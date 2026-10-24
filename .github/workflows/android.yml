@@ -9,16 +9,15 @@ branches:
 jobs:
 build:
 runs-on: ubuntu-latest
-
 steps:
-  - name: Recuperer le projet
-    uses: actions/checkout@v4
+- name: Recuperer le projet
+uses: actions/checkout@v4
 
   - name: Installer Java
     uses: actions/setup-java@v4
     with:
       distribution: temurin
-      java-version: '17'
+      java-version: "17"
 
   - name: Installer Gradle
     uses: gradle/actions/setup-gradle@v4
