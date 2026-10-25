@@ -25,17 +25,28 @@ data class Produit(
     val quantite: Int
 )
 
+data class LigneVente(
+    val produitId: Long,
+    val nom: String,
+    val quantite: Int,
+    val prixUnitaire: Double,
+    val prixAchat: Double
+) {
+    val total: Double get() = prixUnitaire * quantite
+}
+
 data class Vente(
     val id: Long,
     val client: String,
-    val produitId: Long,
-    val produitNom: String,
-    val quantite: Int,
-    val total: Double,
+    val lignes: List<LigneVente>,
     val paye: Double,
     val date: Long
 ) {
+    val total: Double get() = lignes.sumOf { it.total }
     val reste: Double get() = (total - paye).coerceAtLeast(0.0)
+    val cout: Double get() = lignes.sumOf {
+        it.prixAchat * it.quantite
+    }
 }
 
 data class Depense(
@@ -51,7 +62,9 @@ fun argent(montant: Double): String =
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContent { MelmaTechApp(this) }
+        setContent {
+            MelmaTechApp(this)
+        }
     }
 }
 
@@ -85,17 +98,30 @@ fun MelmaTechApp(context: Context) {
     val ventes = remember {
         mutableStateListOf<Vente>().apply {
             try {
-                val json = JSONArray(prefs.getString("ventes", "[]"))
+                val json = JSONArray(prefs.getString("ventes_nouvelles", "[]"))
                 for (i in 0 until json.length()) {
                     val v = json.getJSONObject(i)
+                    val lignesJson = v.getJSONArray("lignes")
+                    val lignes = mutableListOf<LigneVente>()
+
+                    for (j in 0 until lignesJson.length()) {
+                        val l = lignesJson.getJSONObject(j)
+                        lignes.add(
+                            LigneVente(
+                                l.getLong("produitId"),
+                                l.getString("nom"),
+                                l.getInt("quantite"),
+                                l.getDouble("prixUnitaire"),
+                                l.getDouble("prixAchat")
+                            )
+                        )
+                    }
+
                     add(
                         Vente(
                             v.getLong("id"),
                             v.getString("client"),
-                            v.getLong("produitId"),
-                            v.getString("produitNom"),
-                            v.getInt("quantite"),
-                            v.getDouble("total"),
+                            lignes,
                             v.getDouble("paye"),
                             v.getLong("date")
                         )
@@ -141,18 +167,26 @@ fun MelmaTechApp(context: Context) {
     fun sauvegarderVentes() {
         val json = JSONArray()
         ventes.forEach { v ->
+            val lignes = JSONArray()
+            v.lignes.forEach { l ->
+                lignes.put(JSONObject().apply {
+                    put("produitId", l.produitId)
+                    put("nom", l.nom)
+                    put("quantite", l.quantite)
+                    put("prixUnitaire", l.prixUnitaire)
+                    put("prixAchat", l.prixAchat)
+                })
+            }
+
             json.put(JSONObject().apply {
                 put("id", v.id)
                 put("client", v.client)
-                put("produitId", v.produitId)
-                put("produitNom", v.produitNom)
-                put("quantite", v.quantite)
-                put("total", v.total)
+                put("lignes", lignes)
                 put("paye", v.paye)
                 put("date", v.date)
             })
         }
-        prefs.edit().putString("ventes", json.toString()).apply()
+        prefs.edit().putString("ventes_nouvelles", json.toString()).apply()
     }
 
     fun sauvegarderDepenses() {
@@ -170,37 +204,33 @@ fun MelmaTechApp(context: Context) {
 
     var page by remember { mutableStateOf("Accueil") }
 
-    // Formulaire produit
     var nom by remember { mutableStateOf("") }
     var achat by remember { mutableStateOf("") }
-    var ventePrix by remember { mutableStateOf("") }
+    var prixVente by remember { mutableStateOf("") }
     var quantite by remember { mutableStateOf("") }
     var editionId by remember { mutableStateOf<Long?>(null) }
+    var messageProduit by remember { mutableStateOf("") }
 
-    // Formulaire vente
     var client by remember { mutableStateOf("") }
-    var produitChoisi by remember { mutableStateOf<Long?>(null) }
-    var quantiteVente by remember { mutableStateOf("1") }
-    var montantPaye by remember { mutableStateOf("") }
+    var recherche by remember { mutableStateOf("") }
+    var produitChoisi by remember { mutableStateOf<Produit?>(null) }
+    var quantiteSaisie by remember { mutableStateOf("1") }
+    var panier by remember { mutableStateOf(listOf<LigneVente>()) }
+    var paiement by remember { mutableStateOf("") }
     var messageVente by remember { mutableStateOf("") }
-
-    // Paiement d'une dette
-    var ventePaiementId by remember { mutableStateOf<Long?>(null) }
+    var paiementId by remember { mutableStateOf<Long?>(null) }
     var paiementSupplementaire by remember { mutableStateOf("") }
 
-    // Formulaire dépense
     var descriptionDepense by remember { mutableStateOf("") }
     var montantDepense by remember { mutableStateOf("") }
     var messageDepense by remember { mutableStateOf("") }
 
     val chiffreAffaires = ventes.sumOf { it.total }
-    val coutMarchandises = ventes.sumOf { v ->
-        val p = produits.find { it.id == v.produitId }
-        (p?.achat ?: 0.0) * v.quantite
-    }
-    val totalDepenses = depenses.sumOf { it.montant }
-    val totalDettes = ventes.sumOf { it.reste }
+    val coutMarchandises = ventes.sumOf { it.cout }
     val totalEncaisse = ventes.sumOf { it.paye }
+    val totalDettes = ventes.sumOf { it.reste }
+    val totalDepenses = depenses.sumOf { it.montant }
+    val benefice = chiffreAffaires - coutMarchandises - totalDepenses
 
     MaterialTheme {
         Scaffold(
@@ -213,11 +243,7 @@ fun MelmaTechApp(context: Context) {
                         .forEach { onglet ->
                             NavigationBarItem(
                                 selected = page == onglet,
-                                onClick = {
-                                    page = onglet
-                                    messageVente = ""
-                                    messageDepense = ""
-                                },
+                                onClick = { page = onglet },
                                 icon = {},
                                 label = { Text(onglet) }
                             )
@@ -243,16 +269,29 @@ fun MelmaTechApp(context: Context) {
                                 )
                                 Text("Gestion de votre commerce en USD")
                             }
-                            item { DashboardCard("Produits enregistrés", produits.size.toString()) }
-                            item { DashboardCard("Ventes totales", argent(chiffreAffaires)) }
-                            item { DashboardCard("Argent encaissé", argent(totalEncaisse)) }
-                            item { DashboardCard("Dettes clients", argent(totalDettes)) }
-                            item { DashboardCard("Dépenses", argent(totalDepenses)) }
                             item {
                                 DashboardCard(
-                                    "Bénéfice estimé",
-                                    argent(chiffreAffaires - coutMarchandises - totalDepenses)
+                                    "Produits enregistrés",
+                                    produits.size.toString()
                                 )
+                            }
+                            item {
+                                DashboardCard(
+                                    "Chiffre d'affaires",
+                                    argent(chiffreAffaires)
+                                )
+                            }
+                            item {
+                                DashboardCard("Argent encaissé", argent(totalEncaisse))
+                            }
+                            item {
+                                DashboardCard("Dettes clients", argent(totalDettes))
+                            }
+                            item {
+                                DashboardCard("Dépenses", argent(totalDepenses))
+                            }
+                            item {
+                                DashboardCard("Bénéfice estimé", argent(benefice))
                             }
                         }
                     }
@@ -262,71 +301,114 @@ fun MelmaTechApp(context: Context) {
                             verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             item {
-                                Text("Gestion des produits", style = MaterialTheme.typography.headlineSmall)
+                                Text(
+                                    "Gestion des produits",
+                                    style = MaterialTheme.typography.headlineSmall
+                                )
                                 OutlinedTextField(
                                     value = nom,
                                     onValueChange = { nom = it },
                                     label = { Text("Nom du produit") },
-                                    modifier = Modifier.fillMaxWidth()
+                                    modifier = Modifier.fillMaxWidth(),
+                                    singleLine = true
                                 )
                                 OutlinedTextField(
                                     value = achat,
                                     onValueChange = { achat = it },
                                     label = { Text("Prix d'achat (USD)") },
-                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                                    modifier = Modifier.fillMaxWidth()
+                                    keyboardOptions = KeyboardOptions(
+                                        keyboardType = KeyboardType.Decimal
+                                    ),
+                                    modifier = Modifier.fillMaxWidth(),
+                                    singleLine = true
                                 )
                                 OutlinedTextField(
-                                    value = ventePrix,
-                                    onValueChange = { ventePrix = it },
+                                    value = prixVente,
+                                    onValueChange = { prixVente = it },
                                     label = { Text("Prix de vente (USD)") },
-                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                                    modifier = Modifier.fillMaxWidth()
+                                    keyboardOptions = KeyboardOptions(
+                                        keyboardType = KeyboardType.Decimal
+                                    ),
+                                    modifier = Modifier.fillMaxWidth(),
+                                    singleLine = true
                                 )
                                 OutlinedTextField(
                                     value = quantite,
                                     onValueChange = { quantite = it },
                                     label = { Text("Quantité en stock") },
-                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                                    modifier = Modifier.fillMaxWidth()
+                                    keyboardOptions = KeyboardOptions(
+                                        keyboardType = KeyboardType.Number
+                                    ),
+                                    modifier = Modifier.fillMaxWidth(),
+                                    singleLine = true
                                 )
                                 Button(
                                     onClick = {
                                         val a = achat.replace(",", ".").toDoubleOrNull()
-                                        val v = ventePrix.replace(",", ".").toDoubleOrNull()
+                                        val v = prixVente.replace(",", ".").toDoubleOrNull()
                                         val q = quantite.toIntOrNull()
-                                        if (nom.isNotBlank() && a != null && a >= 0 &&
-                                            v != null && v >= 0 && q != null && q >= 0
+
+                                        if (
+                                            nom.isNotBlank() &&
+                                            a != null && a >= 0 &&
+                                            v != null && v >= 0 &&
+                                            q != null && q >= 0
                                         ) {
                                             val id = editionId
                                             if (id == null) {
                                                 produits.add(
-                                                    Produit(System.currentTimeMillis(), nom.trim(), a, v, q)
+                                                    Produit(
+                                                        System.currentTimeMillis(),
+                                                        nom.trim(), a, v, q
+                                                    )
                                                 )
                                             } else {
-                                                val index = produits.indexOfFirst { it.id == id }
+                                                val index = produits.indexOfFirst {
+                                                    it.id == id
+                                                }
                                                 if (index >= 0) {
-                                                    produits[index] = Produit(id, nom.trim(), a, v, q)
+                                                    produits[index] = Produit(
+                                                        id, nom.trim(), a, v, q
+                                                    )
                                                 }
                                             }
+
                                             sauvegarderProduits()
                                             nom = ""
                                             achat = ""
-                                            ventePrix = ""
+                                            prixVente = ""
                                             quantite = ""
                                             editionId = null
+                                            messageProduit = "Produit enregistré."
+                                        } else {
+                                            messageProduit =
+                                                "Vérifie le nom, les prix et la quantité."
                                         }
                                     },
                                     modifier = Modifier.fillMaxWidth()
                                 ) {
-                                    Text(if (editionId == null) "Ajouter le produit" else "Enregistrer les modifications")
+                                    Text(
+                                        if (editionId == null) "Ajouter le produit"
+                                        else "Enregistrer les modifications"
+                                    )
                                 }
+
+                                if (messageProduit.isNotBlank()) {
+                                    Text(messageProduit)
+                                }
+
                                 if (editionId != null) {
                                     TextButton(onClick = {
                                         editionId = null
-                                        nom = ""; achat = ""; ventePrix = ""; quantite = ""
-                                    }) { Text("Annuler") }
+                                        nom = ""
+                                        achat = ""
+                                        prixVente = ""
+                                        quantite = ""
+                                    }) {
+                                        Text("Annuler la modification")
+                                    }
                                 }
+
                                 HorizontalDivider()
                                 Text("Liste des produits (${produits.size})")
                             }
@@ -334,25 +416,45 @@ fun MelmaTechApp(context: Context) {
                             items(produits.toList(), key = { it.id }) { p ->
                                 Card {
                                     Column(
-                                        Modifier.fillMaxWidth().padding(12.dp),
+                                        Modifier
+                                            .fillMaxWidth()
+                                            .padding(12.dp),
                                         verticalArrangement = Arrangement.spacedBy(4.dp)
                                     ) {
-                                        Text(p.nom, style = MaterialTheme.typography.titleMedium)
-                                        Text("Achat : ${argent(p.achat)} | Vente : ${argent(p.vente)}")
+                                        Text(
+                                            p.nom,
+                                            style = MaterialTheme.typography.titleMedium
+                                        )
+                                        Text("Achat : ${argent(p.achat)}")
+                                        Text("Vente : ${argent(p.vente)}")
                                         Text("Stock : ${p.quantite}")
+                                        Text(
+                                            "Bénéfice unitaire : " +
+                                                argent(p.vente - p.achat)
+                                        )
                                         Row {
                                             TextButton(onClick = {
                                                 editionId = p.id
                                                 nom = p.nom
                                                 achat = p.achat.toString()
-                                                ventePrix = p.vente.toString()
+                                                prixVente = p.vente.toString()
                                                 quantite = p.quantite.toString()
-                                            }) { Text("Modifier") }
-
+                                            }) {
+                                                Text("Modifier")
+                                            }
                                             TextButton(onClick = {
                                                 produits.removeAll { it.id == p.id }
                                                 sauvegarderProduits()
-                                            }) { Text("Supprimer") }
+                                                if (editionId == p.id) {
+                                                    editionId = null
+                                                    nom = ""
+                                                    achat = ""
+                                                    prixVente = ""
+                                                    quantite = ""
+                                                }
+                                            }) {
+                                                Text("Supprimer")
+                                            }
                                         }
                                     }
                                 }
@@ -361,144 +463,325 @@ fun MelmaTechApp(context: Context) {
                     }
 
                     "Ventes" -> {
+                        val suggestions = produits.filter {
+                            recherche.isNotBlank() &&
+                                it.nom.contains(recherche.trim(), ignoreCase = true) &&
+                                it.quantite > 0
+                        }.take(6)
+
+                        val totalPanier = panier.sumOf { it.total }
+
                         LazyColumn(
                             verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             item {
-                                Text("Nouvelle vente", style = MaterialTheme.typography.headlineSmall)
+                                Text(
+                                    "Vente rapide",
+                                    style = MaterialTheme.typography.headlineSmall
+                                )
                                 OutlinedTextField(
                                     value = client,
                                     onValueChange = { client = it },
                                     label = { Text("Nom du client") },
-                                    modifier = Modifier.fillMaxWidth()
+                                    modifier = Modifier.fillMaxWidth(),
+                                    singleLine = true
                                 )
-                                Text("Choisir un produit :")
+                                OutlinedTextField(
+                                    value = recherche,
+                                    onValueChange = {
+                                        recherche = it
+                                        produitChoisi = null
+                                    },
+                                    label = { Text("Rechercher un produit") },
+                                    placeholder = {
+                                        Text("Tape les premières lettres...")
+                                    },
+                                    modifier = Modifier.fillMaxWidth(),
+                                    singleLine = true
+                                )
+                                if (recherche.isNotBlank() && suggestions.isEmpty()) {
+                                    Text("Aucun produit disponible trouvé.")
+                                }
                             }
 
-                            items(produits.toList(), key = { it.id }) { p ->
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween
+                            items(suggestions, key = { it.id }) { p ->
+                                Card(
+                                    onClick = {
+                                        produitChoisi = p
+                                        recherche = p.nom
+                                        quantiteSaisie = "1"
+                                    },
+                                    modifier = Modifier.fillMaxWidth()
                                 ) {
-                                    Column(Modifier.weight(1f)) {
-                                        Text(p.nom)
-                                        Text("${argent(p.vente)} — Stock : ${p.quantite}")
+                                    Column(Modifier.padding(12.dp)) {
+                                        Text(
+                                            p.nom,
+                                            style = MaterialTheme.typography.titleMedium
+                                        )
+                                        Text(
+                                            "${argent(p.vente)} par unité — Stock : ${p.quantite}"
+                                        )
                                     }
-                                    RadioButton(
-                                        selected = produitChoisi == p.id,
-                                        onClick = { produitChoisi = p.id }
-                                    )
                                 }
                             }
 
                             item {
-                                OutlinedTextField(
-                                    value = quantiteVente,
-                                    onValueChange = { quantiteVente = it },
-                                    label = { Text("Quantité vendue") },
-                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                                    modifier = Modifier.fillMaxWidth()
+                                produitChoisi?.let { p ->
+                                    Text("Produit choisi : ${p.nom}")
+                                    OutlinedTextField(
+                                        value = quantiteSaisie,
+                                        onValueChange = { quantiteSaisie = it },
+                                        label = { Text("Quantité") },
+                                        keyboardOptions = KeyboardOptions(
+                                            keyboardType = KeyboardType.Number
+                                        ),
+                                        modifier = Modifier.fillMaxWidth(),
+                                        singleLine = true
+                                    )
+                                    Button(
+                                        onClick = {
+                                            val q = quantiteSaisie.toIntOrNull()
+                                            val dansPanier = panier
+                                                .filter { it.produitId == p.id }
+                                                .sumOf { it.quantite }
+
+                                            if (
+                                                q != null && q > 0 &&
+                                                q + dansPanier <= p.quantite
+                                            ) {
+                                                val existant = panier.indexOfFirst {
+                                                    it.produitId == p.id
+                                                }
+                                                panier = if (existant >= 0) {
+                                                    panier.mapIndexed { index, ligne ->
+                                                        if (index == existant) {
+                                                            ligne.copy(
+                                                                quantite = ligne.quantite + q
+                                                            )
+                                                        } else ligne
+                                                    }
+                                                } else {
+                                                    panier + LigneVente(
+                                                        p.id,
+                                                        p.nom,
+                                                        q,
+                                                        p.vente,
+                                                        p.achat
+                                                    )
+                                                }
+
+                                                recherche = ""
+                                                produitChoisi = null
+                                                quantiteSaisie = "1"
+                                                messageVente = ""
+                                            } else {
+                                                messageVente =
+                                                    "Quantité invalide ou stock insuffisant."
+                                            }
+                                        },
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
+                                        Text("Ajouter au panier")
+                                    }
+                                }
+
+                                HorizontalDivider()
+                                Text(
+                                    "Panier (${panier.size} lignes)",
+                                    style = MaterialTheme.typography.titleLarge
                                 )
+                            }
 
-                                val p = produits.find { it.id == produitChoisi }
-                                val q = quantiteVente.toIntOrNull() ?: 0
-                                val total = (p?.vente ?: 0.0) * q
+                            items(panier, key = { it.produitId }) { ligne ->
+                                Card {
+                                    Column(
+                                        Modifier
+                                            .fillMaxWidth()
+                                            .padding(12.dp)
+                                    ) {
+                                        Text(
+                                            ligne.nom,
+                                            style = MaterialTheme.typography.titleMedium
+                                        )
+                                        Text("Quantité : ${ligne.quantite}")
+                                        Text("Sous-total : ${argent(ligne.total)}")
+                                        TextButton(onClick = {
+                                            panier = panier.filter {
+                                                it.produitId != ligne.produitId
+                                            }
+                                        }) {
+                                            Text("Retirer du panier")
+                                        }
+                                    }
+                                }
+                            }
 
-                                Text("Montant total : ${argent(total)}")
+                            item {
+                                Text(
+                                    "TOTAL : ${argent(totalPanier)}",
+                                    style = MaterialTheme.typography.headlineSmall
+                                )
                                 OutlinedTextField(
-                                    value = montantPaye,
-                                    onValueChange = { montantPaye = it },
+                                    value = paiement,
+                                    onValueChange = { paiement = it },
                                     label = { Text("Montant payé maintenant (USD)") },
-                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                                    modifier = Modifier.fillMaxWidth()
+                                    keyboardOptions = KeyboardOptions(
+                                        keyboardType = KeyboardType.Decimal
+                                    ),
+                                    modifier = Modifier.fillMaxWidth(),
+                                    singleLine = true
                                 )
-
                                 Button(
                                     onClick = {
-                                        val produit = produits.find { it.id == produitChoisi }
-                                        val qte = quantiteVente.toIntOrNull()
-                                        val paye = montantPaye.replace(",", ".").toDoubleOrNull()
+                                        val montantPaye = paiement
+                                            .replace(",", ".")
+                                            .toDoubleOrNull()
 
-                                        if (produit != null && qte != null && qte > 0 &&
-                                            qte <= produit.quantite && client.isNotBlank() &&
-                                            paye != null && paye >= 0 &&
-                                            paye <= produit.vente * qte
+                                        if (
+                                            panier.isEmpty() ||
+                                            client.isBlank() ||
+                                            montantPaye == null ||
+                                            montantPaye < 0 ||
+                                            montantPaye > totalPanier
                                         ) {
-                                            val montantTotal = produit.vente * qte
-                                            ventes.add(
-                                                Vente(
-                                                    System.currentTimeMillis(),
-                                                    client.trim(),
-                                                    produit.id,
-                                                    produit.nom,
-                                                    qte,
-                                                    montantTotal,
-                                                    paye,
-                                                    System.currentTimeMillis()
-                                                )
-                                            )
-                                            val index = produits.indexOfFirst { it.id == produit.id }
-                                            produits[index] = produit.copy(quantite = produit.quantite - qte)
-                                            sauvegarderProduits()
-                                            sauvegarderVentes()
-                                            messageVente = "Vente enregistrée. Facture n° ${ventes.last().id}"
-                                            client = ""
-                                            quantiteVente = "1"
-                                            montantPaye = ""
-                                            produitChoisi = null
+                                            messageVente =
+                                                "Vérifie le client, le panier et le paiement."
                                         } else {
-                                            messageVente = "Vérifie le client, la quantité, le stock et le paiement."
+                                            val stockOK = panier.all { ligne ->
+                                                val actuel = produits.find {
+                                                    it.id == ligne.produitId
+                                                }
+                                                actuel != null &&
+                                                    ligne.quantite <= actuel.quantite
+                                            }
+
+                                            if (!stockOK) {
+                                                messageVente =
+                                                    "Stock insuffisant. Vérifie les produits."
+                                            } else {
+                                                val date = System.currentTimeMillis()
+                                                val nouvelleVente = Vente(
+                                                    date,
+                                                    client.trim(),
+                                                    panier.toList(),
+                                                    montantPaye,
+                                                    date
+                                                )
+
+                                                panier.forEach { ligne ->
+                                                    val index = produits.indexOfFirst {
+                                                        it.id == ligne.produitId
+                                                    }
+                                                    if (index >= 0) {
+                                                        val p = produits[index]
+                                                        produits[index] = p.copy(
+                                                            quantite = p.quantite - ligne.quantite
+                                                        )
+                                                    }
+                                                }
+
+                                                ventes.add(nouvelleVente)
+                                                sauvegarderProduits()
+                                                sauvegarderVentes()
+
+                                                messageVente =
+                                                    "Vente enregistrée. Facture n° $date"
+                                                panier = emptyList()
+                                                client = ""
+                                                recherche = ""
+                                                produitChoisi = null
+                                                paiement = ""
+                                                quantiteSaisie = "1"
+                                            }
                                         }
                                     },
                                     modifier = Modifier.fillMaxWidth()
-                                ) { Text("Valider la vente") }
+                                ) {
+                                    Text("Valider la vente")
+                                }
 
-                                if (messageVente.isNotBlank()) Text(messageVente)
+                                if (messageVente.isNotBlank()) {
+                                    Text(messageVente)
+                                }
 
                                 HorizontalDivider()
-                                Text("Historique des ventes", style = MaterialTheme.typography.titleMedium)
+                                Text(
+                                    "Historique des ventes",
+                                    style = MaterialTheme.typography.titleLarge
+                                )
                             }
 
                             items(ventes.toList().reversed(), key = { it.id }) { v ->
                                 Card {
                                     Column(
-                                        Modifier.fillMaxWidth().padding(12.dp),
+                                        Modifier
+                                            .fillMaxWidth()
+                                            .padding(12.dp),
                                         verticalArrangement = Arrangement.spacedBy(4.dp)
                                     ) {
-                                        Text("Facture n° ${v.id}")
+                                        Text(
+                                            "Facture n° ${v.id}",
+                                            style = MaterialTheme.typography.titleMedium
+                                        )
                                         Text("Client : ${v.client}")
-                                        Text("${v.produitNom} × ${v.quantite}")
+                                        v.lignes.forEach { ligne ->
+                                            Text(
+                                                "${ligne.nom} × ${ligne.quantite} = " +
+                                                    argent(ligne.total)
+                                            )
+                                        }
                                         Text("Total : ${argent(v.total)}")
                                         Text("Payé : ${argent(v.paye)}")
-                                        Text("Reste : ${argent(v.reste)}")
+                                        Text("Reste à payer : ${argent(v.reste)}")
 
                                         if (v.reste > 0) {
-                                            if (ventePaiementId == v.id) {
+                                            if (paiementId == v.id) {
                                                 OutlinedTextField(
                                                     value = paiementSupplementaire,
-                                                    onValueChange = { paiementSupplementaire = it },
-                                                    label = { Text("Paiement supplémentaire") },
-                                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                                                    onValueChange = {
+                                                        paiementSupplementaire = it
+                                                    },
+                                                    label = {
+                                                        Text("Paiement supplémentaire")
+                                                    },
+                                                    keyboardOptions = KeyboardOptions(
+                                                        keyboardType = KeyboardType.Decimal
+                                                    ),
                                                     modifier = Modifier.fillMaxWidth()
                                                 )
                                                 Button(onClick = {
-                                                    val montant = paiementSupplementaire.replace(",", ".").toDoubleOrNull()
-                                                    if (montant != null && montant > 0 && montant <= v.reste) {
-                                                        val index = ventes.indexOfFirst { it.id == v.id }
-                                                        ventes[index] = v.copy(paye = v.paye + montant)
-                                                        sauvegarderVentes()
-                                                        ventePaiementId = null
+                                                    val m = paiementSupplementaire
+                                                        .replace(",", ".")
+                                                        .toDoubleOrNull()
+
+                                                    if (m != null && m > 0 && m <= v.reste) {
+                                                        val index = ventes.indexOfFirst {
+                                                            it.id == v.id
+                                                        }
+                                                        if (index >= 0) {
+                                                            ventes[index] = v.copy(
+                                                                paye = v.paye + m
+                                                            )
+                                                            sauvegarderVentes()
+                                                        }
+                                                        paiementId = null
                                                         paiementSupplementaire = ""
-                                                        messageVente = "Paiement enregistré."
+                                                        messageVente =
+                                                            "Paiement supplémentaire enregistré."
                                                     } else {
-                                                        messageVente = "Montant invalide."
+                                                        messageVente =
+                                                            "Montant invalide."
                                                     }
-                                                }) { Text("Enregistrer le paiement") }
+                                                }) {
+                                                    Text("Enregistrer le paiement")
+                                                }
                                             } else {
                                                 TextButton(onClick = {
-                                                    ventePaiementId = v.id
+                                                    paiementId = v.id
                                                     paiementSupplementaire = ""
-                                                }) { Text("Ajouter un paiement") }
+                                                }) {
+                                                    Text("Ajouter un paiement")
+                                                }
                                             }
                                         }
                                     }
@@ -508,38 +791,54 @@ fun MelmaTechApp(context: Context) {
                     }
 
                     "Rapports" -> {
-                        LazyColumn(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        LazyColumn(
+                            verticalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
                             item {
-                                Text("Rapports du commerce", style = MaterialTheme.typography.headlineSmall)
-                                DashboardCard("Nombre de produits", produits.size.toString())
-                                DashboardCard("Unités en stock", produits.sumOf { it.quantite }.toString())
-                                DashboardCard("Ventes totales", argent(chiffreAffaires))
+                                Text(
+                                    "Rapports du commerce",
+                                    style = MaterialTheme.typography.headlineSmall
+                                )
+                                DashboardCard(
+                                    "Chiffre d'affaires",
+                                    argent(chiffreAffaires)
+                                )
                                 DashboardCard("Montant encaissé", argent(totalEncaisse))
                                 DashboardCard("Dettes clients", argent(totalDettes))
+                                DashboardCard("Coût des marchandises vendues", argent(coutMarchandises))
                                 DashboardCard("Dépenses", argent(totalDepenses))
-                                DashboardCard(
-                                    "Bénéfice estimé",
-                                    argent(chiffreAffaires - coutMarchandises - totalDepenses)
-                                )
+                                DashboardCard("Bénéfice estimé", argent(benefice))
                                 HorizontalDivider()
-                                Text("Nouvelle dépense", style = MaterialTheme.typography.titleMedium)
+                                Text(
+                                    "Nouvelle dépense",
+                                    style = MaterialTheme.typography.titleLarge
+                                )
                                 OutlinedTextField(
                                     value = descriptionDepense,
                                     onValueChange = { descriptionDepense = it },
-                                    label = { Text("Description (loyer, transport...)") },
-                                    modifier = Modifier.fillMaxWidth()
+                                    label = { Text("Description de la dépense") },
+                                    modifier = Modifier.fillMaxWidth(),
+                                    singleLine = true
                                 )
                                 OutlinedTextField(
                                     value = montantDepense,
                                     onValueChange = { montantDepense = it },
                                     label = { Text("Montant (USD)") },
-                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                                    modifier = Modifier.fillMaxWidth()
+                                    keyboardOptions = KeyboardOptions(
+                                        keyboardType = KeyboardType.Decimal
+                                    ),
+                                    modifier = Modifier.fillMaxWidth(),
+                                    singleLine = true
                                 )
                                 Button(
                                     onClick = {
-                                        val m = montantDepense.replace(",", ".").toDoubleOrNull()
-                                        if (descriptionDepense.isNotBlank() && m != null && m > 0) {
+                                        val m = montantDepense
+                                            .replace(",", ".")
+                                            .toDoubleOrNull()
+                                        if (
+                                            descriptionDepense.isNotBlank() &&
+                                            m != null && m > 0
+                                        ) {
                                             depenses.add(
                                                 Depense(
                                                     System.currentTimeMillis(),
@@ -553,15 +852,24 @@ fun MelmaTechApp(context: Context) {
                                             montantDepense = ""
                                             messageDepense = "Dépense enregistrée."
                                         } else {
-                                            messageDepense = "Vérifie la description et le montant."
+                                            messageDepense =
+                                                "Vérifie la description et le montant."
                                         }
                                     },
                                     modifier = Modifier.fillMaxWidth()
-                                ) { Text("Enregistrer la dépense") }
-                                if (messageDepense.isNotBlank()) Text(messageDepense)
+                                ) {
+                                    Text("Enregistrer la dépense")
+                                }
+                                if (messageDepense.isNotBlank()) {
+                                    Text(messageDepense)
+                                }
                                 HorizontalDivider()
-                                Text("Historique des dépenses", style = MaterialTheme.typography.titleMedium)
+                                Text(
+                                    "Historique des dépenses",
+                                    style = MaterialTheme.typography.titleMedium
+                                )
                             }
+
                             items(depenses.toList().reversed(), key = { it.id }) { d ->
                                 Card {
                                     Column(Modifier.padding(12.dp)) {
@@ -581,9 +889,9 @@ fun MelmaTechApp(context: Context) {
 @Composable
 fun DashboardCard(titre: String, montant: String) {
     Card(modifier = Modifier.fillMaxWidth()) {
-        Column(modifier = Modifier.padding(16.dp)) {
+        Column(Modifier.padding(16.dp)) {
             Text(titre, style = MaterialTheme.typography.titleMedium)
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(Modifier.height(8.dp))
             Text(montant, style = MaterialTheme.typography.headlineMedium)
         }
     }
