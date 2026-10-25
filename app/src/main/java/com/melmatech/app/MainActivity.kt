@@ -6,9 +6,9 @@ import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.Alignment
 
 class MainActivity : ComponentActivity() {
 override fun onCreate(savedInstanceState: Bundle?) {
@@ -19,6 +19,7 @@ MelmaTechApp()
 }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MelmaTechApp() {
 var page by remember { mutableStateOf("Accueil") }
@@ -63,6 +64,7 @@ MaterialTheme {
                     DashboardCard("Dépenses", "$0.00")
                     DashboardCard("Bénéfice estimé", "$0.00")
                 }
+
                 "Produits" -> Text("Gestion des produits")
                 "Ventes" -> Text("Enregistrement des ventes")
                 "Rapports" -> Text("Rapports du commerce")
