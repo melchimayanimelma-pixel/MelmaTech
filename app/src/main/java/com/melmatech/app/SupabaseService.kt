@@ -9,37 +9,38 @@ import java.io.IOException
 
 object SupabaseService {
 
-private val client = OkHttpClient()
+    private val client = OkHttpClient()
 
-fun testerConnexion(callback: (Boolean, String) -> Unit) {
-    val url = "${SupabaseConfig.url}/rest/v1/produits?select=id&limit=1"
+    fun testerConnexion(callback: (Boolean, String) -> Unit) {
+        val url = "${SupabaseConfig.url}/auth/v1/health"
 
-    val request = Request.Builder()
-        .url(url)
-        .addHeader("apikey", SupabaseConfig.key)
-        .addHeader("Authorization", "Bearer ${SupabaseConfig.key}")
-        .get()
-        .build()
+        val request = Request.Builder()
+            .url(url)
+            .addHeader("apikey", SupabaseConfig.key)
+            .get()
+            .build()
 
-    client.newCall(request).enqueue(object : Callback {
+        client.newCall(request).enqueue(object : Callback {
 
-        override fun onFailure(call: Call, e: IOException) {
-            callback(false, "Erreur réseau : ${e.message}")
-        }
+            override fun onFailure(call: Call, e: IOException) {
+                callback(
+                    false,
+                    "Erreur réseau : ${e.message ?: "connexion impossible"}"
+                )
+            }
 
-        override fun onResponse(call: Call, response: Response) {
-            response.use {
-                if (it.isSuccessful) {
-                    callback(true, "Serveur Supabase accessible.")
-                } else {
-                    callback(
-                        false,
-                        "Erreur Supabase : code ${it.code}"
-                    )
+            override fun onResponse(call: Call, response: Response) {
+                response.use {
+                    if (it.isSuccessful) {
+                        callback(true, "Serveur Supabase accessible.")
+                    } else {
+                        callback(
+                            false,
+                            "Réponse Supabase : code ${it.code}"
+                        )
+                    }
                 }
             }
-        }
-    })
-}
-
+        })
+    }
 }
