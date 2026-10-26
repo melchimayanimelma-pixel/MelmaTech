@@ -14,6 +14,9 @@ defaultConfig {
     targetSdk = 35
     versionCode = 1
     versionName = "1.0"
+
+    buildConfigField("String", "SUPABASE_URL", "\"https://yxdwryjdckupdaduajuy.supabase.co\"")
+    buildConfigField("String", "SUPABASE_KEY", "\"sb_publishable_PU_7owmDVUa_CFwYGkJlgw_SEFAuIHn\"")
 }
 
 buildFeatures {
