@@ -2,6 +2,8 @@ package com.melmatech.app
 
 import android.os.Bundle
 import android.content.Context
+import android.os.Handler
+import android.os.Looper
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.*
