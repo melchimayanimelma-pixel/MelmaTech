@@ -72,7 +72,10 @@ class MainActivity : ComponentActivity() {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MelmaTechApp(context: Context) {var statutConnexion by remember { mutableStateOf("Connexion non testée") }
+fun MelmaTechApp(context: Context) {
+    var statutConnexion by remember {
+        mutableStateOf("Connexion non testée")
+    }
     val prefs = remember {
         context.getSharedPreferences("melmatech", Context.MODE_PRIVATE)
     }
