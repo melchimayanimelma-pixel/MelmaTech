@@ -16,8 +16,6 @@ import androidx.compose.ui.text.input.KeyboardType
 import org.json.JSONArray
 import org.json.JSONObject
 import java.util.Locale
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalLifecycleOwner
 
 data class Produit(
     val id: Long,
