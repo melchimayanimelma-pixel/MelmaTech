@@ -295,6 +295,29 @@ fun MelmaTechApp(context: Context) {var statutConnexion by remember { mutableSta
                             item {
                                 DashboardCard("Bénéfice estimé", argent(benefice))
                             }
+                            item {
+    Button(
+        onClick = {
+            statutConnexion = "Connexion en cours..."
+
+            SupabaseService.testerConnexion { succes, message ->
+                Handler(Looper.getMainLooper()).post {
+                    statutConnexion = message
+                }
+            }
+        },
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Text("Tester la connexion Supabase")
+    }
+}
+
+item {
+    Text(
+        text = statutConnexion,
+        style = MaterialTheme.typography.bodyMedium
+    )
+}
                         }
                     }
 
