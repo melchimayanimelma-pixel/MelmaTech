@@ -262,6 +262,53 @@ fun MelmaTechApp(context: Context) {
     val benefice = chiffreAffaires - coutMarchandises - totalDepenses
 
     MaterialTheme {
+    if (!utilisateurConnecte) {
+        EcranConnexion(
+            email = emailConnexion,
+            onEmailChange = { emailConnexion = it },
+            motDePasse = motDePasseConnexion,
+            onMotDePasseChange = { motDePasseConnexion = it },
+            modeCreationCompte = modeCreationCompte,
+            chargement = chargementConnexion,
+            message = messageConnexion,
+            onChangerMode = {
+                modeCreationCompte = !modeCreationCompte
+                messageConnexion = ""
+            },
+            onValider = {
+                if (emailConnexion.isBlank() || motDePasseConnexion.isBlank()) {
+                    messageConnexion = "Remplis l'e-mail et le mot de passe."
+                } else {
+                    chargementConnexion = true
+                    messageConnexion = "Connexion en cours..."
+
+                    if (modeCreationCompte) {
+                        AuthService.creerCompte(
+                            context,
+                            emailConnexion.trim(),
+                            motDePasseConnexion
+                        ) { succes, message ->
+                            chargementConnexion = false
+                            messageConnexion = message
+                            utilisateurConnecte = succes &&
+                                AuthService.estConnecte(context)
+                        }
+                    } else {
+                        AuthService.connexion(
+                            context,
+                            emailConnexion.trim(),
+                            motDePasseConnexion
+                        ) { succes, message ->
+                            chargementConnexion = false
+                            messageConnexion = message
+                            utilisateurConnecte = succes &&
+                                AuthService.estConnecte(context)
+                        }
+                    }
+                }
+            }
+        )
+    } else {
         Scaffold(
             topBar = {
                 TopAppBar(title = { Text("MelmaTech") })
