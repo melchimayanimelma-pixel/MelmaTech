@@ -243,36 +243,34 @@ fun MelmaTechApp(context: Context) {
     mutableStateOf(false)
     }
     LaunchedEffect(utilisateurConnecte) {
-    if (utilisateurConnecte) {
-        val accessToken = AuthService.obtenirAccessToken(context)
+        if (utilisateurConnecte) {
+            val accessToken = AuthService.obtenirAccessToken(context)
 
-        if (!accessToken.isNullOrBlank()) {
-            chargementProduits = true
+            if (!accessToken.isNullOrBlank()) {
+                chargementProduits = true
 
-            AuthService.obtenirEntrepriseId(context) { succes, message, entrepriseId ->
-                if (succes && entrepriseId != null) {
-                    SupabaseService.chargerProduits(
-                        accessToken,
-                        entrepriseId
-                    ) { ok, resultat, produitsEnLigne ->
+                AuthService.obtenirEntrepriseId(context) { succes, message, entrepriseId ->
+                    if (succes && entrepriseId != null) {
+                        SupabaseService.chargerProduits(
+                            accessToken,
+                            entrepriseId
+                        ) { ok, resultat, produitsEnLigne ->
+                            chargementProduits = false
 
-                        chargementProduits = false
-
-                        if (ok && produitsEnLigne != null) {
-    messageProduit =
-        "${produitsEnLigne.length()} produit(s) trouvé(s) sur Supabase."
-} else {
-    messageProduit = resultat
-}
+                            if (ok && produitsEnLigne != null) {
+                                messageProduit =
+                                    "${produitsEnLigne.length()} produit(s) trouvé(s) sur Supabase."
+                            } else {
+                                messageProduit = resultat
+                            }
                         }
+                    } else {
+                        chargementProduits = false
+                        messageProduit = message
                     }
-                } else {
-                    chargementProduits = false
-                    messageProduit = message
                 }
             }
         }
-    }
     }
 
     var client by remember { mutableStateOf("") }
