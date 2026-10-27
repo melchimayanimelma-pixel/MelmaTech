@@ -528,6 +528,7 @@ item {
         else "Enregistrer les modifications"
     )
 }
+                                if (messageProduit.isNotBlank()) {
                                     Text(messageProduit)
                                 }
 
