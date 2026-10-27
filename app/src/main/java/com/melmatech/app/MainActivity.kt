@@ -242,6 +242,37 @@ fun MelmaTechApp(context: Context) {
     var chargementProduits by remember {
     mutableStateOf(false)
     }
+    LaunchedEffect(utilisateurConnecte) {
+    if (utilisateurConnecte) {
+        val accessToken = AuthService.obtenirAccessToken(context)
+
+        if (!accessToken.isNullOrBlank()) {
+            chargementProduits = true
+
+            AuthService.obtenirEntrepriseId(context) { succes, message, entrepriseId ->
+                if (succes && entrepriseId != null) {
+                    SupabaseService.chargerProduits(
+                        accessToken,
+                        entrepriseId
+                    ) { ok, resultat, produitsEnLigne ->
+
+                        chargementProduits = false
+
+                        if (ok && produitsEnLigne != null) {
+                            // Nous traiterons les produits reçus à l'étape suivante.
+                            messageProduit = resultat
+                        } else {
+                            messageProduit = resultat
+                        }
+                    }
+                } else {
+                    chargementProduits = false
+                    messageProduit = message
+                }
+            }
+        }
+    }
+    }
 
     var client by remember { mutableStateOf("") }
     var recherche by remember { mutableStateOf("") }
