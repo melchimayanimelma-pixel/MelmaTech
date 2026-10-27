@@ -1054,7 +1054,6 @@ item {
             }
         }
     }
-    }
 }
 
 @Composable
