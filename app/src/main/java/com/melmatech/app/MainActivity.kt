@@ -76,6 +76,30 @@ fun MelmaTechApp(context: Context) {
     var statutConnexion by remember {
         mutableStateOf("Connexion non testée")
     }
+
+    var utilisateurConnecte by remember {
+        mutableStateOf(AuthService.estConnecte(context))
+    }
+
+    var emailConnexion by remember {
+        mutableStateOf("")
+    }
+
+    var motDePasseConnexion by remember {
+        mutableStateOf("")
+    }
+
+    var messageConnexion by remember {
+        mutableStateOf("")
+    }
+
+    var chargementConnexion by remember {
+        mutableStateOf(false)
+    }
+
+    var modeCreationCompte by remember {
+        mutableStateOf(false)
+    }
     val prefs = remember {
         context.getSharedPreferences("melmatech", Context.MODE_PRIVATE)
     }
