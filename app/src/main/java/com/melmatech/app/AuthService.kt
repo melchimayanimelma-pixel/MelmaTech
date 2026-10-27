@@ -41,6 +41,104 @@ object AuthService {
         return preferences(context)
             .getString("access_token", null)
     }
+fun obtenirEntrepriseId(
+    context: Context,
+    callback: (Boolean, String, String?) -> Unit
+) {
+    val utilisateurId = obtenirUtilisateurId(context)
+    val accessToken = obtenirAccessToken(context)
+
+    if (utilisateurId.isNullOrBlank() || accessToken.isNullOrBlank()) {
+        mainHandler.post {
+            callback(false, "Reconnecte-toi à ton compte.", null)
+        }
+        return
+    }
+
+    val url =
+        "${SupabaseConfig.url}/rest/v1/profils" +
+        "?id=eq.$utilisateurId&select=entreprise_id,actif"
+
+    val request = Request.Builder()
+        .url(url)
+        .addHeader("apikey", SupabaseConfig.key)
+        .addHeader("Authorization", "Bearer $accessToken")
+        .get()
+        .build()
+
+    client.newCall(request).enqueue(object : Callback {
+
+        override fun onFailure(call: Call, e: IOException) {
+            mainHandler.post {
+                callback(
+                    false,
+                    "Erreur réseau : ${e.message ?: "connexion impossible"}",
+                    null
+                )
+            }
+        }
+
+        override fun onResponse(call: Call, response: Response) {
+            response.use {
+                val body = it.body?.string().orEmpty()
+
+                if (!it.isSuccessful) {
+                    mainHandler.post {
+                        callback(
+                            false,
+                            "Erreur Supabase (${it.code}).",
+                            null
+                        )
+                    }
+                    return
+                }
+
+                try {
+                    val profils = org.json.JSONArray(body)
+
+                    if (profils.length() == 0) {
+                        mainHandler.post {
+                            callback(false, "Profil introuvable.", null)
+                        }
+                        return
+                    }
+
+                    val profil = profils.getJSONObject(0)
+                    val actif = profil.optBoolean("actif", false)
+                    val entrepriseId =
+                        profil.optString("entreprise_id")
+
+                    if (!actif || entrepriseId.isBlank()) {
+                        mainHandler.post {
+                            callback(
+                                false,
+                                "Compte inactif ou entreprise introuvable.",
+                                null
+                            )
+                        }
+                        return
+                    }
+
+                    mainHandler.post {
+                        callback(
+                            true,
+                            "Entreprise récupérée.",
+                            entrepriseId
+                        )
+                    }
+                } catch (_: Exception) {
+                    mainHandler.post {
+                        callback(
+                            false,
+                            "Impossible de lire le profil.",
+                            null
+                        )
+                    }
+                }
+            }
+        }
+    })
+}
 
     fun deconnecter(context: Context) {
         preferences(context).edit().clear().apply()
