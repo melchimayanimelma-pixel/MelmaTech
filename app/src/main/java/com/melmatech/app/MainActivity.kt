@@ -239,6 +239,9 @@ fun MelmaTechApp(context: Context) {
     var quantite by remember { mutableStateOf("") }
     var editionId by remember { mutableStateOf<Long?>(null) }
     var messageProduit by remember { mutableStateOf("") }
+    var chargementProduits by remember {
+    mutableStateOf(false)
+    }
 
     var client by remember { mutableStateOf("") }
     var recherche by remember { mutableStateOf("") }
