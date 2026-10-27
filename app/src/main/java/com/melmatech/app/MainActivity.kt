@@ -259,10 +259,11 @@ fun MelmaTechApp(context: Context) {
                         chargementProduits = false
 
                         if (ok && produitsEnLigne != null) {
-                            // Nous traiterons les produits reçus à l'étape suivante.
-                            messageProduit = resultat
-                        } else {
-                            messageProduit = resultat
+    messageProduit =
+        "${produitsEnLigne.length()} produit(s) trouvé(s) sur Supabase."
+} else {
+    messageProduit = resultat
+}
                         }
                     }
                 } else {
