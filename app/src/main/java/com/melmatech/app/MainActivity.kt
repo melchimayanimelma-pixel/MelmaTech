@@ -442,57 +442,92 @@ item {
                                     singleLine = true
                                 )
                                 Button(
-                                    onClick = {
-                                        val a = achat.replace(",", ".").toDoubleOrNull()
-                                        val v = prixVente.replace(",", ".").toDoubleOrNull()
-                                        val q = quantite.toIntOrNull()
+    onClick = {
+        val a = achat.replace(",", ".").toDoubleOrNull()
+        val v = prixVente.replace(",", ".").toDoubleOrNull()
+        val q = quantite.toIntOrNull()
 
-                                        if (
-                                            nom.isNotBlank() &&
-                                            a != null && a >= 0 &&
-                                            v != null && v >= 0 &&
-                                            q != null && q >= 0
-                                        ) {
-                                            val id = editionId
-                                            if (id == null) {
-                                                produits.add(
-                                                    Produit(
-                                                        System.currentTimeMillis(),
-                                                        nom.trim(), a, v, q
-                                                    )
-                                                )
-                                            } else {
-                                                val index = produits.indexOfFirst {
-                                                    it.id == id
-                                                }
-                                                if (index >= 0) {
-                                                    produits[index] = Produit(
-                                                        id, nom.trim(), a, v, q
-                                                    )
-                                                }
-                                            }
+        if (
+            nom.isNotBlank() &&
+            a != null && a >= 0 &&
+            v != null && v >= 0 &&
+            q != null && q >= 0
+        ) {
+            val nomProduit = nom.trim()
+            val id = editionId
 
-                                            sauvegarderProduits()
-                                            nom = ""
-                                            achat = ""
-                                            prixVente = ""
-                                            quantite = ""
-                                            editionId = null
-                                            messageProduit = "Produit enregistré."
-                                        } else {
-                                            messageProduit =
-                                                "Vérifie le nom, les prix et la quantité."
-                                        }
-                                    },
-                                    modifier = Modifier.fillMaxWidth()
-                                ) {
-                                    Text(
-                                        if (editionId == null) "Ajouter le produit"
-                                        else "Enregistrer les modifications"
-                                    )
+            if (id == null) {
+                produits.add(
+                    Produit(
+                        System.currentTimeMillis(),
+                        nomProduit, a, v, q
+                    )
+                )
+
+                sauvegarderProduits()
+                messageProduit = "Produit enregistré sur le téléphone. Synchronisation en cours..."
+
+                val accessToken = AuthService.obtenirAccessToken(context)
+
+                if (accessToken.isNullOrBlank()) {
+                    messageProduit =
+                        "Produit enregistré sur le téléphone. Reconnecte-toi pour synchroniser."
+                } else {
+                    AuthService.obtenirEntrepriseId(context) { succes, message, entrepriseId ->
+                        if (succes && entrepriseId != null) {
+                            SupabaseService.ajouterProduit(
+                                accessToken,
+                                entrepriseId,
+                                nomProduit,
+                                a,
+                                v,
+                                q
+                            ) { enregistre, resultat ->
+                                messageProduit = if (enregistre) {
+                                    "Produit enregistré et synchronisé avec Supabase."
+                                } else {
+                                    "Produit enregistré sur le téléphone, mais échec Supabase : $resultat"
                                 }
+                            }
+                        } else {
+                            messageProduit =
+                                "Produit enregistré sur le téléphone, mais synchronisation impossible : $message"
+                        }
+                    }
+                }
+            } else {
+                val index = produits.indexOfFirst {
+                    it.id == id
+                }
 
-                                if (messageProduit.isNotBlank()) {
+                if (index >= 0) {
+                    produits[index] = Produit(
+                        id, nomProduit, a, v, q
+                    )
+                }
+
+                sauvegarderProduits()
+                messageProduit =
+                    "Modification enregistrée sur le téléphone. La synchronisation des modifications n'est pas encore activée."
+            }
+
+            nom = ""
+            achat = ""
+            prixVente = ""
+            quantite = ""
+            editionId = null
+        } else {
+            messageProduit =
+                "Vérifie le nom, les prix et la quantité."
+        }
+    },
+    modifier = Modifier.fillMaxWidth()
+) {
+    Text(
+        if (editionId == null) "Ajouter le produit"
+        else "Enregistrer les modifications"
+    )
+}
                                     Text(messageProduit)
                                 }
 
