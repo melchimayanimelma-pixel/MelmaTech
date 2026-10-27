@@ -1066,87 +1066,86 @@ fun DashboardCard(titre: String, montant: String) {
 }
 @Composable
 fun EcranConnexion(
-email: String,
-onEmailChange: (String) -> Unit,
-motDePasse: String,
-onMotDePasseChange: (String) -> Unit,
-modeCreationCompte: Boolean,
-chargement: Boolean,
-message: String,
-onChangerMode: () -> Unit,
-onValider: () -> Unit
+    email: String,
+    onEmailChange: (String) -> Unit,
+    motDePasse: String,
+    onMotDePasseChange: (String) -> Unit,
+    modeCreationCompte: Boolean,
+    chargement: Boolean,
+    message: String,
+    onChangerMode: () -> Unit,
+    onValider: () -> Unit
 ) {
-androidx.compose.foundation.layout.Column(
-modifier = Modifier
-.fillMaxSize()
-.padding(24.dp),
-verticalArrangement = Arrangement.Center,
-horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally
-) {
-Text(
-text = "MelmaTech",
-style = MaterialTheme.typography.headlineLarge
-)
-
-    Text(
-        text = if (modeCreationCompte) "Créer un compte" else "Connexion",
-        style = MaterialTheme.typography.titleLarge
-    )
-
-    Spacer(modifier = Modifier.height(20.dp))
-
-    androidx.compose.material3.OutlinedTextField(
-        value = email,
-        onValueChange = onEmailChange,
-        label = { Text("Adresse e-mail") },
-        singleLine = true,
-        enabled = !chargement
-    )
-
-    Spacer(modifier = Modifier.height(12.dp))
-
-    androidx.compose.material3.OutlinedTextField(
-        value = motDePasse,
-        onValueChange = onMotDePasseChange,
-        label = { Text("Mot de passe") },
-        singleLine = true,
-        enabled = !chargement,
-        visualTransformation =
-            androidx.compose.ui.text.input.PasswordVisualTransformation()
-    )
-
-    Spacer(modifier = Modifier.height(16.dp))
-
-    Button(
-        onClick = onValider,
-        enabled = !chargement,
-        modifier = Modifier.fillMaxWidth()
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(24.dp),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally
     ) {
         Text(
-            if (chargement) "Patiente..." 
-            else if (modeCreationCompte) "Créer mon compte"
-            else "Se connecter"
+            text = "MelmaTech",
+            style = MaterialTheme.typography.headlineLarge
         )
-    }
 
-    Spacer(modifier = Modifier.height(8.dp))
-
-    TextButton(
-        onClick = onChangerMode,
-        enabled = !chargement
-    ) {
         Text(
-            if (modeCreationCompte)
-                "J'ai déjà un compte"
-            else
-                "Créer un nouveau compte"
+            text = if (modeCreationCompte) "Créer un compte" else "Connexion",
+            style = MaterialTheme.typography.titleLarge
         )
-    }
 
-    if (message.isNotBlank()) {
+        Spacer(modifier = Modifier.height(20.dp))
+
+        OutlinedTextField(
+            value = email,
+            onValueChange = onEmailChange,
+            label = { Text("Adresse e-mail") },
+            singleLine = true,
+            enabled = !chargement
+        )
+
         Spacer(modifier = Modifier.height(12.dp))
-        Text(text = message)
-    }
-}
 
+        OutlinedTextField(
+            value = motDePasse,
+            onValueChange = onMotDePasseChange,
+            label = { Text("Mot de passe") },
+            singleLine = true,
+            enabled = !chargement,
+            visualTransformation =
+                androidx.compose.ui.text.input.PasswordVisualTransformation()
+        )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Button(
+            onClick = onValider,
+            enabled = !chargement,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text(
+                if (chargement) "Patiente..."
+                else if (modeCreationCompte) "Créer mon compte"
+                else "Se connecter"
+            )
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        TextButton(
+            onClick = onChangerMode,
+            enabled = !chargement
+        ) {
+            Text(
+                if (modeCreationCompte)
+                    "J'ai déjà un compte"
+                else
+                    "Créer un nouveau compte"
+            )
+        }
+
+        if (message.isNotBlank()) {
+            Spacer(modifier = Modifier.height(12.dp))
+            Text(text = message)
+        }
+    }
 }
