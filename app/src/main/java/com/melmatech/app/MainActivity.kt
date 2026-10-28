@@ -1039,13 +1039,13 @@ fun MelmaTechApp(context: Context) {
                             }
 
                             items(depenses.toList().reversed(), key = { it.id }) { d ->
-    Card {
-        Column(Modifier.padding(12.dp)) {
-            Text(d.description)
-            Text(argent(d.montant))
-        }
-    }
-}
+                                Card {
+                                    Column(Modifier.padding(12.dp)) {
+                                        Text(d.description)
+                                        Text(argent(d.montant))
+                                    }
+                                }
+                            }
                         }
                     }
                 }
@@ -1053,8 +1053,9 @@ fun MelmaTechApp(context: Context) {
         }
     }
 }
+}
 
-
+// Cette fonction doit être déclarée en dehors de MelmaTechApp.
 @Composable
 fun DashboardCard(titre: String, montant: String) {
     Card(modifier = Modifier.fillMaxWidth()) {
@@ -1065,6 +1066,7 @@ fun DashboardCard(titre: String, montant: String) {
         }
     }
 }
+
 @Composable
 fun EcranConnexion(
     email: String,
