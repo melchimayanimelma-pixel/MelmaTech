@@ -140,6 +140,78 @@ fun obtenirEntrepriseId(
     })
 }
 
+    fun creerVendeur(
+    context: Context,
+    nomComplet: String,
+    email: String,
+    motDePasse: String,
+    callback: (Boolean, String) -> Unit
+) {
+    val accessToken = obtenirAccessToken(context)
+
+    if (accessToken.isNullOrBlank()) {
+        mainHandler.post {
+            callback(false, "Reconnecte-toi à ton compte.")
+        }
+        return
+    }
+
+    val donnees = JSONObject().apply {
+        put("nomComplet", nomComplet.trim())
+        put("email", email.trim())
+        put("motDePasse", motDePasse)
+    }
+
+    val requete = Request.Builder()
+        .url("${SupabaseConfig.url}/functions/v1/creer-vendeur")
+        .addHeader("apikey", SupabaseConfig.key)
+        .addHeader("Authorization", "Bearer $accessToken")
+        .addHeader("Content-Type", "application/json")
+        .post(donnees.toString().toRequestBody(jsonType))
+        .build()
+
+    client.newCall(requete).enqueue(object : Callback {
+
+        override fun onFailure(call: Call, e: IOException) {
+            mainHandler.post {
+                callback(
+                    false,
+                    "Erreur réseau. Vérifie ta connexion Internet."
+                )
+            }
+        }
+
+        override fun onResponse(call: Call, response: Response) {
+            response.use {
+                val corps = it.body?.string().orEmpty()
+
+                val resultat = try {
+                    JSONObject(corps)
+                } catch (_: Exception) {
+                    JSONObject()
+                }
+
+                if (it.isSuccessful && resultat.optBoolean("succes")) {
+                    mainHandler.post {
+                        callback(
+                            true,
+                            "Compte vendeur créé avec succès."
+                        )
+                    }
+                } else {
+                    val message = resultat.optString(
+                        "erreur",
+                        "Impossible de créer le compte vendeur (code ${it.code})."
+                    )
+
+                    mainHandler.post {
+                        callback(false, message)
+                    }
+                }
+            }
+        }
+    })
+    }
     fun deconnecter(context: Context) {
         preferences(context).edit().clear().apply()
     }
