@@ -1039,13 +1039,13 @@ fun MelmaTechApp(context: Context) {
                             }
 
                             items(depenses.toList().reversed(), key = { it.id }) { d ->
-                                Card {
-                                    Column(Modifier.padding(12.dp)) {
-                                        Text(d.description)
-                                        Text(argent(d.montant))
-                                    }
-                                }
-                            }
+    Card {
+        Column(Modifier.padding(12.dp)) {
+            Text(d.description)
+            Text(argent(d.montant))
+        }
+    }
+}
                         }
                     }
                 }
@@ -1053,6 +1053,7 @@ fun MelmaTechApp(context: Context) {
         }
     }
 }
+
 
 @Composable
 fun DashboardCard(titre: String, montant: String) {
