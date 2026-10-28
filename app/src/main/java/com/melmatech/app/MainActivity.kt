@@ -344,7 +344,23 @@ fun MelmaTechApp(context: Context) {
     } else {
         Scaffold(
             topBar = {
-                TopAppBar(title = { Text("MelmaTech") })
+                TopAppBar(
+    title = { Text("MelmaTech") },
+    actions = {
+        TextButton(
+            onClick = {
+                AuthService.deconnecter(context)
+                utilisateurConnecte = false
+                messageConnexion = ""
+                emailConnexion = ""
+                motDePasseConnexion = ""
+                modeCreationCompte = false
+            }
+        ) {
+            Text("Déconnexion")
+        }
+    }
+)
             },
             bottomBar = {
                 NavigationBar {
