@@ -1069,6 +1069,66 @@ onSurface = androidx.compose.ui.graphics.Color(0xFF1B1B1F)
         }
     }
                     }
+                    "Utilisateurs" -> {
+    LazyColumn(
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        item {
+            Text(
+                "Gestion des utilisateurs",
+                style = MaterialTheme.typography.headlineSmall
+            )
+            Text(
+                "Gérez les accès à votre entreprise.",
+                style = MaterialTheme.typography.bodyMedium
+            )
+        }
+
+        item {
+            Card(
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text(
+                        "Administrateur",
+                        style = MaterialTheme.typography.titleMedium
+                    )
+                    Text("Accès complet à la gestion de l'entreprise.")
+                }
+            }
+        }
+
+        item {
+            Card(
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text(
+                        "Vendeur",
+                        style = MaterialTheme.typography.titleMedium
+                    )
+                    Text(
+                        "Accès aux ventes, sans autorisation de gérer les produits ou les comptes."
+                    )
+                }
+            }
+        }
+
+        item {
+            Text(
+                "La création des comptes sera activée après la configuration sécurisée des autorisations.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.primary
+            )
+        }
+    }
+                    }
                     "Rapports" -> {
                         LazyColumn(
                             verticalArrangement = Arrangement.spacedBy(10.dp)
