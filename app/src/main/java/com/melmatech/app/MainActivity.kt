@@ -1070,6 +1070,12 @@ onSurface = androidx.compose.ui.graphics.Color(0xFF1B1B1F)
     }
                     }
                     "Utilisateurs" -> {
+    var nomVendeur by remember { mutableStateOf("") }
+    var emailVendeur by remember { mutableStateOf("") }
+    var motDePasseVendeur by remember { mutableStateOf("") }
+    var confirmationVendeur by remember { mutableStateOf("") }
+    var chargementVendeur by remember { mutableStateOf(false) }
+
     LazyColumn(
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
@@ -1078,10 +1084,118 @@ onSurface = androidx.compose.ui.graphics.Color(0xFF1B1B1F)
                 "Gestion des utilisateurs",
                 style = MaterialTheme.typography.headlineSmall
             )
+
             Text(
-                "Gérez les accès à votre entreprise.",
+                "Créez les comptes des vendeurs de votre entreprise.",
                 style = MaterialTheme.typography.bodyMedium
             )
+        }
+
+        item {
+            Card(
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Text(
+                        "Créer un compte vendeur",
+                        style = MaterialTheme.typography.titleLarge
+                    )
+
+                    OutlinedTextField(
+                        value = nomVendeur,
+                        onValueChange = { nomVendeur = it },
+                        label = { Text("Nom complet du vendeur") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        enabled = !chargementVendeur
+                    )
+
+                    OutlinedTextField(
+                        value = emailVendeur,
+                        onValueChange = { emailVendeur = it },
+                        label = { Text("Adresse e-mail") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        enabled = !chargementVendeur
+                    )
+
+                    OutlinedTextField(
+                        value = motDePasseVendeur,
+                        onValueChange = { motDePasseVendeur = it },
+                        label = { Text("Mot de passe temporaire") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        visualTransformation =
+                            androidx.compose.ui.text.input.PasswordVisualTransformation(),
+                        enabled = !chargementVendeur
+                    )
+
+                    Button(
+                        onClick = {
+                            val nom = nomVendeur.trim()
+                            val email = emailVendeur.trim()
+
+                            if (
+                                nom.isBlank() ||
+                                email.isBlank() ||
+                                !email.contains("@") ||
+                                motDePasseVendeur.length < 8
+                            ) {
+                                confirmationVendeur =
+                                    "Saisis un nom, un e-mail valide et un mot de passe d'au moins 8 caractères."
+                            } else {
+                                chargementVendeur = true
+                                confirmationVendeur = ""
+
+                                AuthService.creerVendeur(
+                                    context = context,
+                                    nomComplet = nom,
+                                    email = email,
+                                    motDePasse = motDePasseVendeur
+                                ) { succes, message ->
+                                    chargementVendeur = false
+                                    confirmationVendeur = message
+
+                                    if (succes) {
+                                        nomVendeur = ""
+                                        emailVendeur = ""
+                                        motDePasseVendeur = ""
+                                    }
+                                }
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        enabled = !chargementVendeur
+                    ) {
+                        if (chargementVendeur) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(20.dp),
+                                strokeWidth = 2.dp
+                            )
+                        } else {
+                            Text("Créer le compte vendeur")
+                        }
+                    }
+
+                    if (confirmationVendeur.isNotBlank()) {
+                        Text(
+                            text = confirmationVendeur,
+                            color = if (
+                                confirmationVendeur ==
+                                "Compte vendeur créé avec succès."
+                            ) {
+                                MaterialTheme.colorScheme.primary
+                            } else {
+                                MaterialTheme.colorScheme.error
+                            },
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                    }
+                }
+            }
         }
 
         item {
@@ -1096,7 +1210,10 @@ onSurface = androidx.compose.ui.graphics.Color(0xFF1B1B1F)
                         "Administrateur",
                         style = MaterialTheme.typography.titleMedium
                     )
-                    Text("Accès complet à la gestion de l'entreprise.")
+
+                    Text(
+                        "L'administrateur actif peut créer les comptes vendeurs."
+                    )
                 }
             }
         }
@@ -1113,22 +1230,15 @@ onSurface = androidx.compose.ui.graphics.Color(0xFF1B1B1F)
                         "Vendeur",
                         style = MaterialTheme.typography.titleMedium
                     )
+
                     Text(
-                        "Accès aux ventes, sans autorisation de gérer les produits ou les comptes."
+                        "Le vendeur ne peut pas créer d'autres comptes ni gérer les produits sans autorisation."
                     )
                 }
             }
         }
-
-        item {
-            Text(
-                "La création des comptes sera activée après la configuration sécurisée des autorisations.",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.primary
-            )
-        }
     }
-                    }
+}
                     "Rapports" -> {
                         LazyColumn(
                             verticalArrangement = Arrangement.spacedBy(10.dp)
