@@ -364,7 +364,7 @@ fun MelmaTechApp(context: Context) {
             },
             bottomBar = {
                 NavigationBar {
-                    listOf("Accueil", "Produits", "Ventes", "Rapports")
+                    listOf("Accueil", "Produits", "Ventes", "Rapports", "Plus")
                         .forEach { onglet ->
                             NavigationBarItem(
                                 selected = page == onglet,
