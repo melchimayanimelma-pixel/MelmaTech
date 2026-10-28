@@ -1030,16 +1030,31 @@ onSurface = androidx.compose.ui.graphics.Color(0xFF1B1B1F)
         }
 
         item {
-            Card(modifier = Modifier.fillMaxWidth()) {
-                Column(Modifier.padding(16.dp)) {
-                    Text(
-                        "👥 Utilisateurs",
-                        style = MaterialTheme.typography.titleMedium
-                    )
-                    Text("Gestion des comptes : à développer")
-                }
-            }
+    Card(
+        onClick = { page = "Utilisateurs" },
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Text(
+                "👥 Gestion des utilisateurs",
+                style = MaterialTheme.typography.titleMedium
+            )
+
+            Text(
+                "Créer et gérer les comptes des vendeurs."
+            )
+
+            Text(
+                "Accès réservé à l'administrateur",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.primary
+            )
         }
+    }
+}
 
         item {
             Card(modifier = Modifier.fillMaxWidth()) {
