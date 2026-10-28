@@ -294,7 +294,17 @@ fun MelmaTechApp(context: Context) {
     val totalDepenses = depenses.sumOf { it.montant }
     val benefice = chiffreAffaires - coutMarchandises - totalDepenses
 
-    MaterialTheme {
+    MaterialTheme(
+colorScheme = lightColorScheme(
+primary = androidx.compose.ui.graphics.Color(0xFF1565C0),
+onPrimary = androidx.compose.ui.graphics.Color.White,
+secondary = androidx.compose.ui.graphics.Color(0xFF1976D2),
+background = androidx.compose.ui.graphics.Color(0xFFF5F7FA),
+onBackground = androidx.compose.ui.graphics.Color(0xFF1B1B1F),
+surface = androidx.compose.ui.graphics.Color.White,
+onSurface = androidx.compose.ui.graphics.Color(0xFF1B1B1F)
+)
+) {
     if (!utilisateurConnecte) {
         EcranConnexion(
             email = emailConnexion,
