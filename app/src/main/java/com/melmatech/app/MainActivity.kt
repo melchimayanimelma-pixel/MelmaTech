@@ -974,6 +974,76 @@ fun MelmaTechApp(context: Context) {
                         }
                     }
 
+                    "Plus" -> {
+    LazyColumn(
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        item {
+            Text(
+                "Plus",
+                style = MaterialTheme.typography.headlineMedium
+            )
+            Text(
+                "Autres fonctions de MelmaTech",
+                style = MaterialTheme.typography.bodyMedium
+            )
+        }
+
+        item {
+            Card(
+                onClick = { page = "Rapports" },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(Modifier.padding(16.dp)) {
+                    Text(
+                        "💸 Dépenses",
+                        style = MaterialTheme.typography.titleMedium
+                    )
+                    Text("Consulter et enregistrer les dépenses")
+                }
+            }
+        }
+
+        item {
+            Card(
+                onClick = { page = "Ventes" },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(Modifier.padding(16.dp)) {
+                    Text(
+                        "🧾 Factures et ventes",
+                        style = MaterialTheme.typography.titleMedium
+                    )
+                    Text("Accéder aux ventes et à leur historique")
+                }
+            }
+        }
+
+        item {
+            Card(modifier = Modifier.fillMaxWidth()) {
+                Column(Modifier.padding(16.dp)) {
+                    Text(
+                        "👥 Utilisateurs",
+                        style = MaterialTheme.typography.titleMedium
+                    )
+                    Text("Gestion des comptes : à développer")
+                }
+            }
+        }
+
+        item {
+            Card(modifier = Modifier.fillMaxWidth()) {
+                Column(Modifier.padding(16.dp)) {
+                    Text(
+                        "⚙️ Paramètres",
+                        style = MaterialTheme.typography.titleMedium
+                    )
+                    Text("Configuration de l'entreprise : à développer")
+                }
+            }
+        }
+    }
+                    }
                     "Rapports" -> {
                         LazyColumn(
                             verticalArrangement = Arrangement.spacedBy(10.dp)
