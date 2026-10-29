@@ -106,23 +106,32 @@ fun MelmaTechApp(context: Context) {
     }
 
     val produits = remember {
-        mutableStateListOf<Produit>().apply {
-            try {
-                val json = JSONArray(prefs.getString("produits", "[]"))
-                for (i in 0 until json.length()) {
-                    val p = json.getJSONObject(i)
-                    add(
-                        Produit(
-                            p.getLong("id"),
-                            p.getString("nom"),
-                            p.getDouble("achat"),
-                            p.getDouble("vente"),
-                            p.getInt("quantite")
-                        )
+    mutableStateListOf<Produit>().apply {
+        try {
+            val json = JSONArray(prefs.getString("produits", "[]"))
+
+            for (i in 0 until json.length()) {
+                val p = json.getJSONObject(i)
+
+                add(
+                    Produit(
+                        id = p.getLong("id"),
+                        nom = p.getString("nom"),
+                        achat = p.getDouble("achat"),
+                        vente = p.getDouble("vente"),
+                        quantite = p.getInt("quantite"),
+                        supabaseId = if (p.isNull("supabaseId")) {
+                            null
+                        } else {
+                            p.optString("supabaseId", null)
+                        }
                     )
-                }
-            } catch (_: Exception) {}
+                )
+            }
+        } catch (_: Exception) {
+            // Conserve les produits déjà chargés si une erreur survient.
         }
+    }
     }
 
     val ventes = remember {
