@@ -534,12 +534,17 @@ onSurface = androidx.compose.ui.graphics.Color(0xFF1B1B1F)
             val id = editionId
 
             if (id == null) {
-                produits.add(
-                    Produit(
-                        System.currentTimeMillis(),
-                        nomProduit, a, v, q
-                    )
-                )
+                val nouvelId = System.currentTimeMillis()
+
+produits.add(
+    Produit(
+        nouvelId,
+        nomProduit,
+        a,
+        v,
+        q
+    )
+)
 
 sauvegarderProduits()
 messageProduit = "Produit enregistré sur le téléphone. Synchronisation en cours..."
