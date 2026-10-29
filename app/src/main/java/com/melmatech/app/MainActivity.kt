@@ -81,6 +81,9 @@ fun MelmaTechApp(context: Context) {
     var utilisateurConnecte by remember {
         mutableStateOf(AuthService.estConnecte(context))
     }
+    var roleUtilisateur by remember {
+mutableStateOf<String?>(null)
+    }
 
     var emailConnexion by remember {
         mutableStateOf("")
