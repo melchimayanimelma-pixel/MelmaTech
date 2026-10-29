@@ -541,52 +541,65 @@ onSurface = androidx.compose.ui.graphics.Color(0xFF1B1B1F)
                     )
                 )
 
-                sauvegarderProduits()
-                messageProduit = "Produit enregistré sur le téléphone. Synchronisation en cours..."
+sauvegarderProduits()
+messageProduit = "Produit enregistré sur le téléphone. Synchronisation en cours..."
 
-                val accessToken = AuthService.obtenirAccessToken(context)
+val accessToken = AuthService.obtenirAccessToken(context)
 
-                if (accessToken.isNullOrBlank()) {
-                    messageProduit =
-                        "Produit enregistré sur le téléphone. Reconnecte-toi pour synchroniser."
-                } else {
-                    AuthService.obtenirEntrepriseId(context) { succes, message, entrepriseId ->
-                        if (succes && entrepriseId != null) {
-                            SupabaseService.ajouterProduit(
-                                accessToken,
-                                entrepriseId,
-                                nomProduit,
-                                a,
-                                v,
-                                q
-                            ) { enregistre, resultat ->
-                                messageProduit = if (enregistre) {
-                                    "Produit enregistré et synchronisé avec Supabase."
-                                } else {
-                                    "Produit enregistré sur le téléphone, mais échec Supabase : $resultat"
-                                }
-                            }
-                        } else {
-                            messageProduit =
-                                "Produit enregistré sur le téléphone, mais synchronisation impossible : $message"
-                        }
+if (accessToken.isNullOrBlank()) {
+    messageProduit =
+        "Produit enregistré sur le téléphone. Reconnecte-toi pour synchroniser."
+} else {
+    AuthService.obtenirEntrepriseId(context) { succes, message, entrepriseId ->
+        if (succes && entrepriseId != null) {
+            SupabaseService.ajouterProduit(
+                accessToken,
+                entrepriseId,
+                nomProduit,
+                a,
+                v,
+                q
+            ) { enregistre, resultat, uuid ->
+                if (enregistre && uuid != null) {
+                    val index = produits.indexOfFirst {
+                        it.id == nouvelId
                     }
-                }
-            } else {
-                val index = produits.indexOfFirst {
-                    it.id == id
-                }
 
-                if (index >= 0) {
-                    produits[index] = Produit(
-                        id, nomProduit, a, v, q
-                    )
-                }
+                    if (index >= 0) {
+                        produits[index] = produits[index].copy(
+                            supabaseId = uuid
+                        )
+                        sauvegarderProduits()
+                    }
 
-                sauvegarderProduits()
-                messageProduit =
-                    "Modification enregistrée sur le téléphone. La synchronisation des modifications n'est pas encore activée."
+                    messageProduit =
+                        "Produit enregistré et synchronisé avec Supabase."
+                } else {
+                    messageProduit =
+                        "Produit enregistré sur le téléphone, mais échec de synchronisation : $resultat"
+                }
             }
+        } else {
+            messageProduit =
+                "Produit enregistré sur le téléphone, mais synchronisation impossible : $message"
+        }
+    }
+}
+} else {
+    val index = produits.indexOfFirst {
+        it.id == id
+    }
+
+    if (index >= 0) {
+        produits[index] = Produit(
+            id, nomProduit, a, v, q
+        )
+    }
+
+    sauvegarderProduits()
+    messageProduit =
+        "Modification enregistrée sur le téléphone. La synchronisation des modifications n'est pas encore activée."
+}
 
             nom = ""
             achat = ""
