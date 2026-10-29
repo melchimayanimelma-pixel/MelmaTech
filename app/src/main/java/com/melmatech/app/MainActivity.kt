@@ -291,10 +291,30 @@ mutableStateOf<String?>(null)
                         chargementProduits = false
 
                         if (ok && produitsEnLigne != null) {
-                            messageProduit =
-                                "${produitsEnLigne.length()} produit(s) trouvé(s) sur Supabase."
-                        } else {
-                            messageProduit = resultat
+    produits.clear()
+
+    for (i in 0 until produitsEnLigne.length()) {
+        val p = produitsEnLigne.getJSONObject(i)
+        val idSupabase = p.getString("id")
+
+        produits.add(
+            Produit(
+                id = idSupabase.toLongOrNull()
+                    ?: idSupabase.hashCode().toLong(),
+                nom = p.getString("nom"),
+                achat = p.getDouble("prix_achat"),
+                vente = p.getDouble("prix_vente"),
+                quantite = p.getInt("quantite_stock"),
+                supabaseId = idSupabase
+            )
+        )
+    }
+
+    messageProduit =
+        "${produits.size} produit(s) chargé(s) depuis Supabase."
+} else {
+    messageProduit = resultat
+}
                         }
                     }
 
