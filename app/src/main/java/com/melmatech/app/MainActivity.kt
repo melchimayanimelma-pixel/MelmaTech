@@ -1417,7 +1417,6 @@ if (accessToken.isNullOrBlank()) {
         }
     }
 }
-}
 
 // Cette fonction doit être déclarée en dehors de MelmaTechApp.
 @Composable
