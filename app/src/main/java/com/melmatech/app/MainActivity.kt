@@ -1402,7 +1402,10 @@ if (accessToken.isNullOrBlank()) {
                                 )
                             }
 
-                            items(depenses.toList().reversed(), key = { it.id }) { d ->
+                            items<Depense>(
+    items = depenses.toList().reversed(),
+    key = { depense -> depense.id }
+) { d ->
                                 Card {
                                     Column(Modifier.padding(12.dp)) {
                                         Text(d.description)
