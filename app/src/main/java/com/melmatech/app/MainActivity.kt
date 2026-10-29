@@ -681,35 +681,34 @@ if (accessToken.isNullOrBlank()) {
                                             "Bénéfice unitaire : " +
                                                 argent(p.vente - p.achat)
                                         )
-                                        Row {
-                                            TextButton(onClick = {
-                                                editionId = p.id
-                                                nom = p.nom
-                                                achat = p.achat.toString()
-                                                prixVente = p.vente.toString()
-                                                quantite = p.quantite.toString()
-                                            }) {
-                                                Text("Modifier")
-                                            }
-                                            TextButton(onClick = {
-                                                produits.removeAll { it.id == p.id }
-                                                sauvegarderProduits()
-                                                if (editionId == p.id) {
-                                                    editionId = null
-                                                    nom = ""
-                                                    achat = ""
-                                                    prixVente = ""
-                                                    quantite = ""
-                                                }
-                                            }) {
-                                                Text("Supprimer")
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
+                                        if (roleUtilisateur == "administrateur") {
+    Row {
+        TextButton(onClick = {
+            editionId = p.id
+            nom = p.nom
+            achat = p.achat.toString()
+            prixVente = p.vente.toString()
+            quantite = p.quantite.toString()
+        }) {
+            Text("Modifier")
+        }
+
+        TextButton(onClick = {
+            produits.removeAll { it.id == p.id }
+            sauvegarderProduits()
+
+            if (editionId == p.id) {
+                editionId = null
+                nom = ""
+                achat = ""
+                prixVente = ""
+                quantite = ""
+            }
+        }) {
+            Text("Supprimer")
+        }
+    }
+}
 
                     "Ventes" -> {
                         val suggestions = produits.filter {
