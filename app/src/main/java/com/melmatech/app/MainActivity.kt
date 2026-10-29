@@ -411,8 +411,12 @@ onSurface = androidx.compose.ui.graphics.Color(0xFF1B1B1F)
             },
             bottomBar = {
                 NavigationBar {
-                    listOf("Accueil", "Produits", "Ventes", "Rapports", "Plus")
-                        .forEach { onglet ->
+                    val onglets = if (roleUtilisateur == "administrateur") {
+    listOf("Accueil", "Produits", "Ventes", "Rapports", "Plus")
+} else {
+    listOf("Accueil", "Ventes", "Rapports", "Plus")
+}
+                        onglets.forEach { onglet ->
                             NavigationBarItem(
                                 selected = page == onglet,
                                 onClick = { page = onglet },
