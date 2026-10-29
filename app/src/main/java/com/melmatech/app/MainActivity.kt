@@ -181,18 +181,26 @@ fun MelmaTechApp(context: Context) {
     }
 
     fun sauvegarderProduits() {
-        val json = JSONArray()
-        produits.forEach { p ->
-            json.put(JSONObject().apply {
-                put("id", p.id)
-                put("nom", p.nom)
-                put("achat", p.achat)
-                put("vente", p.vente)
-                put("quantite", p.quantite)
-            })
-        }
-        prefs.edit().putString("produits", json.toString()).apply()
+    val json = JSONArray()
+
+    produits.forEach { p ->
+        json.put(JSONObject().apply {
+            put("id", p.id)
+            put("nom", p.nom)
+            put("achat", p.achat)
+            put("vente", p.vente)
+            put("quantite", p.quantite)
+
+            if (p.supabaseId != null) {
+                put("supabaseId", p.supabaseId)
+            }
+        })
     }
+
+    prefs.edit()
+        .putString("produits", json.toString())
+        .apply()
+}
 
     fun sauvegarderVentes() {
         val json = JSONArray()
