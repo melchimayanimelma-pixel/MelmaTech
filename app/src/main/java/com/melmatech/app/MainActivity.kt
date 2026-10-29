@@ -264,35 +264,51 @@ mutableStateOf<String?>(null)
     mutableStateOf(false)
     }
     LaunchedEffect(utilisateurConnecte) {
-        if (utilisateurConnecte) {
-            val accessToken = AuthService.obtenirAccessToken(context)
+    if (utilisateurConnecte) {
 
-            if (!accessToken.isNullOrBlank()) {
-                chargementProduits = true
+        AuthService.obtenirRole(context) { succesRole, messageRole, role ->
+            if (succesRole) {
+                roleUtilisateur = role?.lowercase()
+            } else {
+                roleUtilisateur = null
+                messageProduit = messageRole
+            }
+        }
 
-                AuthService.obtenirEntrepriseId(context) { succes, message, entrepriseId ->
-                    if (succes && entrepriseId != null) {
-                        SupabaseService.chargerProduits(
-                            accessToken,
-                            entrepriseId
-                        ) { ok, resultat, produitsEnLigne ->
-                            chargementProduits = false
+        val accessToken = AuthService.obtenirAccessToken(context)
 
-                            if (ok && produitsEnLigne != null) {
-                                messageProduit =
-                                    "${produitsEnLigne.length()} produit(s) trouvé(s) sur Supabase."
-                            } else {
-                                messageProduit = resultat
-                            }
-                        }
-                    } else {
+        if (!accessToken.isNullOrBlank()) {
+            chargementProduits = true
+
+            AuthService.obtenirEntrepriseId(context) { succes, message, entrepriseId ->
+                if (succes && entrepriseId != null) {
+
+                    SupabaseService.chargerProduits(
+                        accessToken,
+                        entrepriseId
+                    ) { ok, resultat, produitsEnLigne ->
+
                         chargementProduits = false
-                        messageProduit = message
+
+                        if (ok && produitsEnLigne != null) {
+                            messageProduit =
+                                "${produitsEnLigne.length()} produit(s) trouvé(s) sur Supabase."
+                        } else {
+                            messageProduit = resultat
+                        }
                     }
+
+                } else {
+                    chargementProduits = false
+                    messageProduit = message
                 }
             }
         }
+
+    } else {
+        roleUtilisateur = null
     }
+}
 
     var client by remember { mutableStateOf("") }
     var recherche by remember { mutableStateOf("") }
