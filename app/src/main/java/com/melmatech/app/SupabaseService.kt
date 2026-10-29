@@ -48,58 +48,84 @@ object SupabaseService {
     }
 
     fun ajouterProduit(
-        accessToken: String,
-        entrepriseId: String,
-        nom: String,
-        prixAchat: Double,
-        prixVente: Double,
-        quantite: Int,
-        callback: (Boolean, String) -> Unit
-    ) {
-        val url = "${SupabaseConfig.url}/rest/v1/produits"
+    accessToken: String,
+    entrepriseId: String,
+    nom: String,
+    prixAchat: Double,
+    prixVente: Double,
+    quantite: Int,
+    callback: (Boolean, String, String?) -> Unit
+) {
+    val url = "${SupabaseConfig.url}/rest/v1/produits"
 
-        val donnees = JSONObject().apply {
-            put("entreprise_id", entrepriseId)
-            put("nom", nom)
-            put("prix_achat", prixAchat)
-            put("prix_vente", prixVente)
-            put("quantite_stock", quantite)
-        }
+    val donnees = JSONObject().apply {
+        put("entreprise_id", entrepriseId)
+        put("nom", nom)
+        put("prix_achat", prixAchat)
+        put("prix_vente", prixVente)
+        put("quantite_stock", quantite)
+    }
 
-        val request = Request.Builder()
-            .url(url)
-            .addHeader("apikey", SupabaseConfig.key)
-            .addHeader("Authorization", "Bearer $accessToken")
-            .addHeader("Content-Type", "application/json")
-            .addHeader("Prefer", "return=minimal")
-            .post(donnees.toString().toRequestBody(jsonType))
-            .build()
+    val request = Request.Builder()
+        .url(url)
+        .addHeader("apikey", SupabaseConfig.key)
+        .addHeader("Authorization", "Bearer $accessToken")
+        .addHeader("Content-Type", "application/json")
+        .addHeader("Prefer", "return=representation")
+        .post(donnees.toString().toRequestBody(jsonType))
+        .build()
 
-        client.newCall(request).enqueue(object : Callback {
-            override fun onFailure(call: Call, e: IOException) {
+    client.newCall(request).enqueue(object : Callback {
+        override fun onFailure(call: Call, e: IOException) {
+            Handler(Looper.getMainLooper()).post {
                 callback(
                     false,
-                    "Erreur réseau : ${e.message ?: "connexion impossible"}"
+                    "Erreur réseau : ${e.message ?: "connexion impossible"}",
+                    null
                 )
             }
+        }
 
-            override fun onResponse(call: Call, response: Response) {
-                response.use {
-                    if (it.isSuccessful) {
-                        callback(true, "Produit synchronisé avec Supabase.")
-                    } else {
+        override fun onResponse(call: Call, response: Response) {
+            response.use {
+                val corps = it.body?.string().orEmpty()
+
+                if (!it.isSuccessful) {
+                    Handler(Looper.getMainLooper()).post {
                         callback(
                             false,
-                            "Erreur Supabase (${it.code}) : ${
-                                it.body?.string() ?: "enregistrement refusé"
-                            }"
+                            "Erreur Supabase (${it.code}) : $corps",
+                            null
+                        )
+                    }
+                    return
+                }
+
+                try {
+                    val resultat = JSONArray(corps)
+                    val uuid = resultat.getJSONObject(0).getString("id")
+
+                    Handler(Looper.getMainLooper()).post {
+                        callback(
+                            true,
+                            "Produit synchronisé avec Supabase.",
+                            uuid
+                        )
+                    }
+                } catch (_: Exception) {
+                    Handler(Looper.getMainLooper()).post {
+                        callback(
+                            false,
+                            "Produit créé, mais son identifiant n'a pas pu être récupéré.",
+                            null
                         )
                     }
                 }
             }
-        })
-    }
-fun chargerProduits(
+        }
+    })
+}
+    fun chargerProduits(
         accessToken: String,
         entrepriseId: String,
         callback: (Boolean, String, JSONArray?) -> Unit
