@@ -721,11 +721,11 @@ if (accessToken.isNullOrBlank()) {
 
                     "Ventes" -> {
                         val suggestions = produits.filter {
-                            recherche.isNotBlank() &&
-                                it.nom.contains(recherche.trim(), ignoreCase = true) &&
-                                it.quantite > 0
-                        }.take(6)
-
+    produitChoisi == null &&
+        recherche.isNotBlank() &&
+        it.nom.contains(recherche.trim(), ignoreCase = true) &&
+        it.quantite > 0
+}.take(6)
                         val totalPanier = panier.sumOf { it.total }
 
                         LazyColumn(
