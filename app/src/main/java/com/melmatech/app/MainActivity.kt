@@ -709,6 +709,11 @@ if (accessToken.isNullOrBlank()) {
         }
     }
 }
+                                    }
+                                }
+                            }
+                        }
+                    }
 
                     "Ventes" -> {
                         val suggestions = produits.filter {
