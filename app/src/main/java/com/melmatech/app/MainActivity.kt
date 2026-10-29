@@ -24,7 +24,8 @@ data class Produit(
     val nom: String,
     val achat: Double,
     val vente: Double,
-    val quantite: Int
+    val quantite: Int,
+    val supabaseId: String? = null
 )
 
 data class LigneVente(
