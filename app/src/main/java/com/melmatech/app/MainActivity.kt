@@ -1433,10 +1433,10 @@ if (accessToken.isNullOrBlank()) {
                                 )
                             }
 
-                            items<Depense>(
-    items = depenses.toList().sortedByDescending { it.date },
-    key = { depense -> depense.id }
-)
+                                                        items<Depense>(
+                                items = depenses.toList().sortedByDescending { it.date },
+                                key = { depense -> depense.id }
+                            ) { depense ->
                                 Card {
                                     Column(
                                         modifier = Modifier.padding(12.dp)
@@ -1449,6 +1449,11 @@ if (accessToken.isNullOrBlank()) {
                         }
                     }
                 }
+            }
+        }
+    }
+}
+
 // Cette fonction doit être déclarée en dehors de MelmaTechApp.
 @Composable
 fun DashboardCard(titre: String, montant: String) {
