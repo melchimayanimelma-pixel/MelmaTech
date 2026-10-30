@@ -1434,9 +1434,9 @@ if (accessToken.isNullOrBlank()) {
                             }
 
                             items<Depense>(
-                                items = depenses.toList().reversed(),
-                                key = { depense: Depense -> depense.id }
-                            ) { depense: Depense ->
+    items = depenses.toList().sortedByDescending { it.date },
+    key = { depense -> depense.id }
+)
                                 Card {
                                     Column(
                                         modifier = Modifier.padding(12.dp)
