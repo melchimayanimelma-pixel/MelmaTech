@@ -1304,44 +1304,308 @@ fun MelmaTechApp(context: Context) {
 
                                                 sauvegarderDepenses()
 
-                                                descriptionDepense = ""
-                                                montantDepense = ""
-                                                messageDepense =
-                                                    "Dépense enregistrée."
-                                            } else {
-                                                messageDepense =
-                                                    "Vérifie la description et le montant."
-                                            }
-                                        },
-                                        modifier = Modifier.fillMaxWidth()
-                                    ) {
-                                        Text("Enregistrer la dépense")
-                                    }
 
-                                    Text(messageDepense)
+"Rapports" -> {
 
-                                    HorizontalDivider()
+    var periode by remember { mutableStateOf("Tout") }
 
-                                    Text("Historique des dépenses")
-                                }
+    val maintenant = System.currentTimeMillis()
 
-                                items(
-                                    depenses.toList().sortedByDescending {
-                                        it.date
-                                    },
-                                    key = { it.id }
-                                ) { d ->
-                                    Card {
-                                        Column(
-                                            Modifier.padding(12.dp)
-                                        ) {
-                                            Text(d.description)
-                                            Text(argent(d.montant))
-                                        }
-                                    }
-                                }
-                            }
-                        }
+    fun debutPeriode(type: String): Long {
+        val cal = java.util.Calendar.getInstance()
+
+        when (type) {
+            "Aujourd'hui" -> {
+                cal.set(
+                    java.util.Calendar.HOUR_OF_DAY, 0
+                )
+                cal.set(java.util.Calendar.MINUTE, 0)
+                cal.set(java.util.Calendar.SECOND, 0)
+                cal.set(java.util.Calendar.MILLISECOND, 0)
+            }
+
+            "Cette semaine" -> {
+                cal.set(
+                    java.util.Calendar.DAY_OF_WEEK,
+                    java.util.Calendar.MONDAY
+                )
+                cal.set(
+                    java.util.Calendar.HOUR_OF_DAY, 0
+                )
+                cal.set(java.util.Calendar.MINUTE, 0)
+                cal.set(java.util.Calendar.SECOND, 0)
+                cal.set(java.util.Calendar.MILLISECOND, 0)
+            }
+
+            "Ce mois" -> {
+                cal.set(java.util.Calendar.DAY_OF_MONTH, 1)
+                cal.set(
+                    java.util.Calendar.HOUR_OF_DAY, 0
+                )
+                cal.set(java.util.Calendar.MINUTE, 0)
+                cal.set(java.util.Calendar.SECOND, 0)
+                cal.set(java.util.Calendar.MILLISECOND, 0)
+            }
+
+            else -> return 0L
+        }
+
+        return cal.timeInMillis
+    }
+
+    val debut = debutPeriode(periode)
+
+    val ventesFiltrees = ventes.filter {
+        it.date >= debut && it.date <= maintenant
+    }
+
+    val depensesFiltrees = depenses.filter {
+        it.date >= debut && it.date <= maintenant
+    }
+
+    val caPeriode = ventesFiltrees.sumOf { it.total }
+    val encaissePeriode = ventesFiltrees.sumOf { it.paye }
+    val dettesPeriode = ventesFiltrees.sumOf { it.reste }
+    val coutPeriode = ventesFiltrees.sumOf { it.cout }
+    val depensesPeriode = depensesFiltrees.sumOf { it.montant }
+    val beneficeBrut = caPeriode - coutPeriode
+    val beneficeNet = beneficeBrut - depensesPeriode
+
+    val produitsFaibles = produits.filter {
+        it.quantite in 1..5
+    }
+
+    val produitsEpuises = produits.filter {
+        it.quantite <= 0
+    }
+
+    LazyColumn(
+        verticalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
+        item {
+            Text(
+                "Rapports du commerce",
+                style = MaterialTheme.typography.headlineSmall
+            )
+
+            Text("Analyse détaillée de votre activité.")
+        }
+
+        item {
+            Text(
+                "Choisir une période",
+                style = MaterialTheme.typography.titleMedium
+            )
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                listOf(
+                    "Aujourd'hui",
+                    "Cette semaine",
+                    "Ce mois",
+                    "Tout"
+                ).forEach { choix ->
+
+                    FilterChip(
+                        selected = periode == choix,
+                        onClick = { periode = choix },
+                        label = { Text(choix) }
+                    )
+                }
+            }
+        }
+
+        item {
+            Text(
+                "1. Rapport des ventes",
+                style = MaterialTheme.typography.titleLarge
+            )
+
+            DashboardCard(
+                "Chiffre d'affaires",
+                argent(caPeriode)
+            )
+
+            DashboardCard(
+                "Montant encaissé",
+                argent(encaissePeriode)
+            )
+
+            DashboardCard(
+                "Dettes clients",
+                argent(dettesPeriode)
+            )
+
+            Text("Nombre de ventes : ${ventesFiltrees.size}")
+        }
+
+        item {
+            HorizontalDivider()
+
+            Text(
+                "2. Rapport des bénéfices",
+                style = MaterialTheme.typography.titleLarge
+            )
+
+            DashboardCard(
+                "Coût des marchandises vendues",
+                argent(coutPeriode)
+            )
+
+            DashboardCard(
+                "Bénéfice brut",
+                argent(beneficeBrut)
+            )
+
+            DashboardCard(
+                "Dépenses déduites",
+                argent(depensesPeriode)
+            )
+
+            DashboardCard(
+                "Bénéfice net estimé",
+                argent(beneficeNet)
+            )
+        }
+
+        item {
+            HorizontalDivider()
+
+            Text(
+                "3. Historique des ventes",
+                style = MaterialTheme.typography.titleLarge
+            )
+        }
+
+        if (ventesFiltrees.isEmpty()) {
+            item {
+                Text("Aucune vente pour cette période.")
+            }
+        }
+
+        items(
+            ventesFiltrees.sortedByDescending { it.date },
+            key = { it.id }
+        ) { v ->
+            Card {
+                Column(
+                    Modifier.padding(12.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Text(
+                        "Facture n° ${v.id}",
+                        style = MaterialTheme.typography.titleMedium
+                    )
+
+                    Text("Client : ${v.client}")
+
+                    Text(
+                        "Date : " +
+                        java.text.SimpleDateFormat(
+                            "dd/MM/yyyy HH:mm",
+                            Locale.getDefault()
+                        ).format(java.util.Date(v.date))
+                    )
+
+                    Text("Total : ${argent(v.total)}")
+                    Text("Payé : ${argent(v.paye)}")
+                    Text("Reste : ${argent(v.reste)}")
+
+                    Text(
+                        "Bénéfice sur cette vente : " +
+                        argent(v.total - v.cout)
+                    )
+                }
+            }
+        }
+
+        item {
+            HorizontalDivider()
+
+            Text(
+                "4. Rapport des dépenses",
+                style = MaterialTheme.typography.titleLarge
+            )
+
+            DashboardCard(
+                "Total des dépenses",
+                argent(depensesPeriode)
+            )
+
+            Text("Nombre de dépenses : ${depensesFiltrees.size}")
+        }
+
+        if (depensesFiltrees.isEmpty()) {
+            item {
+                Text("Aucune dépense pour cette période.")
+            }
+        }
+
+        items(
+            depensesFiltrees.sortedByDescending { it.date },
+            key = { it.id }
+        ) { d ->
+            Card {
+                Column(Modifier.padding(12.dp)) {
+                    Text(
+                        d.description,
+                        style = MaterialTheme.typography.titleMedium
+                    )
+
+                    Text(argent(d.montant))
+
+                    Text(
+                        java.text.SimpleDateFormat(
+                            "dd/MM/yyyy HH:mm",
+                            Locale.getDefault()
+                        ).format(java.util.Date(d.date))
+                    )
+                }
+            }
+        }
+
+        item {
+            HorizontalDivider()
+
+            Text(
+                "5. État du stock",
+                style = MaterialTheme.typography.titleLarge
+            )
+
+            DashboardCard(
+                "Produits disponibles",
+                produits.count { it.quantite > 5 }.toString()
+            )
+
+            DashboardCard(
+                "Stocks faibles (5 ou moins)",
+                produitsFaibles.size.toString()
+            )
+
+            DashboardCard(
+                "Produits épuisés",
+                produitsEpuises.size.toString()
+            )
+
+            Text("Produits à surveiller")
+        }
+
+        items(
+            produitsFaibles + produitsEpuises,
+            key = { it.id }
+        ) { p ->
+            Card {
+                Column(Modifier.padding(12.dp)) {
+                    Text(p.nom)
+                    Text("Stock restant : ${p.quantite}")
+                }
+            }
+        }
+    }
+}
+
 
                         "Plus" -> {
 
