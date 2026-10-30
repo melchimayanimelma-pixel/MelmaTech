@@ -1433,14 +1433,10 @@ if (accessToken.isNullOrBlank()) {
                                 )
                             }
 
-                                                                                    items<Depense>(
-                                items = depenses.toList().sortedByDescending { depense: Depense ->
-                                    depense.date
-                                },
-                                key = { depense: Depense ->
-                                    depense.id
-                                }
-                            ) { depense: Depense ->
+                            items(
+                                items = depenses.toList().sortedByDescending { it.date },
+                                key = { it.id }
+                            ) { depense ->
                                 Card {
                                     Column(
                                         modifier = Modifier.padding(12.dp)
