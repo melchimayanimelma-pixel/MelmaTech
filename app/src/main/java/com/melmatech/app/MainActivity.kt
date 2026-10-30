@@ -1414,7 +1414,8 @@ if (accessToken.isNullOrBlank()) {
                                         Text(argent(depense.montant))
                                     }
                                 }
-                                                                                    }
+                             }
+                        }
 // Cette fonction doit être déclarée en dehors de MelmaTechApp.
 @Composable
 fun DashboardCard(titre: String, montant: String) {
