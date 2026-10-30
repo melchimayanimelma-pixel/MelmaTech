@@ -1404,20 +1404,14 @@ if (accessToken.isNullOrBlank()) {
 
                                                                                                                 items<Depense>(
 items = depenses.toList().reversed(),
-key = { depense -> depense.id }
-) { depense ->
+key = { depense: Depense -> depense.id }
+) { depense: Depense ->
 Card {
 Column(
 modifier = Modifier.padding(12.dp)
 ) {
 Text(depense.description)
 Text(argent(depense.montant))
-}
-}
-}
-}
-}
-}
 }
 }
 }
