@@ -1322,7 +1322,7 @@ if (accessToken.isNullOrBlank()) {
         }
     }
 }
-                    "Rapports" -> {
+                                        "Rapports" -> {
                         LazyColumn(
                             verticalArrangement = Arrangement.spacedBy(10.dp)
                         ) {
@@ -1331,20 +1331,44 @@ if (accessToken.isNullOrBlank()) {
                                     "Rapports du commerce",
                                     style = MaterialTheme.typography.headlineSmall
                                 )
+
                                 DashboardCard(
                                     "Chiffre d'affaires",
                                     argent(chiffreAffaires)
                                 )
-                                DashboardCard("Montant encaissé", argent(totalEncaisse))
-                                DashboardCard("Dettes clients", argent(totalDettes))
-                                DashboardCard("Coût des marchandises vendues", argent(coutMarchandises))
-                                DashboardCard("Dépenses", argent(totalDepenses))
-                                DashboardCard("Bénéfice estimé", argent(benefice))
+
+                                DashboardCard(
+                                    "Montant encaissé",
+                                    argent(totalEncaisse)
+                                )
+
+                                DashboardCard(
+                                    "Dettes clients",
+                                    argent(totalDettes)
+                                )
+
+                                DashboardCard(
+                                    "Coût des marchandises vendues",
+                                    argent(coutMarchandises)
+                                )
+
+                                DashboardCard(
+                                    "Dépenses",
+                                    argent(totalDepenses)
+                                )
+
+                                DashboardCard(
+                                    "Bénéfice estimé",
+                                    argent(benefice)
+                                )
+
                                 HorizontalDivider()
+
                                 Text(
                                     "Nouvelle dépense",
                                     style = MaterialTheme.typography.titleLarge
                                 )
+
                                 OutlinedTextField(
                                     value = descriptionDepense,
                                     onValueChange = { descriptionDepense = it },
@@ -1352,6 +1376,7 @@ if (accessToken.isNullOrBlank()) {
                                     modifier = Modifier.fillMaxWidth(),
                                     singleLine = true
                                 )
+
                                 OutlinedTextField(
                                     value = montantDepense,
                                     onValueChange = { montantDepense = it },
@@ -1362,11 +1387,13 @@ if (accessToken.isNullOrBlank()) {
                                     modifier = Modifier.fillMaxWidth(),
                                     singleLine = true
                                 )
+
                                 Button(
                                     onClick = {
                                         val m = montantDepense
                                             .replace(",", ".")
                                             .toDoubleOrNull()
+
                                         if (
                                             descriptionDepense.isNotBlank() &&
                                             m != null && m > 0
@@ -1379,6 +1406,7 @@ if (accessToken.isNullOrBlank()) {
                                                     System.currentTimeMillis()
                                                 )
                                             )
+
                                             sauvegarderDepenses()
                                             descriptionDepense = ""
                                             montantDepense = ""
@@ -1392,31 +1420,35 @@ if (accessToken.isNullOrBlank()) {
                                 ) {
                                     Text("Enregistrer la dépense")
                                 }
+
                                 if (messageDepense.isNotBlank()) {
                                     Text(messageDepense)
                                 }
+
                                 HorizontalDivider()
+
                                 Text(
                                     "Historique des dépenses",
                                     style = MaterialTheme.typography.titleMedium
                                 )
                             }
 
-                                                                                                                items<Depense>(
-items = depenses.toList().reversed(),
-key = { depense: Depense -> depense.id }
-) { depense: Depense ->
-Card {
-Column(
-modifier = Modifier.padding(12.dp)
-) {
-Text(depense.description)
-Text(argent(depense.montant))
-}
-}
-}
-}
-}
+                            items<Depense>(
+                                items = depenses.toList().reversed(),
+                                key = { depense: Depense -> depense.id }
+                            ) { depense: Depense ->
+                                Card {
+                                    Column(
+                                        modifier = Modifier.padding(12.dp)
+                                    ) {
+                                        Text(depense.description)
+                                        Text(argent(depense.montant))
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
 // Cette fonction doit être déclarée en dehors de MelmaTechApp.
 @Composable
 fun DashboardCard(titre: String, montant: String) {
