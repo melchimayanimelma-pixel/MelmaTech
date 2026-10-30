@@ -1433,16 +1433,20 @@ if (accessToken.isNullOrBlank()) {
                                 )
                             }
 
-                                                        items<Depense>(
-                                items = depenses.toList().sortedByDescending { it.date },
-                                key = { depense -> depense.id }
-                            ) { depense ->
+                                                                                    items<Depense>(
+                                items = depenses.toList().sortedByDescending { depense: Depense ->
+                                    depense.date
+                                },
+                                key = { depense: Depense ->
+                                    depense.id
+                                }
+                            ) { depense: Depense ->
                                 Card {
                                     Column(
                                         modifier = Modifier.padding(12.dp)
                                     ) {
-                                        Text(depense.description)
-                                        Text(argent(depense.montant))
+                                        Text(text = depense.description)
+                                        Text(text = argent(depense.montant))
                                     }
                                 }
                             }
@@ -1452,7 +1456,7 @@ if (accessToken.isNullOrBlank()) {
             }
         }
     }
-}
+    }
 
 // Cette fonction doit être déclarée en dehors de MelmaTechApp.
 @Composable
