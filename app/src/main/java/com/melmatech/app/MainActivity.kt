@@ -1299,7 +1299,7 @@ Text("Reste : ${argent(v.reste, devise)}")
                         }
 
             
-"Rapports" -> {
+                        "Rapports" -> {
 
     var periode by remember { mutableStateOf("Tout") }
 
@@ -1544,8 +1544,7 @@ Text(
     }
 }
 
-                        
-"Plus" -> {
+                        "Plus" -> {
 
     var confirmerDeconnexion by remember {
         mutableStateOf(false)
@@ -1698,8 +1697,7 @@ Text(
 }
 
 
-                        
-"Entreprise" -> {
+                        "Entreprise" -> {
 
     if (!estAdministrateur) {
         Text("Accès réservé à l'administrateur.")
@@ -1864,7 +1862,7 @@ Slider(
     }
 }
 
-"Paramètres" -> {
+                        "Paramètres" -> {
     Column(
         Modifier
             .fillMaxWidth()
