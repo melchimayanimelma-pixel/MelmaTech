@@ -612,35 +612,35 @@ fun MelmaTechApp(context: Context) {
                                 item {
                                     DashboardCard(
                                         "Chiffre d'affaires",
-                                        argent(chiffreAffaires)
+                                        argent(chiffreAffaires, devise)
                                     )
                                 }
 
                                 item {
                                     DashboardCard(
                                         "Argent encaissé",
-                                        argent(totalEncaisse)
+                                        argent(totalEncaisse, devise)
                                     )
                                 }
 
                                 item {
                                     DashboardCard(
                                         "Dettes clients",
-                                        argent(totalDettes)
+                                        argent(totalDettes, devise)
                                     )
                                 }
 
                                 item {
                                     DashboardCard(
                                         "Dépenses",
-                                        argent(totalDepenses)
+                                        argent(totalDepenses, devise)
                                     )
                                 }
 
                                 item {
                                     DashboardCard(
                                         "Bénéfice estimé",
-                                        argent(benefice)
+                                        argent(benefice, devise)
                                     )
                                 }
 
