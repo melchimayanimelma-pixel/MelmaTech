@@ -1499,7 +1499,7 @@ Text(
                         d.description,
                         style = MaterialTheme.typography.titleMedium
                     )
-                    Text(argent(d.montant))
+                    Text(argent(d.montant, devise))
                     Text(
                         java.text.SimpleDateFormat(
                             "dd/MM/yyyy HH:mm",
