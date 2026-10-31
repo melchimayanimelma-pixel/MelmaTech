@@ -1461,12 +1461,13 @@ DashboardCard("Bénéfice net estimé", argent(beneficeNet, devise))
                                 Locale.getDefault()
                             ).format(java.util.Date(v.date))
                     )
-                    Text("Total : ${argent(v.total)}")
-                    Text("Payé : ${argent(v.paye)}")
-                    Text("Reste : ${argent(v.reste)}")
-                    Text(
-                        "Bénéfice sur cette vente : " +
-                            argent(v.total - v.cout)
+                    Text("Total : ${argent(v.total, devise)}")
+Text("Payé : ${argent(v.paye, devise)}")
+Text("Reste : ${argent(v.reste, devise)}")
+Text(
+    "Bénéfice sur cette vente : " +
+        argent(v.total - v.cout, devise)
+)
                     )
                 }
             }
