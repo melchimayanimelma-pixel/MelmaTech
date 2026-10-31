@@ -1096,7 +1096,7 @@ Text("Vente : ${argent(p.vente, devise)}")
 
                                 item {
                                     Text(
-                                        "TOTAL : ${argent(totalPanier)}",
+                                        "TOTAL : ${argent(totalPanier, devise)}",
                                         style = MaterialTheme.typography.headlineSmall
                                     )
 
