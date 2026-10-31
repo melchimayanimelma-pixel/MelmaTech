@@ -1468,7 +1468,6 @@ Text(
     "Bénéfice sur cette vente : " +
         argent(v.total - v.cout, devise)
 )
-                    )
                 }
             }
         }
