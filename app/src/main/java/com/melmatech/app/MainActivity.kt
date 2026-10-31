@@ -1778,7 +1778,15 @@ fun MelmaTechApp(context: Context) {
                 }
 
                 if (logoEntreprise.isNotBlank()) {
-                    Text("Logo sélectionné.")
+    Image(
+        painter = rememberAsyncImagePainter(model = logoEntreprise),
+        contentDescription = "Logo de l'entreprise",
+        modifier = Modifier.size(
+            width = 160.dp * tailleLogoEntreprise,
+            height = 120.dp * tailleLogoEntreprise
+        ),
+        contentScale = ContentScale.Fit
+    )
                 }
             }
 
