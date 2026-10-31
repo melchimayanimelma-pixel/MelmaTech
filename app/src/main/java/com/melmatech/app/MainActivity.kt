@@ -1838,7 +1838,7 @@ Slider(
                             .putString("entreprise_impot", impotEntreprise)
                             .putString("entreprise_logo", logoEntreprise)
 .putFloat("entreprise_logo_taille", tailleLogoEntreprise)
-
+.apply()
                         messageEntreprise = "Informations enregistrées avec succès."
                     },
                     modifier = Modifier.fillMaxWidth()
