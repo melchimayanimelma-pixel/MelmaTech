@@ -1780,7 +1780,26 @@ fun MelmaTechApp(context: Context) {
             }
 
             item {
-                Button(
+                // Réglage de la taille du logo
+Text("Taille du logo")
+
+Text(
+    when {
+        tailleLogoEntreprise < 0.9f -> "Petit"
+        tailleLogoEntreprise < 1.3f -> "Moyen"
+        else -> "Grand"
+    }
+)
+
+Slider(
+    value = tailleLogoEntreprise,
+    onValueChange = { tailleLogoEntreprise = it },
+    valueRange = 0.7f..1.5f,
+    steps = 1
+)
+            }
+                item {
+                    Button(
                     onClick = {
                         prefs.edit()
                             .putString("entreprise_nom", nomEntreprise)
