@@ -1222,14 +1222,14 @@ Text("Vente : ${argent(p.vente, devise)}")
 
                                             v.lignes.forEach { ligne ->
                                                 Text(
-                                                    "${ligne.nom} × ${ligne.quantite} = ${argent(ligne.total)}"
+    "${ligne.nom} × ${ligne.quantite} = ${argent(ligne.total, devise)}"
+)
                                                 )
                                             }
 
-                                            Text("Total : ${argent(v.total)}")
-                                            Text("Payé : ${argent(v.paye)}")
-                                            Text("Reste : ${argent(v.reste)}")
-
+                                            Text("Total : ${argent(v.total, devise)}")
+Text("Payé : ${argent(v.paye, devise)}")
+Text("Reste : ${argent(v.reste, devise)}")
                                             if (v.reste > 0) {
                                                 if (paiementId == v.id) {
 
