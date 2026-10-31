@@ -96,6 +96,9 @@ fun MelmaTechApp(context: Context) {
     }
 
     var page by remember { mutableStateOf("Accueil") }
+    var devise by remember {
+    mutableStateOf(prefs.getString("devise", "USD") ?: "USD")
+    }
     
     // Informations de l'entreprise
     var nomEntreprise by remember {
