@@ -1479,7 +1479,7 @@ Text(
                 "4. Rapport des dépenses",
                 style = MaterialTheme.typography.titleLarge
             )
-            DashboardCard("Total des dépenses", argent(depensesPeriode))
+            DashboardCard("Total des dépenses", argent(depensesPeriode, devise))
             Text("Nombre de dépenses : ${depensesFiltrees.size}")
         }
 
