@@ -445,6 +445,17 @@ fun MelmaTechApp(context: Context) {
     val coutMarchandises = ventes.sumOf { it.cout }
     val totalDepenses = depenses.sumOf { it.montant }
     val benefice = chiffreAffaires - coutMarchandises - totalDepenses
+    BackHandler(
+    enabled = utilisateurConnecte && page != "Accueil"
+) {
+    page = when (page) {
+        "Entreprise",
+        "Paramètres",
+        "Utilisateurs" -> "Plus"
+
+        else -> "Accueil"
+    }
+    }
 
     MaterialTheme(
         colorScheme = lightColorScheme(
