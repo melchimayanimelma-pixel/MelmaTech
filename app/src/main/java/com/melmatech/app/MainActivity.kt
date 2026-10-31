@@ -600,8 +600,7 @@ fun MelmaTechApp(context: Context) {
                                         "Bienvenue sur MelmaTech",
                                         style = MaterialTheme.typography.headlineSmall
                                     )
-                                    Text("Gestion de votre commerce en USD")
-                                }
+                                    Text("Gestion de votre commerce en $devise")
 
                                 item {
                                     DashboardCard(
