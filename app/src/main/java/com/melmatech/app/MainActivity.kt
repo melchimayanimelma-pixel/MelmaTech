@@ -1457,84 +1457,159 @@ fun MelmaTechApp(context: Context) {
     }
 }
 
-                        "Plus" -> {
+                        
+"Plus" -> {
 
-                            LazyColumn(
-                                verticalArrangement =
-                                    Arrangement.spacedBy(12.dp)
-                            ) {
-                                item {
-                                    Text(
-                                        "Plus",
-                                        style = MaterialTheme.typography.headlineMedium
-                                    )
-                                    Text("Autres fonctions de MelmaTech")
-                                }
+    var confirmerDeconnexion by remember {
+        mutableStateOf(false)
+    }
 
-                                item {
-                                    Card(
-                                        onClick = {
-                                            page = "Rapports"
-                                        },
-                                        modifier = Modifier.fillMaxWidth()
-                                    ) {
-                                        Column(
-                                            Modifier.padding(16.dp)
-                                        ) {
-                                            Text("💸 Dépenses et rapports")
-                                            Text("Consulter les dépenses et les résultats.")
-                                        }
-                                    }
-                                }
+    LazyColumn(
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        item {
+            Text(
+                "Plus",
+                style = MaterialTheme.typography.headlineMedium
+            )
+            Text("Services et configuration de MelmaTech")
+        }
 
-                                item {
-                                    Card(
-                                        onClick = {
-                                            page = "Ventes"
-                                        },
-                                        modifier = Modifier.fillMaxWidth()
-                                    ) {
-                                        Column(
-                                            Modifier.padding(16.dp)
-                                        ) {
-                                            Text("🧾 Factures et ventes")
-                                            Text("Consulter les ventes et paiements.")
-                                        }
-                                    }
-                                }
+        item {
+            Card(
+                onClick = { page = "Rapports" },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(Modifier.padding(16.dp)) {
+                    Text(
+                        "💸 Dépenses et rapports",
+                        style = MaterialTheme.typography.titleMedium
+                    )
+                    Text("Consulter les résultats et les dépenses.")
+                }
+            }
+        }
 
-                                if (estAdministrateur) {
-                                    item {
-                                        Card(
-                                            onClick = {
-                                                page = "Utilisateurs"
-                                            },
-                                            modifier = Modifier.fillMaxWidth()
-                                        ) {
-                                            Column(
-                                                Modifier.padding(16.dp)
-                                            ) {
-                                                Text("👥 Gestion des utilisateurs")
-                                                Text("Créer les comptes vendeurs.")
-                                            }
-                                        }
-                                    }
-                                }
+        item {
+            Card(
+                onClick = { page = "Ventes" },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(Modifier.padding(16.dp)) {
+                    Text(
+                        "🧾 Factures et ventes",
+                        style = MaterialTheme.typography.titleMedium
+                    )
+                    Text("Consulter les ventes et les paiements.")
+                }
+            }
+        }
 
-                                item {
-                                    Card(
-                                        modifier = Modifier.fillMaxWidth()
-                                    ) {
-                                        Column(
-                                            Modifier.padding(16.dp)
-                                        ) {
-                                            Text("⚙️ Paramètres")
-                                            Text("Configuration à développer.")
-                                        }
-                                    }
-                                }
-                            }
-                        }
+        if (estAdministrateur) {
+            item {
+                Card(
+                    onClick = { page = "Utilisateurs" },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(Modifier.padding(16.dp)) {
+                        Text(
+                            "👥 Gestion des utilisateurs",
+                            style = MaterialTheme.typography.titleMedium
+                        )
+                        Text("Gérer les comptes des vendeurs.")
+                    }
+                }
+            }
+        }
+
+        item {
+            Card(
+                onClick = { page = "Entreprise" },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(Modifier.padding(16.dp)) {
+                    Text(
+                        "🏢 Informations de l'entreprise",
+                        style = MaterialTheme.typography.titleMedium
+                    )
+                    Text("Logo, adresse, contacts, RCCM et ID NAT.")
+                }
+            }
+        }
+
+        item {
+            Card(
+                onClick = { page = "Paramètres" },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(Modifier.padding(16.dp)) {
+                    Text(
+                        "⚙️ Paramètres",
+                        style = MaterialTheme.typography.titleMedium
+                    )
+                    Text("Configuration de l'application.")
+                }
+            }
+        }
+
+        item {
+            HorizontalDivider()
+
+            Card(
+                onClick = { confirmerDeconnexion = true },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(Modifier.padding(16.dp)) {
+                    Text(
+                        "🚪 Déconnexion",
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.titleMedium
+                    )
+                    Text("Fermer la session en toute sécurité.")
+                }
+            }
+        }
+    }
+
+    if (confirmerDeconnexion) {
+        AlertDialog(
+            onDismissRequest = {
+                confirmerDeconnexion = false
+            },
+            title = {
+                Text("Confirmer la déconnexion")
+            },
+            text = {
+                Text("Voulez-vous vraiment vous déconnecter de MelmaTech ?")
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        confirmerDeconnexion = false
+                        AuthService.deconnecter(context)
+                        utilisateurConnecte = false
+                        page = "Accueil"
+                        email = ""
+                        motDePasse = ""
+                        messageConnexion = ""
+                    }
+                ) {
+                    Text("Se déconnecter")
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = {
+                        confirmerDeconnexion = false
+                    }
+                ) {
+                    Text("Annuler")
+                }
+            }
+        )
+    }
+}
+
 
                         "Utilisateurs" -> {
 
