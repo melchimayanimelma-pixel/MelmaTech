@@ -1874,7 +1874,35 @@ Slider(
 
         Text("Configuration de MelmaTech")
 
-        Text("Devise actuelle : USD")
+        Text("Choisir la devise principale")
+
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            OutlinedButton(
+                onClick = {
+                    devise = "USD"
+                    prefs.edit()
+                        .putString("devise", "USD")
+                        .apply()
+                }
+            ) {
+                Text(if (devise == "USD") "✓ USD ($)" else "USD ($)")
+            }
+
+            OutlinedButton(
+                onClick = {
+                    devise = "CDF"
+                    prefs.edit()
+                        .putString("devise", "CDF")
+                        .apply()
+                }
+            ) {
+                Text(if (devise == "CDF") "✓ CDF (FC)" else "CDF (FC)")
+            }
+        }
+
+        Text("Devise actuelle : $devise")
 
         Text("Version : 1.0")
 
