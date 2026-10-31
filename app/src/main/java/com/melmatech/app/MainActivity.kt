@@ -601,6 +601,7 @@ fun MelmaTechApp(context: Context) {
                                         style = MaterialTheme.typography.headlineSmall
                                     )
                                     Text("Gestion de votre commerce en $devise")
+                                }
 
                                 item {
                                     DashboardCard(
