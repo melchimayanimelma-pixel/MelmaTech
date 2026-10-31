@@ -1676,6 +1676,172 @@ fun MelmaTechApp(context: Context) {
 }
 
 
+                        
+"Entreprise" -> {
+
+    if (!estAdministrateur) {
+        Text("Accès réservé à l'administrateur.")
+    } else {
+        LazyColumn(
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            item {
+                Text(
+                    "Informations de l'entreprise",
+                    style = MaterialTheme.typography.headlineSmall
+                )
+                Text("Ces informations apparaîtront sur les documents officiels.")
+            }
+
+            item {
+                OutlinedTextField(
+                    value = nomEntreprise,
+                    onValueChange = { nomEntreprise = it },
+                    label = { Text("Nom de l'entreprise") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+
+            item {
+                OutlinedTextField(
+                    value = adresseEntreprise,
+                    onValueChange = { adresseEntreprise = it },
+                    label = { Text("Adresse physique") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+
+            item {
+                OutlinedTextField(
+                    value = telephoneEntreprise,
+                    onValueChange = { telephoneEntreprise = it },
+                    label = { Text("Numéros de téléphone") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+
+            item {
+                OutlinedTextField(
+                    value = emailEntreprise,
+                    onValueChange = { emailEntreprise = it },
+                    label = { Text("Adresse e-mail") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+
+            item {
+                OutlinedTextField(
+                    value = rccmEntreprise,
+                    onValueChange = { rccmEntreprise = it },
+                    label = { Text("Numéro RCCM") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+
+            item {
+                OutlinedTextField(
+                    value = idNatEntreprise,
+                    onValueChange = { idNatEntreprise = it },
+                    label = { Text("Numéro ID NAT") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+
+            item {
+                OutlinedTextField(
+                    value = impotEntreprise,
+                    onValueChange = { impotEntreprise = it },
+                    label = { Text("Numéro d'impôt") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+
+            item {
+                Text(
+                    "Logo de l'entreprise",
+                    style = MaterialTheme.typography.titleMedium
+                )
+
+                Button(
+                    onClick = {
+                        choisirLogo.launch(arrayOf("image/*"))
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Choisir le logo dans le téléphone")
+                }
+
+                if (logoEntreprise.isNotBlank()) {
+                    Text("Logo sélectionné.")
+                }
+            }
+
+            item {
+                Button(
+                    onClick = {
+                        prefs.edit()
+                            .putString("entreprise_nom", nomEntreprise)
+                            .putString("entreprise_adresse", adresseEntreprise)
+                            .putString("entreprise_telephone", telephoneEntreprise)
+                            .putString("entreprise_email", emailEntreprise)
+                            .putString("entreprise_rccm", rccmEntreprise)
+                            .putString("entreprise_idnat", idNatEntreprise)
+                            .putString("entreprise_impot", impotEntreprise)
+                            .putString("entreprise_logo", logoEntreprise)
+                            .apply()
+
+                        messageEntreprise = "Informations enregistrées avec succès."
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Enregistrer les informations")
+                }
+
+                Text(
+                    messageEntreprise,
+                    color = MaterialTheme.colorScheme.primary
+                )
+            }
+
+            item {
+                OutlinedButton(
+                    onClick = { page = "Plus" },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Retour")
+                }
+            }
+        }
+    }
+}
+
+"Paramètres" -> {
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        Text(
+            "Paramètres",
+            style = MaterialTheme.typography.headlineSmall
+        )
+
+        Text("Configuration de MelmaTech")
+
+        Text("Devise actuelle : USD")
+
+        Text("Version : 1.0")
+
+        OutlinedButton(
+            onClick = { page = "Plus" },
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text("Retour")
+        }
+    }
+}
+
                         "Utilisateurs" -> {
 
                             if (!estAdministrateur) {
