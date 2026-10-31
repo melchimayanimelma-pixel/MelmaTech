@@ -1810,7 +1810,7 @@ Slider(
                             .putString("entreprise_idnat", idNatEntreprise)
                             .putString("entreprise_impot", impotEntreprise)
                             .putString("entreprise_logo", logoEntreprise)
-                            .apply()
+.putFloat("entreprise_logo_taille", tailleLogoEntreprise)
 
                         messageEntreprise = "Informations enregistrées avec succès."
                     },
