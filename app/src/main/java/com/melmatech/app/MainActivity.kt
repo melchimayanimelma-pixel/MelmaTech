@@ -25,6 +25,7 @@ import android.util.Base64
 import androidx.compose.foundation.Image
 import androidx.compose.ui.layout.ContentScale
 import coil.compose.rememberAsyncImagePainter
+import androidx.activity.compose.BackHandler
 
 data class Produit(
     val id: Long,
