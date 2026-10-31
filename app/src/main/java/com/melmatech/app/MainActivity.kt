@@ -887,8 +887,8 @@ fun MelmaTechApp(context: Context) {
                                                     style = MaterialTheme.typography.titleMedium
                                                 )
 
-                                                Text("Achat : ${argent(p.achat)}")
-                                                Text("Vente : ${argent(p.vente)}")
+                                                Text("Achat : ${argent(p.achat, devise)}")
+Text("Vente : ${argent(p.vente, devise)}")
                                                 Text("Stock : ${p.quantite}")
 
                                                 if (estAdministrateur) {
