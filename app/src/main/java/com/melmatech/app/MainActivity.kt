@@ -92,6 +92,67 @@ fun MelmaTechApp(context: Context) {
     }
 
     var page by remember { mutableStateOf("Accueil") }
+    
+    // Informations de l'entreprise
+    var nomEntreprise by remember {
+        mutableStateOf(prefs.getString("entreprise_nom", "") ?: "")
+    }
+
+    var adresseEntreprise by remember {
+        mutableStateOf(prefs.getString("entreprise_adresse", "") ?: "")
+    }
+
+    var emailEntreprise by remember {
+        mutableStateOf(prefs.getString("entreprise_email", "") ?: "")
+    }
+
+    var telephoneEntreprise by remember {
+        mutableStateOf(prefs.getString("entreprise_telephone", "") ?: "")
+    }
+
+    var rccmEntreprise by remember {
+        mutableStateOf(prefs.getString("entreprise_rccm", "") ?: "")
+    }
+
+    var idNatEntreprise by remember {
+        mutableStateOf(prefs.getString("entreprise_idnat", "") ?: "")
+    }
+
+    var impotEntreprise by remember {
+        mutableStateOf(prefs.getString("entreprise_impot", "") ?: "")
+    }
+
+    var logoEntreprise by remember {
+        mutableStateOf(prefs.getString("entreprise_logo", "") ?: "")
+    }
+
+    var messageEntreprise by remember {
+        mutableStateOf("")
+    }
+
+    val choisirLogo = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        if (uri != null) {
+            try {
+                context.contentResolver.takePersistableUriPermission(
+                    uri,
+                    android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION
+                )
+
+                logoEntreprise = uri.toString()
+
+                prefs.edit()
+                    .putString("entreprise_logo", logoEntreprise)
+                    .apply()
+
+                messageEntreprise = "Logo sélectionné avec succès."
+            } catch (e: Exception) {
+                messageEntreprise = "Impossible d'enregistrer ce logo."
+            }
+        }
+    }
+
 
     var email by remember { mutableStateOf("") }
     var motDePasse by remember { mutableStateOf("") }
