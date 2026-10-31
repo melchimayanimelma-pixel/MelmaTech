@@ -1079,7 +1079,7 @@ Text("Vente : ${argent(p.vente, devise)}")
                                         ) {
                                             Text(ligne.nom)
                                             Text("Quantité : ${ligne.quantite}")
-                                            Text("Total : ${argent(ligne.total)}")
+                                            Text("Total : ${argent(ligne.total, devise)}")
 
                                             TextButton(
                                                 onClick = {
