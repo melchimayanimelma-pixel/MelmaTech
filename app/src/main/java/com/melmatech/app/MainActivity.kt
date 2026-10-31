@@ -1418,12 +1418,12 @@ DashboardCard("Dettes clients", argent(dettesPeriode, devise))
                 style = MaterialTheme.typography.titleLarge
             )
             DashboardCard(
-                "Coût des marchandises vendues",
-                argent(coutPeriode)
-            )
-            DashboardCard("Bénéfice brut", argent(beneficeBrut))
-            DashboardCard("Dépenses déduites", argent(depensesPeriode))
-            DashboardCard("Bénéfice net estimé", argent(beneficeNet))
+    "Coût des marchandises vendues",
+    argent(coutPeriode, devise)
+)
+DashboardCard("Bénéfice brut", argent(beneficeBrut, devise))
+DashboardCard("Dépenses déduites", argent(depensesPeriode, devise))
+DashboardCard("Bénéfice net estimé", argent(beneficeNet, devise))
         }
 
         item {
