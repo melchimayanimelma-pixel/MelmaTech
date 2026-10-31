@@ -1406,9 +1406,9 @@ fun MelmaTechApp(context: Context) {
                 "1. Rapport des ventes",
                 style = MaterialTheme.typography.titleLarge
             )
-            DashboardCard("Chiffre d'affaires", argent(caPeriode))
-            DashboardCard("Montant encaissé", argent(encaissePeriode))
-            DashboardCard("Dettes clients", argent(dettesPeriode))
+            DashboardCard("Chiffre d'affaires", argent(caPeriode, devise))
+DashboardCard("Montant encaissé", argent(encaissePeriode, devise))
+DashboardCard("Dettes clients", argent(dettesPeriode, devise))
             Text("Nombre de ventes : ${ventesFiltrees.size}")
         }
 
