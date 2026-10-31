@@ -987,8 +987,8 @@ Text("Vente : ${argent(p.vente, devise)}")
                                         ) {
                                             Text(p.nom)
                                             Text(
-                                                "${argent(p.vente)} — Stock : ${p.quantite}"
-                                            )
+    "${argent(p.vente, devise)} — Stock : ${p.quantite}"
+)
                                         }
                                     }
                                 }
