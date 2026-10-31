@@ -125,6 +125,9 @@ fun MelmaTechApp(context: Context) {
     var logoEntreprise by remember {
         mutableStateOf(prefs.getString("entreprise_logo", "") ?: "")
     }
+    var tailleLogoEntreprise by remember {
+    mutableStateOf(prefs.getFloat("entreprise_logo_taille", 1f))
+    }
 
     var messageEntreprise by remember {
         mutableStateOf("")
