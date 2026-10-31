@@ -523,25 +523,11 @@ fun MelmaTechApp(context: Context) {
         } else {
 
             Scaffold(
-                topBar = {
-                    TopAppBar(
-                        title = { Text("MelmaTech") },
-                        actions = {
-                            TextButton(
-                                onClick = {
-                                    AuthService.deconnecter(context)
-                                    utilisateurConnecte = false
-                                    page = "Accueil"
-                                    email = ""
-                                    motDePasse = ""
-                                    messageConnexion = ""
-                                }
-                            ) {
-                                Text("Déconnexion")
-                            }
-                        }
-                    )
-                },
+    topBar = {
+        TopAppBar(
+            title = { Text("MelmaTech") }
+        )
+    },
                 bottomBar = {
                     NavigationBar {
                         val onglets = if (estAdministrateur) {
