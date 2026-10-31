@@ -1224,7 +1224,6 @@ Text("Vente : ${argent(p.vente, devise)}")
                                             v.lignes.forEach { ligne ->
                                                 Text(
     "${ligne.nom} × ${ligne.quantite} = ${argent(ligne.total, devise)}"
-)
                                                 )
                                             }
 
