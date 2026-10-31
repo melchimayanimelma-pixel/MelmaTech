@@ -67,15 +67,17 @@ data class Depense(
     val date: Long
 )
 
-fun argent(montant: Double): String =
-    "$" + String.format(Locale.US, "%.2f", montant)
+fun argent(montant: Double, devise: String = "USD"): String {
+    val montantFormate = String.format(
+        Locale.US,
+        "%,.2f",
+        montant
+    )
 
-class MainActivity : ComponentActivity() {
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        setContent {
-            MelmaTechApp(this)
-        }
+    return if (devise == "CDF") {
+        "$montantFormate FC"
+    } else {
+        "$$montantFormate"
     }
 }
 
