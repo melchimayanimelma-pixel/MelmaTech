@@ -1551,6 +1551,42 @@ DashboardCard("Bénéfice net estimé", argent(beneficeNet, devise))
                 style = MaterialTheme.typography.titleLarge
             )
         }
+        item {
+    HorizontalDivider()
+
+    Text(
+        "3. Rapport des produits vendus",
+        style = MaterialTheme.typography.titleLarge
+    )
+
+    if (rapportProduits.isEmpty()) {
+        Text("Aucun produit vendu pour cette période.")
+    }
+}
+
+items(
+    rapportProduits,
+    key = { it.first }
+) { produit ->
+    Card {
+        Column(
+            modifier = Modifier.padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            Text(
+                produit.first,
+                style = MaterialTheme.typography.titleMedium
+            )
+
+            Text("Quantité vendue : ${produit.second}")
+
+            Text(
+                "Chiffre d'affaires : " +
+                    argent(produit.third, devise)
+            )
+        }
+    }
+}
 
         if (ventesFiltrees.isEmpty()) {
             item {
