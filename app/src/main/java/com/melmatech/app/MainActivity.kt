@@ -450,6 +450,9 @@ fun MelmaTechApp(context: Context) {
     var produitChoisi by remember { mutableStateOf<Produit?>(null) }
     var quantiteSaisie by remember { mutableStateOf("1") }
     var panier by remember { mutableStateOf(listOf<LigneVente>()) }
+    var derniereVenteValidee by remember {
+    mutableStateOf<Vente?>(null)
+    }
     var paiement by remember { mutableStateOf("") }
     var paiementId by remember { mutableStateOf<Long?>(null) }
     var paiementSupplementaire by remember { mutableStateOf("") }
