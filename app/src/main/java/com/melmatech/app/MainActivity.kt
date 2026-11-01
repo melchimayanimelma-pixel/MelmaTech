@@ -1236,12 +1236,27 @@ Text("Vente : ${argent(p.vente, devise)}")
             }
 
             Button(
-                onClick = {
-                    // Nous ajouterons ici l'impression.
-                },
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text("Imprimer la facture")
+    onClick = {
+        derniereVenteValidee?.let { vente ->
+            val fichier = genererFacturePdf(
+                context,
+                vente,
+                devise,
+                nomEntreprise,
+                adresseEntreprise,
+                telephoneEntreprise,
+                emailEntreprise,
+                rccmEntreprise,
+                idNatEntreprise,
+                impotEntreprise
+            )
+
+            imprimerFacture(context, fichier)
+        }
+    },
+    modifier = Modifier.fillMaxWidth()
+) {
+    Text("Imprimer la facture")
             }
         }
     }
