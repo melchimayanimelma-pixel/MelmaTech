@@ -1157,6 +1157,7 @@ Text("Vente : ${argent(p.vente, devise)}")
                                                         montantPaye,
                                                         id
                                                     )
+                                                    derniereVenteValidee = nouvelleVente
 
                                                     panier.forEach { ligne ->
                                                         val index =
