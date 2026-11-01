@@ -1899,6 +1899,32 @@ Text(
                     modifier = Modifier.fillMaxWidth()
                 )
             }
+            item {
+    OutlinedTextField(
+        value = lieuEntreprise,
+        onValueChange = { lieuEntreprise = it },
+        label = { Text("Lieu d'établissement des documents") },
+        modifier = Modifier.fillMaxWidth()
+    )
+}
+
+item {
+    OutlinedTextField(
+        value = nomGerant,
+        onValueChange = { nomGerant = it },
+        label = { Text("Nom du gérant") },
+        modifier = Modifier.fillMaxWidth()
+    )
+}
+
+item {
+    OutlinedTextField(
+        value = fonctionGerant,
+        onValueChange = { fonctionGerant = it },
+        label = { Text("Fonction du gérant") },
+        modifier = Modifier.fillMaxWidth()
+    )
+}
 
             item {
                 OutlinedTextField(
