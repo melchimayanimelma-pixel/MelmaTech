@@ -1251,7 +1251,8 @@ Text("Vente : ${argent(p.vente, devise)}")
             emailEntreprise,
             rccmEntreprise,
             idNatEntreprise,
-            impotEntreprise
+            impotEntreprise,
+            logoEntreprise
         )
 
         fichierFactureEnAttente = fichier
@@ -1263,9 +1264,9 @@ Text("Vente : ${argent(p.vente, devise)}")
     modifier = Modifier.fillMaxWidth()
 ) {
     Text("Enregistrer la facture PDF")
-            }
+}
 
-            Button(
+Button(
     onClick = {
         derniereVenteValidee?.let { vente ->
             val fichier = genererFacturePdf(
@@ -1278,7 +1279,8 @@ Text("Vente : ${argent(p.vente, devise)}")
                 emailEntreprise,
                 rccmEntreprise,
                 idNatEntreprise,
-                impotEntreprise
+                impotEntreprise,
+                logoEntreprise
             )
 
             imprimerFacture(context, fichier)
@@ -1287,7 +1289,7 @@ Text("Vente : ${argent(p.vente, devise)}")
     modifier = Modifier.fillMaxWidth()
 ) {
     Text("Imprimer la facture")
-            }
+}
         }
     }
                                     }
