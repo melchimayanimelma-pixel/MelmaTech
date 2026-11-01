@@ -1451,6 +1451,25 @@ Text("Reste : ${argent(v.reste, devise)}")
     val encaissePeriode = ventesFiltrees.sumOf { it.paye }
     val dettesPeriode = ventesFiltrees.sumOf { it.reste }
     val coutPeriode = ventesFiltrees.sumOf { it.cout }
+    val rapportProduits = ventesFiltrees
+    .flatMap { it.lignes }
+    .groupBy { it.produitId }
+    .map { (_, lignes) ->
+        val premiereLigne = lignes.first()
+
+        val quantiteVendue = lignes.sumOf { it.quantite }
+        val chiffreAffaires = lignes.sumOf { it.total }
+        val coutMarchandises = lignes.sumOf {
+            it.prixAchat * it.quantite
+        }
+
+        Triple(
+            premiereLigne.nom,
+            quantiteVendue,
+            chiffreAffaires
+        )
+    }
+    .sortedByDescending { it.second }
     val depensesPeriode = depensesFiltrees.sumOf { it.montant }
     val beneficeBrut = caPeriode - coutPeriode
     val beneficeNet = beneficeBrut - depensesPeriode
