@@ -45,6 +45,7 @@ import android.print.PrintDocumentInfo
 import android.print.PageRange
 import android.os.CancellationSignal
 import java.io.FileInputStream
+import android.graphics.Bitmap
 
 data class Produit(
     val id: Long,
@@ -2310,6 +2311,22 @@ private fun genererFacturePdf(
     }
 
     var y = 50f
+    if (logoEntreprise.isNotBlank()) {
+    try {
+        val uri = Uri.parse(logoEntreprise)
+        context.contentResolver.openInputStream(uri)?.use { input ->
+            val bitmap = BitmapFactory.decodeStream(input)
+
+            if (bitmap != null) {
+                val logo = Bitmap.createScaledBitmap(
+                    bitmap, 90, 90, true
+                )
+                canvas.drawBitmap(logo, 455f, 25f, null)
+            }
+        }
+    } catch (_: Exception) {
+    }
+    }
 
     canvas.drawText(
         nomEntreprise.ifBlank { "Mon entreprise" },
