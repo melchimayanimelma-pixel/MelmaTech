@@ -126,6 +126,21 @@ fun MelmaTechApp(context: Context) {
     var nomEntreprise by remember {
         mutableStateOf(prefs.getString("entreprise_nom", "") ?: "")
     }
+    
+var lieuEntreprise by remember {
+    mutableStateOf(prefs.getString("entreprise_lieu", "") ?: "")
+}
+
+var nomGerant by remember {
+    mutableStateOf(prefs.getString("entreprise_gerant", "") ?: "")
+}
+
+var fonctionGerant by remember {
+    mutableStateOf(
+        prefs.getString("entreprise_fonction_gerant", "Gérant") ?: "Gérant"
+    )
+}
+
 
     var adresseEntreprise by remember {
         mutableStateOf(prefs.getString("entreprise_adresse", "") ?: "")
