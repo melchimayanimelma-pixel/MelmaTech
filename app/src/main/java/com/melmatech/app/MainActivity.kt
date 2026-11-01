@@ -2174,3 +2174,156 @@ class MainActivity : ComponentActivity() {
         }
     }
 }
+private fun genererFacturePdf(
+    context: Context,
+    vente: Vente,
+    devise: String,
+    nomEntreprise: String,
+    adresseEntreprise: String,
+    telephoneEntreprise: String,
+    emailEntreprise: String,
+    rccmEntreprise: String,
+    idNatEntreprise: String,
+    impotEntreprise: String
+): File {
+
+    val document = PdfDocument()
+    val largeur = 595
+    val hauteur = 842
+
+    val pageInfo = PdfDocument.PageInfo.Builder(
+        largeur, hauteur, 1
+    ).create()
+
+    val page = document.startPage(pageInfo)
+    val canvas = page.canvas
+
+    val titre = Paint().apply {
+        textSize = 24f
+        typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+    }
+
+    val texte = Paint().apply {
+        textSize = 12f
+    }
+
+    val gras = Paint().apply {
+        textSize = 12f
+        typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+    }
+
+    var y = 50f
+
+    canvas.drawText(
+        nomEntreprise.ifBlank { "Mon entreprise" },
+        40f, y, titre
+    )
+    y += 30f
+        listOf(
+        adresseEntreprise,
+        telephoneEntreprise,
+        emailEntreprise,
+        "RCCM : $rccmEntreprise",
+        "ID NAT : $idNatEntreprise",
+        "N° Impôt : $impotEntreprise"
+    ).filter { it.isNotBlank() && !it.endsWith(": ") }
+        .forEach {
+            canvas.drawText(it, 40f, y, Paint().apply {
+                textSize = 12f
+            })
+            y += 17f
+        }
+
+    y += 25f
+
+    canvas.drawText("FACTURE", 40f, y, titre)
+    y += 30f
+
+    canvas.drawText("N° facture : ${vente.id}", 40f, y, texte)
+    y += 20f
+
+    val date = SimpleDateFormat(
+        "dd/MM/yyyy HH:mm",
+        Locale.getDefault()
+    ).format(Date(vente.date))
+
+    canvas.drawText("Date : $date", 40f, y, texte)
+    y += 20f
+
+    canvas.drawText(
+        "Client : ${vente.client.ifBlank { "Client comptant" }}",
+        40f, y, texte
+    )
+    y += 35f
+        canvas.drawText("Article", 40f, y, gras)
+    canvas.drawText("Qté", 300f, y, gras)
+    canvas.drawText("Prix", 370f, y, gras)
+    canvas.drawText("Total", 470f, y, gras)
+
+    y += 10f
+    canvas.drawLine(40f, y, 555f, y, texte)
+    y += 22f
+
+    vente.lignes.forEach { ligne ->
+        canvas.drawText(ligne.nom.take(32), 40f, y, texte)
+        canvas.drawText("${ligne.quantite}", 300f, y, texte)
+
+        canvas.drawText(
+            String.format(Locale.US, "%.2f", ligne.prixUnitaire),
+            370f, y, texte
+        )
+
+        canvas.drawText(
+            String.format(Locale.US, "%.2f", ligne.total),
+            470f, y, texte
+        )
+
+        y += 22f
+    }
+        y += 15f
+    canvas.drawLine(40f, y, 555f, y, texte)
+    y += 30f
+
+    canvas.drawText(
+        "TOTAL : ${argent(vente.total, devise)}",
+        350f, y, gras
+    )
+    y += 22f
+
+    canvas.drawText(
+        "Payé : ${argent(vente.paye, devise)}",
+        350f, y, texte
+    )
+    y += 22f
+
+    canvas.drawText(
+        "Reste à payer : ${argent(vente.reste, devise)}",
+        350f, y, gras
+    )
+
+    y += 55f
+    canvas.drawText(
+        "Merci pour votre confiance !",
+        40f, y, texte
+    )
+
+    document.finishPage(page)
+
+    val dossier = File(
+        context.getExternalFilesDir(null),
+        "Factures"
+    )
+    if (!dossier.exists()) dossier.mkdirs()
+
+    val fichier = File(dossier, "Facture-${vente.id}.pdf")
+
+    try {
+        FileOutputStream(fichier).use {
+            document.writeTo(it)
+        }
+    } finally {
+        document.close()
+    }
+
+    return fichier
+}
