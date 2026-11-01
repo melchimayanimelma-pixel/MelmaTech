@@ -1198,6 +1198,49 @@ Text("Vente : ${argent(p.vente, devise)}")
                                     }
 
                                     Text(messageVente)
+                                    derniereVenteValidee?.let { vente ->
+
+    Card {
+        Column(
+            modifier = Modifier.padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Text("Facture n° ${vente.id}")
+
+            Button(
+                onClick = {
+                    val fichier = genererFacturePdf(
+                        context,
+                        vente,
+                        devise,
+                        nomEntreprise,
+                        adresseEntreprise,
+                        telephoneEntreprise,
+                        emailEntreprise,
+                        rccmEntreprise,
+                        idNatEntreprise,
+                        impotEntreprise
+                    )
+
+                    messageVente =
+                        "Facture PDF enregistrée : ${fichier.name}"
+                },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Enregistrer la facture PDF")
+            }
+
+            Button(
+                onClick = {
+                    // Nous ajouterons ici l'impression.
+                },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Imprimer la facture")
+            }
+        }
+    }
+                                    }
 
                                     HorizontalDivider()
 
