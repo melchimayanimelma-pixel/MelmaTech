@@ -2280,7 +2280,8 @@ private fun genererFacturePdf(
     emailEntreprise: String,
     rccmEntreprise: String,
     idNatEntreprise: String,
-    impotEntreprise: String
+        impotEntreprise: String,
+    logoEntreprise: String
 ): File {
 
     val document = PdfDocument()
