@@ -1263,26 +1263,29 @@ Text("Vente : ${argent(p.vente, devise)}")
             Text("Facture n° ${vente.id}")
 
             Button(
-                onClick = {
-                    val fichier = genererFacturePdf(
-                        context,
-                        vente,
-                        devise,
-                        nomEntreprise,
-                        adresseEntreprise,
-                        telephoneEntreprise,
-                        emailEntreprise,
-                        rccmEntreprise,
-                        idNatEntreprise,
-                        impotEntreprise
-                    )
+    onClick = {
+        val fichier = genererFacturePdf(
+            context,
+            vente,
+            devise,
+            nomEntreprise,
+            adresseEntreprise,
+            telephoneEntreprise,
+            emailEntreprise,
+            rccmEntreprise,
+            idNatEntreprise,
+            impotEntreprise
+        )
 
-                    messageVente =
-                        "Facture PDF enregistrée : ${fichier.name}"
-                },
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text("Enregistrer la facture PDF")
+        fichierFactureEnAttente = fichier
+
+        enregistrerFactureLauncher.launch(
+            "Facture-${vente.id}.pdf"
+        )
+    },
+    modifier = Modifier.fillMaxWidth()
+) {
+    Text("Enregistrer la facture PDF")
             }
 
             Button(
