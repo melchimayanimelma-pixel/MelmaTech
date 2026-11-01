@@ -218,6 +218,31 @@ val enregistrerFactureLauncher =
 
         fichierFactureEnAttente = null
     }
+    var fichierFactureEnAttente by remember {
+    mutableStateOf<File?>(null)
+}
+
+val enregistrerFactureLauncher =
+    rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.CreateDocument("application/pdf")
+    ) { uri ->
+        val fichier = fichierFactureEnAttente
+
+        if (uri != null && fichier != null) {
+            try {
+                context.contentResolver.openOutputStream(uri)?.use { sortie ->
+                    fichier.inputStream().use { entree ->
+                        entree.copyTo(sortie)
+                    }
+                }
+                messageVente = "Facture enregistrée avec succès."
+            } catch (e: Exception) {
+                messageVente = "Erreur d'enregistrement : ${e.message}"
+            }
+        }
+
+        fichierFactureEnAttente = null
+    }
     var messageDepense by remember { mutableStateOf("") }
 
     var chargementProduits by remember {
