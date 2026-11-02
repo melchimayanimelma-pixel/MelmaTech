@@ -628,7 +628,10 @@ val enregistrerFactureLauncher =
         )
     },
                 bottomBar = {
-                    NavigationBar {
+                    NavigationBar(
+    containerColor = Color.White,
+    contentColor = Color(0xFF6C3CE9)
+) {
                         val onglets = if (estAdministrateur) {
                             listOf(
                                 "Accueil",
