@@ -212,6 +212,30 @@ var fonctionGerant by remember {
     var fichierFactureEnAttente by remember {
     mutableStateOf<File?>(null)
 }
+    var fichierRapportEnAttente by remember {
+    mutableStateOf<File?>(null)
+}
+
+val enregistrerRapportLauncher =
+    rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.CreateDocument("application/pdf")
+    ) { uri ->
+        val fichier = fichierRapportEnAttente
+
+        if (uri != null && fichier != null) {
+            try {
+                context.contentResolver.openOutputStream(uri)?.use { sortie ->
+                    fichier.inputStream().use { entree ->
+                        entree.copyTo(sortie)
+                    }
+                }
+            } catch (e: Exception) {
+                messageVente = "Erreur d'enregistrement du rapport : ${e.message}"
+            }
+        }
+
+        fichierRapportEnAttente = null
+    }
 
 val enregistrerFactureLauncher =
     rememberLauncherForActivityResult(
