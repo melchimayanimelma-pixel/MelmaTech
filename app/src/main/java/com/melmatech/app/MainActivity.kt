@@ -1509,6 +1509,33 @@ Text("Reste : ${argent(v.reste, devise)}")
         )
     }
     .sortedByDescending { it.second }
+    val contenuRapportVentes = buildList {
+    add("Période : $periode")
+    add("")
+    add("RÉSUMÉ DES VENTES")
+    add("Chiffre d'affaires : ${argent(caPeriode, devise)}")
+    add("Montant encaissé : ${argent(encaissePeriode, devise)}")
+    add("Dettes clients : ${argent(dettesPeriode, devise)}")
+    add("Coût des marchandises : ${argent(coutPeriode, devise)}")
+    add("")
+    add("PRODUITS VENDUS")
+
+    rapportProduits.forEach { produit ->
+        add("${produit.first} | Quantité : ${produit.second} | Total : ${argent(produit.third, devise)}")
+    }
+
+    add("")
+    add("HISTORIQUE DES VENTES")
+
+    ventesFiltrees.forEach { vente ->
+        add("Client : ${vente.client}")
+        add("Date : ${java.text.SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(Date(vente.date))}")
+        add("Montant : ${argent(vente.total, devise)}")
+        add("Payé : ${argent(vente.paye, devise)}")
+        add("Reste : ${argent(vente.reste, devise)}")
+        add("------------------------------")
+    }
+    }
     val depensesPeriode = depensesFiltrees.sumOf { it.montant }
     val beneficeBrut = caPeriode - coutPeriode
     val beneficeNet = beneficeBrut - depensesPeriode
