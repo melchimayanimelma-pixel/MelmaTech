@@ -55,6 +55,7 @@ import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.filled.MoreHoriz
 import androidx.compose.material.icons.filled.Inventory2
+import androidx.compose.ui.text.font.FontWeight
 
 data class Produit(
     val id: Long,
