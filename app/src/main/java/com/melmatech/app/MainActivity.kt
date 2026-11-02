@@ -649,6 +649,7 @@ val enregistrerFactureLauncher =
                         onglets.forEach { onglet ->
     val icone = when (onglet) {
         "Accueil" -> Icons.Filled.Home
+        "Produits" -> Icons.Filled.Inventory2
         "Ventes" -> Icons.Filled.ShoppingCart
         "Rapports" -> Icons.Filled.BarChart
         else -> Icons.Filled.MoreHoriz
