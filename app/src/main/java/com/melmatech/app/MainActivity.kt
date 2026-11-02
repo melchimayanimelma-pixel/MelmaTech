@@ -1537,6 +1537,28 @@ Text("Reste : ${argent(v.reste, devise)}")
     }
     }
     val depensesPeriode = depensesFiltrees.sumOf { it.montant }
+        val contenuRapportDepenses = buildList {
+        add("Période : $periode")
+        add("")
+        add("RÉSUMÉ DES DÉPENSES")
+        add("Total des dépenses : ${argent(depensesPeriode, devise)}")
+        add("")
+        add("HISTORIQUE DES DÉPENSES")
+
+        depensesFiltrees.forEach { depense ->
+            add("Description : ${depense.description}")
+            add(
+                "Date : ${
+                    java.text.SimpleDateFormat(
+                        "dd/MM/yyyy",
+                        Locale.getDefault()
+                    ).format(Date(depense.date))
+                }"
+            )
+            add("Montant : ${argent(depense.montant, devise)}")
+            add("------------------------------")
+        }
+        }
     val beneficeBrut = caPeriode - coutPeriode
     val beneficeNet = beneficeBrut - depensesPeriode
 
