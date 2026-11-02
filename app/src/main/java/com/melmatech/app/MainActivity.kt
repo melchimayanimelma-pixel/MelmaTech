@@ -1818,6 +1818,69 @@ Text("Reste : ${argent(v.reste, devise)}")
                 Text("Imprimer le rapport des bénéfices")
             }
                         }
+                                item {
+            HorizontalDivider()
+
+            Text(
+                "Rapport du stock",
+                style = MaterialTheme.typography.titleLarge
+            )
+
+            Button(
+                onClick = {
+                    val fichier = genererRapportDocumentPdf(
+                        context = context,
+                        titreRapport = "RAPPORT DU STOCK",
+                        periode = "Situation actuelle du stock",
+                        contenu = contenuRapportStock,
+                        nomEntreprise = nomEntreprise,
+                        adresseEntreprise = adresseEntreprise,
+                        telephoneEntreprise = telephoneEntreprise,
+                        emailEntreprise = emailEntreprise,
+                        rccmEntreprise = rccmEntreprise,
+                        idNatEntreprise = idNatEntreprise,
+                        impotEntreprise = impotEntreprise,
+                        logoEntreprise = logoEntreprise,
+                        lieuEntreprise = lieuEntreprise,
+                        nomGerant = nomGerant,
+                        fonctionGerant = fonctionGerant
+                    )
+
+                    fichierRapportEnAttente = fichier
+                    enregistrerRapportLauncher.launch("Rapport-Stock.pdf")
+                },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Enregistrer le stock en PDF")
+            }
+
+            OutlinedButton(
+                onClick = {
+                    val fichier = genererRapportDocumentPdf(
+                        context = context,
+                        titreRapport = "RAPPORT DU STOCK",
+                        periode = "Situation actuelle du stock",
+                        contenu = contenuRapportStock,
+                        nomEntreprise = nomEntreprise,
+                        adresseEntreprise = adresseEntreprise,
+                        telephoneEntreprise = telephoneEntreprise,
+                        emailEntreprise = emailEntreprise,
+                        rccmEntreprise = rccmEntreprise,
+                        idNatEntreprise = idNatEntreprise,
+                        impotEntreprise = impotEntreprise,
+                        logoEntreprise = logoEntreprise,
+                        lieuEntreprise = lieuEntreprise,
+                        nomGerant = nomGerant,
+                        fonctionGerant = fonctionGerant
+                    )
+
+                    imprimerRapport(context, fichier)
+                },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Imprimer le rapport du stock")
+            }
+                                }
         item {
             Text(
                 "Choisir une période",
