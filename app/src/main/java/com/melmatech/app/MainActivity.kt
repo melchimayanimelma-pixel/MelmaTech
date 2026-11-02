@@ -54,6 +54,7 @@ import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.filled.MoreHoriz
+import androidx.compose.material.icons.filled.Inventory2
 
 data class Produit(
     val id: Long,
@@ -646,12 +647,29 @@ val enregistrerFactureLauncher =
                         }
 
                         onglets.forEach { onglet ->
-                            NavigationBarItem(
-                                selected = page == onglet,
-                                onClick = { page = onglet },
-                                icon = {},
-                                label = { Text(onglet) }
-                            )
+    val icone = when (onglet) {
+        "Accueil" -> Icons.Filled.Home
+        "Ventes" -> Icons.Filled.ShoppingCart
+        "Rapports" -> Icons.Filled.BarChart
+        else -> Icons.Filled.MoreHoriz
+    }
+
+    NavigationBarItem(
+        selected = page == onglet,
+        onClick = { page = onglet },
+        icon = {
+            Icon(
+                imageVector = icone,
+                contentDescription = onglet
+            )
+        },
+        label = {
+            Text(
+                text = onglet,
+                maxLines = 1
+            )
+        }
+    )
                         }
                     }
                 }
