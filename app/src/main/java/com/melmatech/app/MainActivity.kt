@@ -1558,6 +1558,71 @@ Text("Reste : ${argent(v.reste, devise)}")
             )
             Text("Analyse détaillée de votre activité.")
         }
+                item {
+            HorizontalDivider()
+
+            Text(
+                "Rapport des ventes",
+                style = MaterialTheme.typography.titleLarge
+            )
+
+            Button(
+                onClick = {
+                    val fichier = genererRapportDocumentPdf(
+                        context = context,
+                        titreRapport = "RAPPORT DES VENTES",
+                        periode = periode,
+                        contenu = contenuRapportVentes,
+                        nomEntreprise = nomEntreprise,
+                        adresseEntreprise = adresseEntreprise,
+                        telephoneEntreprise = telephoneEntreprise,
+                        emailEntreprise = emailEntreprise,
+                        rccmEntreprise = rccmEntreprise,
+                        idNatEntreprise = idNatEntreprise,
+                        impotEntreprise = impotEntreprise,
+                        logoEntreprise = logoEntreprise,
+                        lieuEntreprise = lieuEntreprise,
+                        nomGerant = nomGerant,
+                        fonctionGerant = fonctionGerant
+                    )
+
+                    fichierRapportEnAttente = fichier
+                    enregistrerRapportLauncher.launch(
+                        "Rapport-Ventes.pdf"
+                    )
+                },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Enregistrer les ventes en PDF")
+            }
+
+            OutlinedButton(
+                onClick = {
+                    val fichier = genererRapportDocumentPdf(
+                        context = context,
+                        titreRapport = "RAPPORT DES VENTES",
+                        periode = periode,
+                        contenu = contenuRapportVentes,
+                        nomEntreprise = nomEntreprise,
+                        adresseEntreprise = adresseEntreprise,
+                        telephoneEntreprise = telephoneEntreprise,
+                        emailEntreprise = emailEntreprise,
+                        rccmEntreprise = rccmEntreprise,
+                        idNatEntreprise = idNatEntreprise,
+                        impotEntreprise = impotEntreprise,
+                        logoEntreprise = logoEntreprise,
+                        lieuEntreprise = lieuEntreprise,
+                        nomGerant = nomGerant,
+                        fonctionGerant = fonctionGerant
+                    )
+
+                    imprimerRapport(context, fichier)
+                },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Imprimer le rapport des ventes")
+            }
+                }
 
         item {
             Text(
