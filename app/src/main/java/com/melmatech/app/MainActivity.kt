@@ -660,6 +660,13 @@ val enregistrerFactureLauncher =
 
     NavigationBarItem(
         selected = page == onglet,
+        colors = NavigationBarItemDefaults.colors(
+    selectedIconColor = Color(0xFF6C3CE9),
+    selectedTextColor = Color(0xFF6C3CE9),
+    indicatorColor = Color(0xFFEDE5FF),
+    unselectedIconColor = Color(0xFF8A8A8A),
+    unselectedTextColor = Color(0xFF8A8A8A)
+),
         onClick = { page = onglet },
         icon = {
             Icon(
