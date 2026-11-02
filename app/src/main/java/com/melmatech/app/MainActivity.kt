@@ -903,136 +903,372 @@ val produitsFiltres = produits.filter { produit ->
                                                                         token,
                                                                         entrepriseId,
                                                                         nomProduit.trim(),
-                                                                        a,
-                                                                        v,
-                                                                        q
-                                                                    ) { enregistre, resultat, uuid ->
 
-                                                                        if (
-                                                                            enregistre &&
-                                                                            uuid != null
-                                                                        ) {
-                                                                            val index =
-                                                                                produits.indexOfFirst {
-                                                                                    it.id == nouvelId
-                                                                                }
+LazyColumn(
+    verticalArrangement = Arrangement.spacedBy(14.dp),
+    contentPadding = PaddingValues(bottom = 20.dp)
+) {
+    item {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(
+                    Color(0xFF5426A8),
+                    RoundedCornerShape(20.dp)
+                )
+                .padding(18.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            Text(
+                "MelmaTech",
+                color = Color.White,
+                style = MaterialTheme.typography.labelLarge
+            )
+            Text(
+                "Gestion des produits",
+                color = Color.White,
+                style = MaterialTheme.typography.headlineSmall
+            )
+            Text(
+                "Gérez votre catalogue et votre stock",
+                color = Color.White.copy(alpha = 0.8f)
+            )
+        }
+    }
 
-                                                                            if (index >= 0) {
-                                                                                produits[index] =
-                                                                                    produits[index].copy(
-                                                                                        supabaseId = uuid
-                                                                                    )
-                                                                                sauvegarderProduits()
-                                                                            }
-                                                                        }
+    item {
+        Text(
+            "Vue d'ensemble",
+            style = MaterialTheme.typography.titleLarge
+        )
 
-                                                                        messageProduit = resultat
-                                                                    }
-                                                                } else {
-                                                                    messageProduit = message
-                                                                }
-                                                            }
-                                                        }
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Card(modifier = Modifier.weight(1f)) {
+                Column(Modifier.padding(12.dp)) {
+                    Text("Produits")
+                    Text(
+                        "$totalProduits",
+                        style = MaterialTheme.typography.headlineSmall,
+                        color = Color(0xFF5426A8)
+                    )
+                }
+            }
+            Card(modifier = Modifier.weight(1f)) {
+                Column(Modifier.padding(12.dp)) {
+                    Text("Unités en stock")
+                    Text(
+                        "$stockTotal",
+                        style = MaterialTheme.typography.headlineSmall
+                    )
+                }
+            }
+        }
 
-                                                    } else {
-                                                        val index =
-                                                            produits.indexOfFirst {
-                                                                it.id == id
-                                                            }
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Card(modifier = Modifier.weight(1f)) {
+                Column(Modifier.padding(12.dp)) {
+                    Text("Stock faible")
+                    Text(
+                        "$produitsEnAlerte",
+                        color = Color(0xFFD97706),
+                        style = MaterialTheme.typography.headlineSmall
+                    )
+                }
+            }
+            Card(modifier = Modifier.weight(1f)) {
+                Column(Modifier.padding(12.dp)) {
+                    Text("Épuisés")
+                    Text(
+                        "$produitsEpuises",
+                        color = Color.Red,
+                        style = MaterialTheme.typography.headlineSmall
+                    )
+                }
+            }
+        }
 
-                                                        if (index >= 0) {
-                                                            produits[index] =
-                                                                produits[index].copy(
-                                                                    nom = nomProduit.trim(),
-                                                                    achat = a,
-                                                                    vente = v,
-                                                                    quantite = q
-                                                                )
-                                                        }
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(
+                containerColor = Color(0xFFF1EBFC)
+            )
+        ) {
+            Column(Modifier.padding(14.dp)) {
+                Text("Valeur du stock")
+                Text(
+                    argent(valeurStock, devise),
+                    style = MaterialTheme.typography.titleLarge,
+                    color = Color(0xFF5426A8)
+                )
+            }
+        }
+    }
 
-                                                        sauvegarderProduits()
+    item {
+        OutlinedTextField(
+            value = rechercheProduit,
+            onValueChange = { rechercheProduit = it },
+            modifier = Modifier.fillMaxWidth(),
+            label = { Text("Rechercher un produit") },
+            singleLine = true
+        )
 
-                                                        messageProduit =
-                                                            "Modification enregistrée localement. Synchronisation des modifications non activée."
-                                                    }
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            listOf("Tous", "Stock faible", "Épuisés").forEach { filtre ->
+                FilterChip(
+                    selected = filtreProduit == filtre,
+                    onClick = { filtreProduit = filtre },
+                    label = { Text(filtre) }
+                )
+            }
+        }
+    }
 
-                                                    nomProduit = ""
-                                                    achatProduit = ""
-                                                    venteProduit = ""
-                                                    stockProduit = ""
-                                                    editionId = null
+    item {
+        Text(
+            "Ajouter un produit",
+            style = MaterialTheme.typography.titleLarge
+        )
+
+        OutlinedTextField(
+            value = nomProduit,
+            onValueChange = { nomProduit = it },
+            label = { Text("Nom du produit") },
+            modifier = Modifier.fillMaxWidth()
+        )
+
+        OutlinedTextField(
+            value = achatProduit,
+            onValueChange = { achatProduit = it },
+            label = { Text("Prix d'achat ($devise)") },
+            keyboardOptions = KeyboardOptions(
+                keyboardType = KeyboardType.Decimal
+            ),
+            modifier = Modifier.fillMaxWidth()
+        )
+
+        OutlinedTextField(
+            value = venteProduit,
+            onValueChange = { venteProduit = it },
+            label = { Text("Prix de vente ($devise)") },
+            keyboardOptions = KeyboardOptions(
+                keyboardType = KeyboardType.Decimal
+            ),
+            modifier = Modifier.fillMaxWidth()
+        )
+
+        OutlinedTextField(
+            value = stockProduit,
+            onValueChange = { stockProduit = it },
+            label = { Text("Quantité en stock") },
+            keyboardOptions = KeyboardOptions(
+                keyboardType = KeyboardType.Number
+            ),
+            modifier = Modifier.fillMaxWidth()
+        )
+
+        Button(
+            onClick = {
+                val a = achatProduit.replace(",", ".").toDoubleOrNull()
+                val v = venteProduit.replace(",", ".").toDoubleOrNull()
+                val q = stockProduit.toIntOrNull()
+
+                if (
+                    nomProduit.isBlank() ||
+                    a == null || a < 0 ||
+                    v == null || v < 0 ||
+                    q == null || q < 0
+                ) {
+                    messageProduit =
+                        "Vérifie les informations du produit."
+                } else {
+                    val id = editionId
+
+                    if (id == null) {
+                        val nouvelId = System.currentTimeMillis()
+
+                        produits.add(
+                            Produit(
+                                nouvelId,
+                                nomProduit.trim(),
+                                a,
+                                v,
+                                q
+                            )
+                        )
+
+                        sauvegarderProduits()
+                        messageProduit = "Produit enregistré localement."
+
+                        val token =
+                            AuthService.obtenirAccessToken(context)
+
+                        if (!token.isNullOrBlank()) {
+                            AuthService.obtenirEntrepriseId(context) {
+                                    ok, message, entrepriseId ->
+
+                                if (ok && entrepriseId != null) {
+                                    SupabaseService.ajouterProduit(
+                                        token,
+                                        entrepriseId,
+                                        nomProduit.trim(),
+                                        a,
+                                        v,
+                                        q
+                                    ) { enregistre, resultat, uuid ->
+
+                                        if (enregistre && uuid != null) {
+                                            val index =
+                                                produits.indexOfFirst {
+                                                    it.id == nouvelId
                                                 }
-                                            },
-                                            modifier = Modifier.fillMaxWidth()
-                                        ) {
-                                            Text(
-                                                if (editionId == null)
-                                                    "Ajouter le produit"
-                                                else
-                                                    "Enregistrer les modifications"
-                                            )
-                                        }
 
-                                        Text(messageProduit)
-                                        HorizontalDivider()
-                                        Text("Liste des produits (${produits.size})")
-                                    }
-
-                                    items(
-                                        produits.toList(),
-                                        key = { it.id }
-                                    ) { p ->
-
-                                        Card {
-                                            Column(
-                                                Modifier
-                                                    .fillMaxWidth()
-                                                    .padding(12.dp)
-                                            ) {
-                                                Text(
-                                                    p.nom,
-                                                    style = MaterialTheme.typography.titleMedium
-                                                )
-
-                                                Text("Achat : ${argent(p.achat, devise)}")
-Text("Vente : ${argent(p.vente, devise)}")
-                                                Text("Stock : ${p.quantite}")
-
-                                                if (estAdministrateur) {
-                                                    Row {
-                                                        TextButton(
-                                                            onClick = {
-                                                                editionId = p.id
-                                                                nomProduit = p.nom
-                                                                achatProduit =
-                                                                    p.achat.toString()
-                                                                venteProduit =
-                                                                    p.vente.toString()
-                                                                stockProduit =
-                                                                    p.quantite.toString()
-                                                            }
-                                                        ) {
-                                                            Text("Modifier")
-                                                        }
-
-                                                        TextButton(
-                                                            onClick = {
-                                                                produits.removeAll {
-                                                                    it.id == p.id
-                                                                }
-                                                                sauvegarderProduits()
-                                                            }
-                                                        ) {
-                                                            Text("Supprimer")
-                                                        }
-                                                    }
-                                                }
+                                            if (index >= 0) {
+                                                produits[index] =
+                                                    produits[index].copy(
+                                                        supabaseId = uuid
+                                                    )
+                                                sauvegarderProduits()
                                             }
                                         }
+
+                                        messageProduit = resultat
                                     }
+                                } else {
+                                    messageProduit = message
                                 }
                             }
                         }
+                    } else {
+                        val index = produits.indexOfFirst {
+                            it.id == id
+                        }
+
+                        if (index >= 0) {
+                            produits[index] =
+                                produits[index].copy(
+                                    nom = nomProduit.trim(),
+                                    achat = a,
+                                    vente = v,
+                                    quantite = q
+                                )
+                        }
+
+                        sauvegarderProduits()
+                        messageProduit =
+                            "Modification enregistrée localement. Synchronisation des modifications non activée."
+                    }
+
+                    nomProduit = ""
+                    achatProduit = ""
+                    venteProduit = ""
+                    stockProduit = ""
+                    editionId = null
+                }
+            },
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text(
+                if (editionId == null) "Ajouter le produit"
+                else "Enregistrer les modifications"
+            )
+        }
+
+        Text(messageProduit)
+    }
+
+    item {
+        Text(
+            "Catalogue des produits (${produitsFiltres.size})",
+            style = MaterialTheme.typography.titleLarge
+        )
+    }
+
+    items(
+        produitsFiltres,
+        key = { it.id }
+    ) { p ->
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(16.dp)
+        ) {
+            Column(
+                Modifier
+                    .fillMaxWidth()
+                    .padding(14.dp),
+                verticalArrangement = Arrangement.spacedBy(7.dp)
+            ) {
+                Text(
+                    p.nom,
+                    style = MaterialTheme.typography.titleMedium
+                )
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text("Achat : ${argent(p.achat, devise)}")
+                    Text("Vente : ${argent(p.vente, devise)}")
+                }
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text("Quantité : ${p.quantite}")
+
+                    Text(
+                        when {
+                            p.quantite <= 0 -> "Épuisé"
+                            p.quantite <= 5 -> "Stock faible"
+                            else -> "Disponible"
+                        },
+                        color = when {
+                            p.quantite <= 0 -> Color.Red
+                            p.quantite <= 5 -> Color(0xFFD97706)
+                            else -> Color(0xFF16834A)
+                        }
+                    )
+                }
+
+                if (estAdministrateur) {
+                    Row {
+                        TextButton(
+                            onClick = {
+                                editionId = p.id
+                                nomProduit = p.nom
+                                achatProduit = p.achat.toString()
+                                venteProduit = p.vente.toString()
+                                stockProduit = p.quantite.toString()
+                            }
+                        ) {
+                            Text("Modifier")
+                        }
+
+                        TextButton(
+                            onClick = {
+                                produits.removeAll { it.id == p.id }
+                                sauvegarderProduits()
+                            }
+                        ) {
+                            Text("Supprimer")
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
                         "Ventes" -> {
 
                             val suggestions = produits.filter {
