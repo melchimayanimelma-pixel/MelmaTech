@@ -514,6 +514,8 @@ val enregistrerFactureLauncher =
     var venteProduit by remember { mutableStateOf("") }
     var stockProduit by remember { mutableStateOf("") }
     var editionId by remember { mutableStateOf<Long?>(null) }
+    var rechercheProduit by remember { mutableStateOf("") }
+    var filtreProduit by remember { mutableStateOf("Tous") }
 
     // Champs de vente.
     var client by remember { mutableStateOf("") }
