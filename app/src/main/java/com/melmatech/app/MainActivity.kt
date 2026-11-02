@@ -1560,6 +1560,20 @@ Text("Reste : ${argent(v.reste, devise)}")
         }
         }
     val beneficeBrut = caPeriode - coutPeriode
+                                val beneficeNet = beneficeBrut - depensesPeriode
+
+    val contenuRapportBenefices = buildList {
+        add("Période : $periode")
+        add("")
+        add("RÉSUMÉ DES BÉNÉFICES")
+        add("Chiffre d'affaires : ${argent(caPeriode, devise)}")
+        add("Coût des marchandises : ${argent(coutPeriode, devise)}")
+        add("Bénéfice brut : ${argent(beneficeBrut, devise)}")
+        add("Dépenses : ${argent(depensesPeriode, devise)}")
+        add("")
+        add("BÉNÉFICE NET ESTIMÉ")
+        add(argent(beneficeNet, devise))
+    }
     val beneficeNet = beneficeBrut - depensesPeriode
 
     val produitsFaibles = produits.filter {
