@@ -46,6 +46,9 @@ import android.print.PageRange
 import android.os.CancellationSignal
 import java.io.FileInputStream
 import android.graphics.Bitmap
+import androidx.compose.foundation.background
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.graphics.Color
 
 data class Produit(
     val id: Long,
