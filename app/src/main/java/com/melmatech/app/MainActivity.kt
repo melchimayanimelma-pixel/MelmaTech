@@ -1725,6 +1725,71 @@ Text("Reste : ${argent(v.reste, devise)}")
                 Text("Imprimer le rapport des dépenses")
             }
                 }
+                        item {
+            HorizontalDivider()
+
+            Text(
+                "Rapport des bénéfices",
+                style = MaterialTheme.typography.titleLarge
+            )
+
+            Button(
+                onClick = {
+                    val fichier = genererRapportDocumentPdf(
+                        context = context,
+                        titreRapport = "RAPPORT DES BÉNÉFICES",
+                        periode = periode,
+                        contenu = contenuRapportBenefices,
+                        nomEntreprise = nomEntreprise,
+                        adresseEntreprise = adresseEntreprise,
+                        telephoneEntreprise = telephoneEntreprise,
+                        emailEntreprise = emailEntreprise,
+                        rccmEntreprise = rccmEntreprise,
+                        idNatEntreprise = idNatEntreprise,
+                        impotEntreprise = impotEntreprise,
+                        logoEntreprise = logoEntreprise,
+                        lieuEntreprise = lieuEntreprise,
+                        nomGerant = nomGerant,
+                        fonctionGerant = fonctionGerant
+                    )
+
+                    fichierRapportEnAttente = fichier
+                    enregistrerRapportLauncher.launch(
+                        "Rapport-Benefices.pdf"
+                    )
+                },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Enregistrer les bénéfices en PDF")
+            }
+
+            OutlinedButton(
+                onClick = {
+                    val fichier = genererRapportDocumentPdf(
+                        context = context,
+                        titreRapport = "RAPPORT DES BÉNÉFICES",
+                        periode = periode,
+                        contenu = contenuRapportBenefices,
+                        nomEntreprise = nomEntreprise,
+                        adresseEntreprise = adresseEntreprise,
+                        telephoneEntreprise = telephoneEntreprise,
+                        emailEntreprise = emailEntreprise,
+                        rccmEntreprise = rccmEntreprise,
+                        idNatEntreprise = idNatEntreprise,
+                        impotEntreprise = impotEntreprise,
+                        logoEntreprise = logoEntreprise,
+                        lieuEntreprise = lieuEntreprise,
+                        nomGerant = nomGerant,
+                        fonctionGerant = fonctionGerant
+                    )
+
+                    imprimerRapport(context, fichier)
+                },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Imprimer le rapport des bénéfices")
+            }
+                        }
         item {
             Text(
                 "Choisir une période",
