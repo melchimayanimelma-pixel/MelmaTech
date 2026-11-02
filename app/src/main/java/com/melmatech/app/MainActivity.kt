@@ -1574,7 +1574,6 @@ Text("Reste : ${argent(v.reste, devise)}")
         add("BÉNÉFICE NET ESTIMÉ")
         add(argent(beneficeNet, devise))
     }
-    val beneficeNet = beneficeBrut - depensesPeriode
 
     val produitsFaibles = produits.filter {
         it.quantite in 1..5
