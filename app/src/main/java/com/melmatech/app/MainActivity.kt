@@ -2839,22 +2839,52 @@ Slider(
 
 @Composable
 fun DashboardCard(titre: String, montant: String) {
+
+    val icone = when (titre) {
+        "Produits enregistrés" -> Icons.Filled.Inventory2
+        "Chiffre d'affaires" -> Icons.Filled.BarChart
+        "Argent encaissé" -> Icons.Filled.Payments
+        "Dettes clients" -> Icons.Filled.AccountBalanceWallet
+        "Dépenses" -> Icons.Filled.MoneyOff
+        "Bénéfice estimé" -> Icons.Filled.TrendingUp
+        else -> Icons.Filled.BarChart
+    }
+
     Card(
-        modifier = Modifier.fillMaxWidth()
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = Color(0xFF6C3CE9)
+        ),
+        elevation = CardDefaults.cardElevation(
+            defaultElevation = 4.dp
+        )
     ) {
         Column(
-            Modifier.padding(16.dp)
+            modifier = Modifier.padding(18.dp)
         ) {
-            Text(
-                titre,
-                style = MaterialTheme.typography.titleMedium
+            Icon(
+                imageVector = icone,
+                contentDescription = titre,
+                tint = Color.White,
+                modifier = Modifier.size(30.dp)
             )
 
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(12.dp))
 
             Text(
-                montant,
-                style = MaterialTheme.typography.headlineMedium
+                text = titre,
+                style = MaterialTheme.typography.titleMedium,
+                color = Color(0xFFEDE5FF)
+            )
+
+            Spacer(Modifier.height(6.dp))
+
+            Text(
+                text = montant,
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Bold,
+                color = Color.White
             )
         }
     }
