@@ -56,6 +56,11 @@ import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.filled.MoreHoriz
 import androidx.compose.material.icons.filled.Inventory2
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.material.icons.filled.Payments
+import androidx.compose.material.icons.filled.AccountBalanceWallet
+import androidx.compose.material.icons.filled.TrendingUp
+import androidx.compose.material.icons.filled.MoneyOff
 
 data class Produit(
     val id: Long,
