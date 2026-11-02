@@ -2623,6 +2623,53 @@ private fun imprimerFacture(
         PrintAttributes.Builder().build()
     )
 }
+private fun imprimerRapport(context: Context, fichier: File) {
+    val printManager = context.getSystemService(Context.PRINT_SERVICE) as android.print.PrintManager
+
+    val adapter = object : android.print.PrintDocumentAdapter() {
+        override fun onLayout(
+            oldAttributes: android.print.PrintAttributes?,
+            newAttributes: android.print.PrintAttributes,
+            cancellationSignal: android.os.CancellationSignal,
+            callback: LayoutResultCallback,
+            extras: android.os.Bundle?
+        ) {
+            if (cancellationSignal.isCanceled) return
+
+            callback.onLayoutFinished(
+                android.print.PrintDocumentInfo.Builder(fichier.name)
+                    .setContentType(android.print.PrintDocumentInfo.CONTENT_TYPE_DOCUMENT)
+                    .build(),
+                true
+            )
+        }
+
+        override fun onWrite(
+            pages: Array<out android.print.PageRange>,
+            destination: android.os.ParcelFileDescriptor,
+            cancellationSignal: android.os.CancellationSignal,
+            callback: WriteResultCallback
+        ) {
+            try {
+                java.io.FileInputStream(fichier).use { input ->
+                    java.io.FileOutputStream(destination.fileDescriptor).use { output ->
+                        input.copyTo(output)
+                    }
+                }
+
+                callback.onWriteFinished(arrayOf(android.print.PageRange.ALL_PAGES))
+            } catch (e: Exception) {
+                callback.onWriteFailed(e.message)
+            }
+        }
+    }
+
+    printManager.print(
+        "Rapport-${fichier.name}",
+        adapter,
+        android.print.PrintAttributes.Builder().build()
+    )
+}
 
 private fun genererRapportDocumentPdf(
     context: Context,
