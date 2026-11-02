@@ -624,8 +624,17 @@ val enregistrerFactureLauncher =
             Scaffold(
     topBar = {
         TopAppBar(
-            title = { Text("MelmaTech") }
+    title = {
+        Text(
+            text = "MelmaTech",
+            color = Color(0xFF6C3CE9),
+            fontWeight = FontWeight.Bold
         )
+    },
+    colors = TopAppBarDefaults.topAppBarColors(
+        containerColor = Color.White
+    )
+)
     },
                 bottomBar = {
                     NavigationBar(
