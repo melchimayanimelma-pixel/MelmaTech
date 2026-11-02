@@ -2599,3 +2599,189 @@ private fun imprimerFacture(
         PrintAttributes.Builder().build()
     )
 }
+
+private fun genererRapportDocumentPdf(
+    context: Context,
+    titreRapport: String,
+    periode: String,
+    contenu: List<String>,
+    nomEntreprise: String,
+    adresseEntreprise: String,
+    telephoneEntreprise: String,
+    emailEntreprise: String,
+    rccmEntreprise: String,
+    idNatEntreprise: String,
+    impotEntreprise: String,
+    logoEntreprise: String,
+    lieuEntreprise: String,
+    nomGerant: String,
+    fonctionGerant: String
+): File {
+
+    val lignesParPage = 30
+    val groupes = contenu.chunked(lignesParPage)
+        .ifEmpty { listOf(emptyList()) }
+
+    val document = PdfDocument()
+    val largeur = 595
+    val hauteur = 842
+
+    val titre = Paint().apply {
+        textSize = 19f
+        typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+        textAlign = Paint.Align.CENTER
+    }
+
+    val gras = Paint().apply {
+        textSize = 11f
+        typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+    }
+
+    val texte = Paint().apply {
+        textSize = 10f
+    }
+
+    try {
+        groupes.forEachIndexed { index, lignes ->
+
+            val pageInfo = PdfDocument.PageInfo.Builder(
+                largeur, hauteur, index + 1
+            ).create()
+
+            val page = document.startPage(pageInfo)
+            val canvas = page.canvas
+
+            var y = 35f
+
+            if (index == 0 && logoEntreprise.isNotBlank()) {
+                try {
+                    val uri = Uri.parse(logoEntreprise)
+                    context.contentResolver
+                        .openInputStream(uri)?.use { input ->
+                            BitmapFactory.decodeStream(input)?.let { bitmap ->
+                                val ratio = minOf(
+                                    90f / bitmap.width,
+                                    65f / bitmap.height
+                                )
+                                val logo = Bitmap.createScaledBitmap(
+                                    bitmap,
+                                    (bitmap.width * ratio).toInt().coerceAtLeast(1),
+                                    (bitmap.height * ratio).toInt().coerceAtLeast(1),
+                                    true
+                                )
+                                canvas.drawBitmap(logo, 40f, 25f, null)
+                            }
+                        }
+                } catch (_: Exception) {
+                }
+            }
+
+            val entreprise = Paint().apply {
+                textSize = 13f
+                typeface = Typeface.create(
+                    Typeface.DEFAULT, Typeface.BOLD
+                )
+            }
+
+            canvas.drawText(
+                nomEntreprise.ifBlank { "Mon entreprise" },
+                150f, y, entreprise
+            )
+            y += 17f
+
+            listOf(
+                adresseEntreprise,
+                telephoneEntreprise,
+                emailEntreprise,
+                "RCCM : $rccmEntreprise",
+                "ID NAT : $idNatEntreprise",
+                "N° Impôt : $impotEntreprise"
+            ).filter { it.isNotBlank() && !it.endsWith(": ") }
+                .forEach {
+                    canvas.drawText(it, 150f, y, texte)
+                    y += 14f
+                }
+
+            y = maxOf(y + 12f, 110f)
+
+            canvas.drawLine(40f, y, 555f, y, texte)
+            y += 30f
+
+            canvas.drawText(titreRapport, largeur / 2f, y, titre)
+            y += 24f
+
+            val paintCentre = Paint(texte).apply {
+                textAlign = Paint.Align.CENTER
+            }
+
+            canvas.drawText(
+                periode,
+                largeur / 2f,
+                y,
+                paintCentre
+            )
+            y += 28f
+
+            canvas.drawLine(40f, y, 555f, y, texte)
+            y += 25f
+
+            lignes.forEach { ligne ->
+                canvas.drawText(ligne.take(85), 40f, y, texte)
+                y += 20f
+            }
+
+            if (index == groupes.lastIndex) {
+                y = maxOf(y + 25f, 730f)
+
+                canvas.drawText(
+                    "Fait à ${lieuEntreprise.ifBlank { "________________" }}, le " +
+                        java.text.SimpleDateFormat(
+                            "dd/MM/yyyy",
+                            Locale.getDefault()
+                        ).format(Date()),
+                    40f, y, texte
+                )
+                y += 28f
+
+                canvas.drawText("Par : $nomGerant", 40f, y, gras)
+                y += 20f
+
+                canvas.drawText(
+                    "Fonction : $fonctionGerant",
+                    40f, y, texte
+                )
+                y += 45f
+
+                canvas.drawLine(40f, y, 220f, y, texte)
+                canvas.drawText(
+                    "Signature et cachet",
+                    40f, y + 16f, texte
+                )
+            }
+
+            document.finishPage(page)
+        }
+
+        val dossier = File(
+            context.getExternalFilesDir(null),
+            "Rapports"
+        )
+
+        if (!dossier.exists()) dossier.mkdirs()
+
+        val fichier = File(
+            dossier,
+            "Rapport-${System.currentTimeMillis()}.pdf"
+        )
+
+        FileOutputStream(fichier).use {
+            document.writeTo(it)
+        }
+
+        return fichier
+
+    } finally {
+        document.close()
+    }
+}
+
