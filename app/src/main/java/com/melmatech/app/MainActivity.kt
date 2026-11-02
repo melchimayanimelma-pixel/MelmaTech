@@ -746,6 +746,36 @@ val enregistrerFactureLauncher =
                         }
 
                         "Produits" -> {
+                            val totalProduits = produits.size
+
+val stockTotal = produits.sumOf {
+    it.quantite
+}
+
+val produitsEnAlerte = produits.count {
+    it.quantite in 1..5
+}
+
+val produitsEpuises = produits.count {
+    it.quantite <= 0
+}
+
+val valeurStock = produits.sumOf {
+    it.achat * it.quantite
+}
+
+val produitsFiltres = produits.filter { produit ->
+    val correspondRecherche =
+        produit.nom.contains(rechercheProduit, ignoreCase = true)
+
+    val correspondFiltre = when (filtreProduit) {
+        "Stock faible" -> produit.quantite in 1..5
+        "Épuisés" -> produit.quantite <= 0
+        else -> true
+    }
+
+    correspondRecherche && correspondFiltre
+}
 
                             if (!estAdministrateur) {
                                 Text("Accès réservé à l'administrateur.")
