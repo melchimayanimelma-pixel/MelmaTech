@@ -1582,6 +1582,35 @@ Text("Reste : ${argent(v.reste, devise)}")
     val produitsEpuises = produits.filter {
         it.quantite <= 0
     }
+        val contenuRapportStock = buildList {
+        add("Date du rapport : ${
+            java.text.SimpleDateFormat(
+                "dd/MM/yyyy",
+                Locale.getDefault()
+            ).format(Date())
+        }")
+        add("")
+        add("RÉSUMÉ DU STOCK")
+        add("Nombre total de produits : ${produits.size}")
+        add("Produits en stock faible : ${produitsFaibles.size}")
+        add("Produits épuisés : ${produitsEpuises.size}")
+        add("")
+        add("ÉTAT DÉTAILLÉ DU STOCK")
+
+        produits.forEach { produit ->
+            add("Produit : ${produit.nom}")
+            add("Quantité disponible : ${produit.quantite}")
+            add("Prix de vente : ${argent(produit.vente, devise)}")
+
+            when {
+                produit.quantite <= 0 -> add("État : ÉPUISÉ")
+                produit.quantite <= 5 -> add("État : STOCK FAIBLE")
+                else -> add("État : DISPONIBLE")
+            }
+
+            add("------------------------------")
+        }
+            }
 
     LazyColumn(
         verticalArrangement = Arrangement.spacedBy(10.dp)
