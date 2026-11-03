@@ -2872,6 +2872,16 @@ Slider(
 @Composable
 fun DashboardCard(titre: String, montant: String) {
 
+    val couleur = when (titre) {
+        "Produits enregistrés" -> Color(0xFF6C3CE9)
+        "Chiffre d'affaires" -> Color(0xFF2878D0)
+        "Argent encaissé" -> Color(0xFF239B68)
+        "Dettes clients" -> Color(0xFFE58B25)
+        "Dépenses" -> Color(0xFFD95757)
+        "Bénéfice estimé" -> Color(0xFF159EAD)
+        else -> Color(0xFF6C3CE9)
+    }
+
     val icone = when (titre) {
         "Produits enregistrés" -> Icons.Filled.Inventory2
         "Chiffre d'affaires" -> Icons.Filled.BarChart
@@ -2886,7 +2896,7 @@ fun DashboardCard(titre: String, montant: String) {
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(
-            containerColor = Color(0xFF6C3CE9)
+            containerColor = couleur
         ),
         elevation = CardDefaults.cardElevation(
             defaultElevation = 4.dp
@@ -2907,7 +2917,7 @@ fun DashboardCard(titre: String, montant: String) {
             Text(
                 text = titre,
                 style = MaterialTheme.typography.titleMedium,
-                color = Color(0xFFEDE5FF)
+                color = Color.White
             )
 
             Spacer(Modifier.height(6.dp))
