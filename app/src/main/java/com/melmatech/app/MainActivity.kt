@@ -2356,7 +2356,7 @@ Text(
 
         item {
             Card(
-                onClick = { page = "Rapports" },
+                onClick = { page = "Depenses" },
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Column(Modifier.padding(16.dp)) {
