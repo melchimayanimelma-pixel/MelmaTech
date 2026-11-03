@@ -1257,6 +1257,13 @@ val enregistrerFactureLauncher =
     var messageDepense by remember {
         mutableStateOf("")
     }
+    var depenseAModifier by remember {
+    mutableStateOf<Depense?>(null)
+}
+
+var confirmerSuppression by remember {
+    mutableStateOf<Depense?>(null)
+}
 
     LazyColumn(
         verticalArrangement = Arrangement.spacedBy(12.dp)
