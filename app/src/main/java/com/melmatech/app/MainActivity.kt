@@ -1252,6 +1252,148 @@ val enregistrerFactureLauncher =
 }
 
 
+                        "Depenses" -> {
+
+    var messageDepense by remember {
+        mutableStateOf("")
+    }
+
+    LazyColumn(
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        item {
+            Text(
+                "Gestion des dépenses",
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Bold
+            )
+
+            Text("Enregistre et suis les dépenses de ton commerce.")
+        }
+
+        item {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(16.dp)
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Text(
+                        "Nouvelle dépense",
+                        style = MaterialTheme.typography.titleLarge
+                    )
+
+                    OutlinedTextField(
+                        value = descriptionDepense,
+                        onValueChange = {
+                            descriptionDepense = it
+                        },
+                        label = { Text("Description de la dépense") },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
+                    OutlinedTextField(
+                        value = montantDepense,
+                        onValueChange = {
+                            montantDepense = it
+                        },
+                        label = {
+                            Text("Montant ($devise)")
+                        },
+                        keyboardOptions = KeyboardOptions(
+                            keyboardType = KeyboardType.Decimal
+                        ),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
+                    Button(
+                        onClick = {
+                            val montant = montantDepense
+                                .replace(",", ".")
+                                .toDoubleOrNull()
+
+                            if (
+                                descriptionDepense.isBlank() ||
+                                montant == null ||
+                                montant <= 0
+                            ) {
+                                messageDepense =
+                                    "Vérifie la description et le montant."
+                            } else {
+                                val id = System.currentTimeMillis()
+
+                                depenses.add(
+                                    Depense(
+                                        id,
+                                        descriptionDepense.trim(),
+                                        montant,
+                                        id
+                                    )
+                                )
+
+                                sauvegarderDepenses()
+
+                                descriptionDepense = ""
+                                montantDepense = ""
+                                messageDepense =
+                                    "Dépense enregistrée avec succès."
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("Enregistrer la dépense")
+                    }
+
+                    if (messageDepense.isNotBlank()) {
+                        Text(messageDepense)
+                    }
+                }
+            }
+        }
+
+        item {
+            Text(
+                "Historique des dépenses",
+                style = MaterialTheme.typography.titleLarge
+            )
+
+            Text(
+                "Total : ${argent(totalDepenses, devise)}",
+                fontWeight = FontWeight.Bold
+            )
+        }
+
+        if (depenses.isEmpty()) {
+            item {
+                Text("Aucune dépense enregistrée.")
+            }
+        }
+
+        items(
+            depenses.sortedByDescending { it.date },
+            key = { it.id }
+        ) { depense ->
+            Card(
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(
+                    modifier = Modifier.padding(14.dp)
+                ) {
+                    Text(
+                        depense.description,
+                        fontWeight = FontWeight.Bold
+                    )
+
+                    Text(argent(depense.montant, devise))
+
+                    Text(formaterDate(depense.date))
+                }
+            }
+        }
+    }
+                        }
                         "Ventes" -> {
 
                             val suggestions = produits.filter {
