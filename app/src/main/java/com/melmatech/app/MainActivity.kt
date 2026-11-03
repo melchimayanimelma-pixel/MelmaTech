@@ -1396,6 +1396,31 @@ var confirmerSuppression by remember {
                     Text(argent(depense.montant, devise))
 
                     Text(formaterDate(depense.date))
+                    Row(
+    modifier = Modifier.fillMaxWidth(),
+    horizontalArrangement = Arrangement.spacedBy(8.dp)
+) {
+    TextButton(
+        onClick = {
+            depenseAModifier = depense
+            descriptionDepense = depense.description
+            montantDepense = depense.montant.toString()
+        }
+    ) {
+        Text("Modifier")
+    }
+
+    TextButton(
+        onClick = {
+            confirmerSuppression = depense
+        }
+    ) {
+        Text(
+            "Supprimer",
+            color = MaterialTheme.colorScheme.error
+        )
+    }
+                    }
                 }
             }
         }
