@@ -722,82 +722,111 @@ val enregistrerFactureLauncher =
                     when (page) {
 
                         "Accueil" -> {
-                            LazyColumn(
-                                verticalArrangement =
-                                    Arrangement.spacedBy(10.dp)
-                            ) {
-                                item {
-                                    Text(
-                                        "Bienvenue sur MelmaTech",
-                                        style = MaterialTheme.typography.headlineSmall
-                                    )
-                                    Text("Gestion de votre commerce en $devise")
-                                }
+    LazyColumn(
+        verticalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
+        item {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(
+                        Color(0xFF6C3CE9),
+                        RoundedCornerShape(20.dp)
+                    )
+                    .padding(20.dp)
+            ) {
+                Text(
+                    text = "Bienvenue sur MelmaTech",
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White
+                )
 
-                                item {
-                                    DashboardCard(
-                                        "Produits enregistrés",
-                                        produits.size.toString()
-                                    )
-                                }
+                Spacer(Modifier.height(6.dp))
 
-                                item {
-                                    DashboardCard(
-                                        "Chiffre d'affaires",
-                                        argent(chiffreAffaires, devise)
-                                    )
-                                }
+                Text(
+                    text = "Gestion de votre commerce en $devise",
+                    color = Color.White
+                )
+            }
+        }
 
-                                item {
-                                    DashboardCard(
-                                        "Argent encaissé",
-                                        argent(totalEncaisse, devise)
-                                    )
-                                }
+        item {
+            LazyVerticalGrid(
+                columns = GridCells.Fixed(2),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(540.dp),
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp),
+                userScrollEnabled = false
+            ) {
+                item {
+                    DashboardCard(
+                        "Produits enregistrés",
+                        produits.size.toString()
+                    )
+                }
 
-                                item {
-                                    DashboardCard(
-                                        "Dettes clients",
-                                        argent(totalDettes, devise)
-                                    )
-                                }
+                item {
+                    DashboardCard(
+                        "Chiffre d'affaires",
+                        argent(chiffreAffaires, devise)
+                    )
+                }
 
-                                item {
-                                    DashboardCard(
-                                        "Dépenses",
-                                        argent(totalDepenses, devise)
-                                    )
-                                }
+                item {
+                    DashboardCard(
+                        "Argent encaissé",
+                        argent(totalEncaisse, devise)
+                    )
+                }
 
-                                item {
-                                    DashboardCard(
-                                        "Bénéfice estimé",
-                                        argent(benefice, devise)
-                                    )
-                                }
+                item {
+                    DashboardCard(
+                        "Dettes clients",
+                        argent(totalDettes, devise)
+                    )
+                }
 
-                                item {
-                                    if (chargementProduits) {
-                                        CircularProgressIndicator()
-                                    }
+                item {
+                    DashboardCard(
+                        "Dépenses",
+                        argent(totalDepenses, devise)
+                    )
+                }
 
-                                    Text(messageProduit)
-                                }
+                item {
+                    DashboardCard(
+                        "Bénéfice estimé",
+                        argent(benefice, devise)
+                    )
+                }
+            }
+        }
 
-                                item {
-                                    Button(
-                                        onClick = {
-                                            SupabaseService.testerConnexion {
-                                                    succes, message ->
-                                                messageConnexion = message
-                                            }
-                                        },
-                                        modifier = Modifier.fillMaxWidth()
-                                    ) {
-                                        Text("Tester Supabase")
-                                    }
-                                }
-                            }
+        item {
+            if (chargementProduits) {
+                CircularProgressIndicator()
+            }
+
+            Text(messageProduit)
+        }
+
+        item {
+            Button(
+                onClick = {
+                    SupabaseService.testerConnexion {
+                        succes, message ->
+                        messageConnexion = message
+                    }
+                },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Tester Supabase")
+            }
+        }
+    }
                         }
 
                         
