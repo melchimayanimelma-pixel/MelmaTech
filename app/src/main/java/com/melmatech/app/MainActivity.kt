@@ -1257,13 +1257,14 @@ val enregistrerFactureLauncher =
     var messageDepense by remember {
         mutableStateOf("")
     }
-    var depenseAModifier by remember {
-    mutableStateOf<Depense?>(null)
-}
 
-var confirmerSuppression by remember {
-    mutableStateOf<Depense?>(null)
-}
+    var depenseAModifier by remember {
+        mutableStateOf<Depense?>(null)
+    }
+
+    var confirmerSuppression by remember {
+        mutableStateOf<Depense?>(null)
+    }
 
     LazyColumn(
         verticalArrangement = Arrangement.spacedBy(12.dp)
@@ -1288,7 +1289,10 @@ var confirmerSuppression by remember {
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     Text(
-                        "Nouvelle dépense",
+                        if (depenseAModifier != null)
+                            "Modifier une dépense"
+                        else
+                            "Nouvelle dépense",
                         style = MaterialTheme.typography.titleLarge
                     )
 
@@ -1297,7 +1301,9 @@ var confirmerSuppression by remember {
                         onValueChange = {
                             descriptionDepense = it
                         },
-                        label = { Text("Description de la dépense") },
+                        label = {
+                            Text("Description de la dépense")
+                        },
                         modifier = Modifier.fillMaxWidth()
                     )
 
@@ -1329,28 +1335,72 @@ var confirmerSuppression by remember {
                                 messageDepense =
                                     "Vérifie la description et le montant."
                             } else {
-                                val id = System.currentTimeMillis()
 
-                                depenses.add(
-                                    Depense(
-                                        id,
-                                        descriptionDepense.trim(),
-                                        montant,
-                                        id
+                                if (depenseAModifier != null) {
+                                    val ancienneDepense =
+                                        depenseAModifier!!
+
+                                    val index = depenses.indexOfFirst {
+                                        it.id == ancienneDepense.id
+                                    }
+
+                                    if (index != -1) {
+                                        depenses[index] =
+                                            ancienneDepense.copy(
+                                                description = descriptionDepense.trim(),
+                                                montant = montant
+                                            )
+                                    }
+
+                                    depenseAModifier = null
+
+                                    messageDepense =
+                                        "Dépense modifiée avec succès."
+
+                                } else {
+                                    val id = System.currentTimeMillis()
+
+                                    depenses.add(
+                                        Depense(
+                                            id,
+                                            descriptionDepense.trim(),
+                                            montant,
+                                            id
+                                        )
                                     )
-                                )
+
+                                    messageDepense =
+                                        "Dépense enregistrée avec succès."
+                                }
 
                                 sauvegarderDepenses()
 
                                 descriptionDepense = ""
                                 montantDepense = ""
-                                messageDepense =
-                                    "Dépense enregistrée avec succès."
                             }
                         },
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        Text("Enregistrer la dépense")
+                        Text(
+                            if (depenseAModifier != null)
+                                "Enregistrer les modifications"
+                            else
+                                "Enregistrer la dépense"
+                        )
+                    }
+
+                    if (depenseAModifier != null) {
+                        OutlinedButton(
+                            onClick = {
+                                depenseAModifier = null
+                                descriptionDepense = ""
+                                montantDepense = ""
+                                messageDepense = ""
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text("Annuler la modification")
+                        }
                     }
 
                     if (messageDepense.isNotBlank()) {
@@ -1382,11 +1432,13 @@ var confirmerSuppression by remember {
             depenses.sortedByDescending { it.date },
             key = { it.id }
         ) { depense ->
+
             Card(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Column(
-                    modifier = Modifier.padding(14.dp)
+                    modifier = Modifier.padding(14.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
                     Text(
                         depense.description,
@@ -1396,36 +1448,91 @@ var confirmerSuppression by remember {
                     Text(argent(depense.montant, devise))
 
                     Text(formaterDate(depense.date))
-                    Row(
-    modifier = Modifier.fillMaxWidth(),
-    horizontalArrangement = Arrangement.spacedBy(8.dp)
-) {
-    TextButton(
-        onClick = {
-            depenseAModifier = depense
-            descriptionDepense = depense.description
-            montantDepense = depense.montant.toString()
-        }
-    ) {
-        Text("Modifier")
-    }
 
-    TextButton(
-        onClick = {
-            confirmerSuppression = depense
-        }
-    ) {
-        Text(
-            "Supprimer",
-            color = MaterialTheme.colorScheme.error
-        )
-    }
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        TextButton(
+                            onClick = {
+                                depenseAModifier = depense
+                                descriptionDepense = depense.description
+                                montantDepense = depense.montant.toString()
+                                messageDepense = ""
+                            }
+                        ) {
+                            Text("Modifier")
+                        }
+
+                        TextButton(
+                            onClick = {
+                                confirmerSuppression = depense
+                            }
+                        ) {
+                            Text(
+                                "Supprimer",
+                                color = MaterialTheme.colorScheme.error
+                            )
+                        }
                     }
                 }
             }
         }
     }
+
+    if (confirmerSuppression != null) {
+        AlertDialog(
+            onDismissRequest = {
+                confirmerSuppression = null
+            },
+            title = {
+                Text("Supprimer cette dépense ?")
+            },
+            text = {
+                Text(
+                    "La dépense « ${confirmerSuppression!!.description} » sera supprimée définitivement."
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        val depense = confirmerSuppression!!
+
+                        depenses.removeAll {
+                            it.id == depense.id
                         }
+
+                        sauvegarderDepenses()
+
+                        if (depenseAModifier?.id == depense.id) {
+                            depenseAModifier = null
+                            descriptionDepense = ""
+                            montantDepense = ""
+                        }
+
+                        confirmerSuppression = null
+                        messageDepense = "Dépense supprimée."
+                    }
+                ) {
+                    Text(
+                        "Supprimer",
+                        color = MaterialTheme.colorScheme.error
+                    )
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = {
+                        confirmerSuppression = null
+                    }
+                ) {
+                    Text("Annuler")
+                }
+            }
+        )
+    }
+                        }
+                        
                         "Ventes" -> {
 
                             val suggestions = produits.filter {
