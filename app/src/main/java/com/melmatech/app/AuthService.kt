@@ -10,8 +10,18 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.Response
+import org.json.JSONArray
 import org.json.JSONObject
 import java.io.IOException
+import java.util.UUID
+
+data class ProfilUtilisateur(
+    val id: String,
+    val nomComplet: String,
+    val role: String,
+    val entrepriseId: String,
+    val photoUrl: String?
+)
 
 object AuthService {
 
@@ -33,263 +43,550 @@ object AuthService {
     }
 
     fun obtenirUtilisateurId(context: Context): String? {
-        return preferences(context)
-            .getString("user_id", null)
+        return preferences(context).getString("user_id", null)
     }
 
     fun obtenirAccessToken(context: Context): String? {
-        return preferences(context)
-            .getString("access_token", null)
-    }
-fun obtenirEntrepriseId(
-    context: Context,
-    callback: (Boolean, String, String?) -> Unit
-) {
-    val utilisateurId = obtenirUtilisateurId(context)
-    val accessToken = obtenirAccessToken(context)
-
-    if (utilisateurId.isNullOrBlank() || accessToken.isNullOrBlank()) {
-        mainHandler.post {
-            callback(false, "Reconnecte-toi à ton compte.", null)
-        }
-        return
+        return preferences(context).getString("access_token", null)
     }
 
-    val url =
-        "${SupabaseConfig.url}/rest/v1/profils" +
-        "?id=eq.$utilisateurId&select=entreprise_id,actif"
+    fun deconnecter(context: Context) {
+        preferences(context).edit().clear().apply()
+    }
 
-    val request = Request.Builder()
-        .url(url)
-        .addHeader("apikey", SupabaseConfig.key)
-        .addHeader("Authorization", "Bearer $accessToken")
-        .get()
-        .build()
+    // Récupérer le profil complet de l'utilisateur connecté.
+    fun obtenirProfil(
+        context: Context,
+        callback: (Boolean, String, ProfilUtilisateur?) -> Unit
+    ) {
+        val id = obtenirUtilisateurId(context)
+        val token = obtenirAccessToken(context)
 
-    client.newCall(request).enqueue(object : Callback {
-
-        override fun onFailure(call: Call, e: IOException) {
+        if (id.isNullOrBlank() || token.isNullOrBlank()) {
             mainHandler.post {
-                callback(
-                    false,
-                    "Erreur réseau : ${e.message ?: "connexion impossible"}",
-                    null
-                )
+                callback(false, "Reconnecte-toi à ton compte.", null)
             }
+            return
         }
 
-        override fun onResponse(call: Call, response: Response) {
-            response.use {
-                val body = it.body?.string().orEmpty()
+        val url =
+            "${SupabaseConfig.url}/rest/v1/profils" +
+            "?id=eq.$id" +
+            "&select=id,nom_complet,role,entreprise_id,photo_url,actif"
 
-                if (!it.isSuccessful) {
-                    mainHandler.post {
-                        callback(
-                            false,
-                            "Erreur Supabase (${it.code}).",
-                            null
-                        )
-                    }
-                    return
+        val request = Request.Builder()
+            .url(url)
+            .addHeader("apikey", SupabaseConfig.key)
+            .addHeader("Authorization", "Bearer $token")
+            .get()
+            .build()
+
+        client.newCall(request).enqueue(object : Callback {
+
+            override fun onFailure(call: Call, e: IOException) {
+                mainHandler.post {
+                    callback(false, "Erreur réseau.", null)
                 }
+            }
 
-                try {
-                    val profils = org.json.JSONArray(body)
+            override fun onResponse(call: Call, response: Response) {
+                response.use {
+                    val body = it.body?.string().orEmpty()
 
-                    if (profils.length() == 0) {
-                        mainHandler.post {
-                            callback(false, "Profil introuvable.", null)
-                        }
-                        return
-                    }
-
-                    val profil = profils.getJSONObject(0)
-                    val actif = profil.optBoolean("actif", false)
-                    val entrepriseId =
-                        profil.optString("entreprise_id")
-
-                    if (!actif || entrepriseId.isBlank()) {
+                    if (!it.isSuccessful) {
                         mainHandler.post {
                             callback(
                                 false,
-                                "Compte inactif ou entreprise introuvable.",
+                                "Erreur Supabase (${it.code}).",
                                 null
                             )
                         }
                         return
                     }
 
-                    mainHandler.post {
-                        callback(
-                            true,
-                            "Entreprise récupérée.",
-                            entrepriseId
-                        )
-                    }
-                } catch (_: Exception) {
-                    mainHandler.post {
-                        callback(
-                            false,
-                            "Impossible de lire le profil.",
-                            null
-                        )
-                    }
-                }
-            }
-        }
-    })
-}
-fun obtenirRole(
-    context: Context,
-    callback: (Boolean, String, String?) -> Unit
-) {
-    val utilisateurId = obtenirUtilisateurId(context)
-    val accessToken = obtenirAccessToken(context)
+                    try {
+                        val profils = JSONArray(body)
 
-    if (utilisateurId.isNullOrBlank() || accessToken.isNullOrBlank()) {
-        mainHandler.post {
-            callback(false, "Reconnecte-toi à ton compte.", null)
-        }
-        return
-    }
-
-    val url =
-        "${SupabaseConfig.url}/rest/v1/profils" +
-        "?id=eq.$utilisateurId&select=role,actif"
-
-    val request = Request.Builder()
-        .url(url)
-        .addHeader("apikey", SupabaseConfig.key)
-        .addHeader("Authorization", "Bearer $accessToken")
-        .get()
-        .build()
-
-    client.newCall(request).enqueue(object : Callback {
-        override fun onFailure(call: Call, e: IOException) {
-            mainHandler.post {
-                callback(false, "Erreur réseau.", null)
-            }
-        }
-
-        override fun onResponse(call: Call, response: Response) {
-            response.use {
-                val body = it.body?.string().orEmpty()
-
-                if (!it.isSuccessful) {
-                    mainHandler.post {
-                        callback(false, "Erreur Supabase (${it.code}).", null)
-                    }
-                    return
-                }
-
-                try {
-                    val profils = org.json.JSONArray(body)
-
-                    if (profils.length() == 0) {
-                        mainHandler.post {
-                            callback(false, "Profil introuvable.", null)
+                        if (profils.length() == 0) {
+                            mainHandler.post {
+                                callback(false, "Profil introuvable.", null)
+                            }
+                            return
                         }
-                        return
-                    }
 
-                    val profil = profils.getJSONObject(0)
-                    val role = profil.optString("role", "")
-                    val actif = profil.optBoolean("actif", false)
+                        val p = profils.getJSONObject(0)
 
-                    if (!actif || role.isBlank()) {
-                        mainHandler.post {
-                            callback(false, "Compte inactif ou rôle introuvable.", null)
+                        if (!p.optBoolean("actif", false)) {
+                            mainHandler.post {
+                                callback(false, "Compte inactif.", null)
+                            }
+                            return
                         }
-                        return
-                    }
 
-                    mainHandler.post {
-                        callback(true, "Rôle récupéré.", role)
-                    }
-                } catch (_: Exception) {
-                    mainHandler.post {
-                        callback(false, "Impossible de lire le rôle.", null)
+                        val profil = ProfilUtilisateur(
+                            id = p.optString("id"),
+                            nomComplet = p.optString("nom_complet"),
+                            role = p.optString("role"),
+                            entrepriseId = p.optString("entreprise_id"),
+                            photoUrl = if (p.isNull("photo_url")) {
+                                null
+                            } else {
+                                p.optString("photo_url").takeIf {
+                                    it.isNotBlank()
+                                }
+                            }
+                        )
+
+                        mainHandler.post {
+                            callback(true, "Profil récupéré.", profil)
+                        }
+
+                    } catch (_: Exception) {
+                        mainHandler.post {
+                            callback(false, "Impossible de lire le profil.", null)
+                        }
                     }
                 }
             }
-        }
-    })
-}
-
-    fun creerVendeur(
-    context: Context,
-    nomComplet: String,
-    email: String,
-    motDePasse: String,
-    callback: (Boolean, String) -> Unit
-) {
-    val accessToken = obtenirAccessToken(context)
-
-    if (accessToken.isNullOrBlank()) {
-        mainHandler.post {
-            callback(false, "Reconnecte-toi à ton compte.")
-        }
-        return
+        })
     }
 
-    val donnees = JSONObject().apply {
-        put("nomComplet", nomComplet.trim())
-        put("email", email.trim())
-        put("motDePasse", motDePasse)
+    // Récupérer l'entreprise de l'utilisateur connecté.
+    fun obtenirEntrepriseId(
+        context: Context,
+        callback: (Boolean, String, String?) -> Unit
+    ) {
+        obtenirProfil(context) { succes, message, profil ->
+            callback(
+                succes,
+                message,
+                profil?.entrepriseId
+            )
+        }
     }
 
-    val requete = Request.Builder()
-        .url("${SupabaseConfig.url}/functions/v1/creer-vendeur")
-        .addHeader("apikey", SupabaseConfig.key)
-        .addHeader("Authorization", "Bearer $accessToken")
-        .addHeader("Content-Type", "application/json")
-        .post(donnees.toString().toRequestBody(jsonType))
-        .build()
+    // Récupérer le rôle de l'utilisateur connecté.
+    fun obtenirRole(
+        context: Context,
+        callback: (Boolean, String, String?) -> Unit
+    ) {
+        obtenirProfil(context) { succes, message, profil ->
+            callback(
+                succes,
+                message,
+                profil?.role
+            )
+        }
+    }
 
-    client.newCall(requete).enqueue(object : Callback {
+    // Récupérer l'URL publique d'une photo.
+    private fun urlPubliquePhoto(chemin: String): String {
+        return "${SupabaseConfig.url}/storage/v1/object/public/" +
+            "photos-profils/$chemin"
+    }
 
-        override fun onFailure(call: Call, e: IOException) {
+    // Envoyer une photo dans Supabase Storage.
+    // Le fichier est stocké dans le dossier de l'entreprise
+    // puis dans celui de l'utilisateur.
+    fun envoyerPhotoProfil(
+        context: Context,
+        utilisateurCibleId: String,
+        image: ByteArray,
+        typeMime: String,
+        callback: (Boolean, String, String?) -> Unit
+    ) {
+        val utilisateurConnecteId = obtenirUtilisateurId(context)
+        val token = obtenirAccessToken(context)
+
+        if (
+            utilisateurConnecteId.isNullOrBlank() ||
+            token.isNullOrBlank()
+        ) {
             mainHandler.post {
+                callback(false, "Reconnecte-toi à ton compte.", null)
+            }
+            return
+        }
+
+        if (image.isEmpty()) {
+            mainHandler.post {
+                callback(false, "Image vide.", null)
+            }
+            return
+        }
+
+        if (image.size > 2 * 1024 * 1024) {
+            mainHandler.post {
+                callback(false, "La photo doit faire moins de 2 Mo.", null)
+            }
+            return
+        }
+
+        if (
+            typeMime !in listOf(
+                "image/jpeg",
+                "image/png",
+                "image/webp"
+            )
+        ) {
+            mainHandler.post {
+                callback(false, "Format d'image non accepté.", null)
+            }
+            return
+        }
+
+        // Vérifier que l'utilisateur connecté est administrateur
+        // et que la cible appartient à sa propre entreprise.
+        obtenirProfil(context) { succes, message, profilAdmin ->
+
+            if (!succes || profilAdmin == null) {
+                callback(false, message, null)
+                return@obtenirProfil
+            }
+
+            val role = profilAdmin.role.lowercase()
+
+            if (
+                role !in listOf(
+                    "administrateur",
+                    "admin",
+                    "manager"
+                )
+            ) {
                 callback(
                     false,
-                    "Erreur réseau. Vérifie ta connexion Internet."
+                    "Seul un administrateur peut modifier les photos.",
+                    null
                 )
+                return@obtenirProfil
             }
-        }
 
-        override fun onResponse(call: Call, response: Response) {
-            response.use {
-                val corps = it.body?.string().orEmpty()
+            // Vérifier le profil de la personne dont on change la photo.
+            verifierProfilCible(
+                context,
+                utilisateurCibleId
+            ) { cibleOK, cibleMessage, entrepriseCible ->
 
-                val resultat = try {
-                    JSONObject(corps)
-                } catch (_: Exception) {
-                    JSONObject()
-                }
-
-                if (it.isSuccessful && resultat.optBoolean("succes")) {
-                    mainHandler.post {
-                        callback(
-                            true,
-                            "Compte vendeur créé avec succès."
-                        )
-                    }
-                } else {
-                    val message = resultat.optString(
-                        "erreur",
-                        "Impossible de créer le compte vendeur (code ${it.code})."
+                if (!cibleOK || entrepriseCible != profilAdmin.entrepriseId) {
+                    callback(
+                        false,
+                        "Ce compte n'appartient pas à ton entreprise.",
+                        null
                     )
+                    return@verifierProfilCible
+                }
 
-                    mainHandler.post {
-                        callback(false, message)
+                val extension = when (typeMime) {
+                    "image/png" -> "png"
+                    "image/webp" -> "webp"
+                    else -> "jpg"
+                }
+
+                val nomFichier =
+                    "${UUID.randomUUID()}.$extension"
+
+                val chemin =
+                    "${profilAdmin.entrepriseId}/" +
+                    "$utilisateurCibleId/$nomFichier"
+
+                val url =
+                    "${SupabaseConfig.url}/storage/v1/object/" +
+                    "photos-profils/$chemin"
+
+                val request = Request.Builder()
+                    .url(url)
+                    .addHeader("apikey", SupabaseConfig.key)
+                    .addHeader("Authorization", "Bearer $token")
+                    .addHeader("Content-Type", typeMime)
+                    .addHeader("x-upsert", "false")
+                    .post(image.toRequestBody(typeMime.toMediaType()))
+                    .build()
+
+                client.newCall(request).enqueue(object : Callback {
+
+                    override fun onFailure(
+                        call: Call,
+                        e: IOException
+                    ) {
+                        mainHandler.post {
+                            callback(
+                                false,
+                                "Erreur lors de l'envoi de la photo.",
+                                null
+                            )
+                        }
+                    }
+
+                    override fun onResponse(
+                        call: Call,
+                        response: Response
+                    ) {
+                        response.use {
+                            if (!it.isSuccessful) {
+                                mainHandler.post {
+                                    callback(
+                                        false,
+                                        "Erreur Storage (${it.code}).",
+                                        null
+                                    )
+                                }
+                                return
+                            }
+
+                            val photoUrl = urlPubliquePhoto(chemin)
+
+                            mettreAJourPhotoProfil(
+                                context,
+                                utilisateurCibleId,
+                                photoUrl
+                            ) { miseAJourOK, resultat ->
+
+                                callback(
+                                    miseAJourOK,
+                                    resultat,
+                                    if (miseAJourOK) photoUrl else null
+                                )
+                            }
+                        }
+                    }
+                })
+            }
+        }
+    }
+
+    // Vérifier le profil de la cible avant l'envoi.
+    private fun verifierProfilCible(
+        context: Context,
+        cibleId: String,
+        callback: (Boolean, String, String?) -> Unit
+    ) {
+        val token = obtenirAccessToken(context)
+
+        if (token.isNullOrBlank()) {
+            callback(false, "Session expirée.", null)
+            return
+        }
+
+        val url =
+            "${SupabaseConfig.url}/rest/v1/profils" +
+            "?id=eq.$cibleId&select=entreprise_id,actif"
+
+        val request = Request.Builder()
+            .url(url)
+            .addHeader("apikey", SupabaseConfig.key)
+            .addHeader("Authorization", "Bearer $token")
+            .get()
+            .build()
+
+        client.newCall(request).enqueue(object : Callback {
+
+            override fun onFailure(call: Call, e: IOException) {
+                mainHandler.post {
+                    callback(false, "Erreur réseau.", null)
+                }
+            }
+
+            override fun onResponse(call: Call, response: Response) {
+                response.use {
+                    val body = it.body?.string().orEmpty()
+
+                    if (!it.isSuccessful) {
+                        mainHandler.post {
+                            callback(false, "Erreur de vérification.", null)
+                        }
+                        return
+                    }
+
+                    try {
+                        val profils = JSONArray(body)
+
+                        if (profils.length() == 0) {
+                            mainHandler.post {
+                                callback(false, "Profil cible introuvable.", null)
+                            }
+                            return
+                        }
+
+                        val p = profils.getJSONObject(0)
+
+                        if (!p.optBoolean("actif", false)) {
+                            mainHandler.post {
+                                callback(false, "Compte cible inactif.", null)
+                            }
+                            return
+                        }
+
+                        mainHandler.post {
+                            callback(
+                                true,
+                                "Profil vérifié.",
+                                p.optString("entreprise_id")
+                            )
+                        }
+
+                    } catch (_: Exception) {
+                        mainHandler.post {
+                            callback(false, "Impossible de lire le profil cible.", null)
+                        }
                     }
                 }
             }
-        }
-    })
+        })
     }
-    fun deconnecter(context: Context) {
-        preferences(context).edit().clear().apply()
+
+    // Enregistrer l'adresse de la photo dans la table profils.
+    private fun mettreAJourPhotoProfil(
+        context: Context,
+        cibleId: String,
+        photoUrl: String,
+        callback: (Boolean, String) -> Unit
+    ) {
+        val token = obtenirAccessToken(context)
+
+        if (token.isNullOrBlank()) {
+            callback(false, "Session expirée.")
+            return
+        }
+
+        val json = JSONObject().apply {
+            put("photo_url", photoUrl)
+        }
+
+        val url =
+            "${SupabaseConfig.url}/rest/v1/profils?id=eq.$cibleId"
+
+        val request = Request.Builder()
+            .url(url)
+            .addHeader("apikey", SupabaseConfig.key)
+            .addHeader("Authorization", "Bearer $token")
+            .addHeader("Content-Type", "application/json")
+            .addHeader("Prefer", "return=minimal")
+            .patch(json.toString().toRequestBody(jsonType))
+            .build()
+
+        client.newCall(request).enqueue(object : Callback {
+
+            override fun onFailure(call: Call, e: IOException) {
+                mainHandler.post {
+                    callback(false, "Photo envoyée, mais profil non mis à jour.")
+                }
+            }
+
+            override fun onResponse(call: Call, response: Response) {
+                response.use {
+                    mainHandler.post {
+                        if (it.isSuccessful) {
+                            callback(true, "Photo de profil enregistrée.")
+                        } else {
+                            callback(
+                                false,
+                                "Erreur lors de l'enregistrement du profil (${it.code})."
+                            )
+                        }
+                    }
+                }
+            }
+        })
+    }
+
+    // Créer un vendeur et récupérer son identifiant.
+    fun creerVendeurAvecId(
+        context: Context,
+        nomComplet: String,
+        email: String,
+        motDePasse: String,
+        callback: (Boolean, String, String?) -> Unit
+    ) {
+        val token = obtenirAccessToken(context)
+
+        if (token.isNullOrBlank()) {
+            mainHandler.post {
+                callback(false, "Reconnecte-toi à ton compte.", null)
+            }
+            return
+        }
+
+        val donnees = JSONObject().apply {
+            put("nomComplet", nomComplet.trim())
+            put("email", email.trim())
+            put("motDePasse", motDePasse)
+        }
+
+        val request = Request.Builder()
+            .url("${SupabaseConfig.url}/functions/v1/creer-vendeur")
+            .addHeader("apikey", SupabaseConfig.key)
+            .addHeader("Authorization", "Bearer $token")
+            .addHeader("Content-Type", "application/json")
+            .post(donnees.toString().toRequestBody(jsonType))
+            .build()
+
+        client.newCall(request).enqueue(object : Callback {
+
+            override fun onFailure(call: Call, e: IOException) {
+                mainHandler.post {
+                    callback(
+                        false,
+                        "Erreur réseau. Vérifie ta connexion Internet.",
+                        null
+                    )
+                }
+            }
+
+            override fun onResponse(call: Call, response: Response) {
+                response.use {
+                    val corps = it.body?.string().orEmpty()
+
+                    val resultat = try {
+                        JSONObject(corps)
+                    } catch (_: Exception) {
+                        JSONObject()
+                    }
+
+                    if (
+                        it.isSuccessful &&
+                        resultat.optBoolean("succes")
+                    ) {
+                        val vendeurId =
+                            resultat.optString("vendeurId")
+
+                        mainHandler.post {
+                            callback(
+                                true,
+                                "Compte vendeur créé avec succès.",
+                                vendeurId.takeIf { id -> id.isNotBlank() }
+                            )
+                        }
+                    } else {
+                        val message = resultat.optString(
+                            "erreur",
+                            "Impossible de créer le compte vendeur (${it.code})."
+                        )
+
+                        mainHandler.post {
+                            callback(false, message, null)
+                        }
+                    }
+                }
+            }
+        })
+    }
+
+    // Garder l'ancienne signature pour ne pas casser MainActivity.
+    fun creerVendeur(
+        context: Context,
+        nomComplet: String,
+        email: String,
+        motDePasse: String,
+        callback: (Boolean, String) -> Unit
+    ) {
+        creerVendeurAvecId(
+            context,
+            nomComplet,
+            email,
+            motDePasse
+        ) { succes, message, _ ->
+            callback(succes, message)
+        }
     }
 
     fun creerCompte(
@@ -304,11 +601,11 @@ fun obtenirRole(
         }
 
         envoyerRequete(
-            context = context,
-            chemin = "/auth/v1/signup",
-            json = json,
-            sauvegarderSession = true,
-            callback = callback
+            context,
+            "/auth/v1/signup",
+            json,
+            true,
+            callback
         )
     }
 
@@ -324,11 +621,11 @@ fun obtenirRole(
         }
 
         envoyerRequete(
-            context = context,
-            chemin = "/auth/v1/token?grant_type=password",
-            json = json,
-            sauvegarderSession = true,
-            callback = callback
+            context,
+            "/auth/v1/token?grant_type=password",
+            json,
+            true,
+            callback
         )
     }
 
@@ -351,11 +648,11 @@ fun obtenirRole(
         }
 
         envoyerRequete(
-            context = context,
-            chemin = "/auth/v1/token?grant_type=refresh_token",
-            json = json,
-            sauvegarderSession = true,
-            callback = callback
+            context,
+            "/auth/v1/token?grant_type=refresh_token",
+            json,
+            true,
+            callback
         )
     }
 
@@ -430,13 +727,11 @@ fun obtenirRole(
                                 .putString("access_token", accessToken)
 
                             if (refreshToken.isNotBlank()) {
-                                editeur.putString(
-                                    "refresh_token",
-                                    refreshToken
-                                )
+                                editeur.putString("refresh_token", refreshToken)
                             }
 
                             val userId = utilisateur?.optString("id")
+
                             if (!userId.isNullOrBlank()) {
                                 editeur.putString("user_id", userId)
                             }
@@ -450,7 +745,7 @@ fun obtenirRole(
                             mainHandler.post {
                                 callback(
                                     true,
-                                    "Compte créé. Vérifie ton e-mail si Supabase demande une confirmation avant la connexion."
+                                    "Compte créé. Vérifie ton e-mail si Supabase demande une confirmation."
                                 )
                             }
                         }
