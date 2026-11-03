@@ -228,6 +228,17 @@ var fonctionGerant by remember {
     }
 
 
+    var photoProfilUri by remember {
+    mutableStateOf<Uri?>(null)
+}
+
+val choisirPhotoProfil = rememberLauncherForActivityResult(
+    contract = ActivityResultContracts.GetContent()
+) { uri ->
+    if (uri != null) {
+        photoProfilUri = uri
+    }
+}
     var email by remember { mutableStateOf("") }
     var motDePasse by remember { mutableStateOf("") }
     var modeCreation by remember { mutableStateOf(false) }
