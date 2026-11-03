@@ -119,6 +119,14 @@ fun argent(montant: Double, devise: String = "USD"): String {
         "$$montantFormate"
     }
 }
+fun formaterDate(timestamp: Long): String {
+    val format = SimpleDateFormat(
+        "dd/MM/yyyy à HH:mm",
+        Locale.FRANCE
+    )
+
+    return format.format(Date(timestamp))
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
