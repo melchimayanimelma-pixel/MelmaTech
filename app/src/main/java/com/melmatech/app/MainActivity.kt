@@ -2636,14 +2636,79 @@ Text(
     }
 
     LazyColumn(
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+        modifier = Modifier.fillMaxSize(),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
+
+        item {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 8.dp, bottom = 4.dp)
+            ) {
+                Text(
+                    "Plus",
+                    style = MaterialTheme.typography.headlineLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary
+                )
+
+                Text(
+                    "Gérez votre compte et configurez MelmaTech.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+
+        item {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.primary
+                )
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(18.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text(
+                            "MelmaTech",
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onPrimary
+                        )
+
+                        Text(
+                            if (estAdministrateur)
+                                "Espace administrateur"
+                            else
+                                "Espace vendeur",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onPrimary
+                        )
+                    }
+
+                    Text(
+                        "⚙️",
+                        style = MaterialTheme.typography.headlineLarge
+                    )
+                }
+            }
+        }
+
         item {
             Text(
-                "Plus",
-                style = MaterialTheme.typography.headlineMedium
+                "GESTION",
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.primary,
+                fontWeight = FontWeight.Bold
             )
-            Text("Services et configuration de MelmaTech")
         }
 
         item {
@@ -2651,12 +2716,30 @@ Text(
                 onClick = { page = "Depenses" },
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Column(Modifier.padding(16.dp)) {
-                    Text(
-                        "💸 Dépenses et rapports",
-                        style = MaterialTheme.typography.titleMedium
-                    )
-                    Text("Consulter les résultats et les dépenses.")
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("💸", style = MaterialTheme.typography.headlineMedium)
+
+                    Spacer(Modifier.width(14.dp))
+
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            "Dépenses et rapports",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        Text(
+                            "Suivre les dépenses et les résultats.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+
+                    Text("›", style = MaterialTheme.typography.headlineMedium)
                 }
             }
         }
@@ -2666,31 +2749,85 @@ Text(
                 onClick = { page = "Ventes" },
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Column(Modifier.padding(16.dp)) {
-                    Text(
-                        "🧾 Factures et ventes",
-                        style = MaterialTheme.typography.titleMedium
-                    )
-                    Text("Consulter les ventes et les paiements.")
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("🧾", style = MaterialTheme.typography.headlineMedium)
+
+                    Spacer(Modifier.width(14.dp))
+
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            "Factures et ventes",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        Text(
+                            "Consulter les ventes et les paiements.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+
+                    Text("›", style = MaterialTheme.typography.headlineMedium)
                 }
             }
         }
 
         if (estAdministrateur) {
             item {
+                Text(
+                    "ADMINISTRATION",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+
+            item {
                 Card(
                     onClick = { page = "Utilisateurs" },
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Column(Modifier.padding(16.dp)) {
-                        Text(
-                            "👥 Gestion des utilisateurs",
-                            style = MaterialTheme.typography.titleMedium
-                        )
-                        Text("Gérer les comptes des vendeurs.")
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text("👥", style = MaterialTheme.typography.headlineMedium)
+
+                        Spacer(Modifier.width(14.dp))
+
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                "Gestion des utilisateurs",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                            Text(
+                                "Gérer les comptes des vendeurs.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+
+                        Text("›", style = MaterialTheme.typography.headlineMedium)
                     }
                 }
             }
+        }
+
+        item {
+            Text(
+                "CONFIGURATION",
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.primary,
+                fontWeight = FontWeight.Bold
+            )
         }
 
         item {
@@ -2698,12 +2835,30 @@ Text(
                 onClick = { page = "Entreprise" },
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Column(Modifier.padding(16.dp)) {
-                    Text(
-                        "🏢 Informations de l'entreprise",
-                        style = MaterialTheme.typography.titleMedium
-                    )
-                    Text("Logo, adresse, contacts, RCCM et ID NAT.")
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("🏢", style = MaterialTheme.typography.headlineMedium)
+
+                    Spacer(Modifier.width(14.dp))
+
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            "Informations de l'entreprise",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        Text(
+                            "Logo, adresse, contacts, RCCM et ID NAT.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+
+                    Text("›", style = MaterialTheme.typography.headlineMedium)
                 }
             }
         }
@@ -2713,32 +2868,71 @@ Text(
                 onClick = { page = "Paramètres" },
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Column(Modifier.padding(16.dp)) {
-                    Text(
-                        "⚙️ Paramètres",
-                        style = MaterialTheme.typography.titleMedium
-                    )
-                    Text("Configuration de l'application.")
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("⚙️", style = MaterialTheme.typography.headlineMedium)
+
+                    Spacer(Modifier.width(14.dp))
+
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            "Paramètres",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        Text(
+                            "Devise et préférences de l'application.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+
+                    Text("›", style = MaterialTheme.typography.headlineMedium)
                 }
             }
         }
 
         item {
-            HorizontalDivider()
+            Spacer(Modifier.height(4.dp))
 
             Card(
                 onClick = { confirmerDeconnexion = true },
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.errorContainer
+                )
             ) {
-                Column(Modifier.padding(16.dp)) {
-                    Text(
-                        "🚪 Déconnexion",
-                        color = MaterialTheme.colorScheme.error,
-                        style = MaterialTheme.typography.titleMedium
-                    )
-                    Text("Fermer la session en toute sécurité.")
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("🚪", style = MaterialTheme.typography.headlineMedium)
+
+                    Spacer(Modifier.width(14.dp))
+
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            "Déconnexion",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.onErrorContainer
+                        )
+                        Text(
+                            "Fermer votre session en toute sécurité.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onErrorContainer
+                        )
+                    }
                 }
             }
+
+            Spacer(Modifier.height(16.dp))
         }
     }
 
@@ -2779,7 +2973,7 @@ Text(
             }
         )
     }
-}
+                        }
 
 
                         "Entreprise" -> {
