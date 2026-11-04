@@ -23,13 +23,25 @@ data class ProfilUtilisateur(
     val photoUrl: String?
 )
 
+data class UtilisateurEntreprise(
+    val id: String,
+    val nomComplet: String,
+    val email: String,
+    val role: String,
+    val entrepriseId: String,
+    val photoUrl: String?,
+    val actif: Boolean
+)
+
 object AuthService {
 
     private val client = OkHttpClient()
+
     private val jsonType =
         "application/json; charset=utf-8".toMediaType()
 
-    private val mainHandler = Handler(Looper.getMainLooper())
+    private val mainHandler =
+        Handler(Looper.getMainLooper())
 
     private fun preferences(context: Context) =
         context.applicationContext.getSharedPreferences(
@@ -37,9 +49,14 @@ object AuthService {
             Context.MODE_PRIVATE
         )
 
+    private fun retour(callback: () -> Unit) {
+        mainHandler.post(callback)
+    }
+
     fun estConnecte(context: Context): Boolean {
-        return preferences(context)
-            .getString("access_token", null) != null
+        return !preferences(context)
+            .getString("access_token", null)
+            .isNullOrBlank()
     }
 
     fun obtenirUtilisateurId(context: Context): String? {
@@ -54,7 +71,8 @@ object AuthService {
         preferences(context).edit().clear().apply()
     }
 
-    // Récupérer le profil complet de l'utilisateur connecté.
+    // PROFIL DE L'UTILISATEUR CONNECTÉ
+
     fun obtenirProfil(
         context: Context,
         callback: (Boolean, String, ProfilUtilisateur?) -> Unit
@@ -63,7 +81,7 @@ object AuthService {
         val token = obtenirAccessToken(context)
 
         if (id.isNullOrBlank() || token.isNullOrBlank()) {
-            mainHandler.post {
+            retour {
                 callback(false, "Reconnecte-toi à ton compte.", null)
             }
             return
@@ -84,7 +102,7 @@ object AuthService {
         client.newCall(request).enqueue(object : Callback {
 
             override fun onFailure(call: Call, e: IOException) {
-                mainHandler.post {
+                retour {
                     callback(false, "Erreur réseau.", null)
                 }
             }
@@ -94,7 +112,7 @@ object AuthService {
                     val body = it.body?.string().orEmpty()
 
                     if (!it.isSuccessful) {
-                        mainHandler.post {
+                        retour {
                             callback(
                                 false,
                                 "Erreur Supabase (${it.code}).",
@@ -108,7 +126,7 @@ object AuthService {
                         val profils = JSONArray(body)
 
                         if (profils.length() == 0) {
-                            mainHandler.post {
+                            retour {
                                 callback(false, "Profil introuvable.", null)
                             }
                             return
@@ -117,33 +135,35 @@ object AuthService {
                         val p = profils.getJSONObject(0)
 
                         if (!p.optBoolean("actif", false)) {
-                            mainHandler.post {
+                            retour {
                                 callback(false, "Compte inactif.", null)
                             }
                             return
                         }
+
+                        val photo = p.optString("photo_url")
 
                         val profil = ProfilUtilisateur(
                             id = p.optString("id"),
                             nomComplet = p.optString("nom_complet"),
                             role = p.optString("role"),
                             entrepriseId = p.optString("entreprise_id"),
-                            photoUrl = if (p.isNull("photo_url")) {
-                                null
-                            } else {
-                                p.optString("photo_url").takeIf {
-                                    it.isNotBlank()
-                                }
+                            photoUrl = photo.takeIf {
+                                it.isNotBlank() && it != "null"
                             }
                         )
 
-                        mainHandler.post {
+                        retour {
                             callback(true, "Profil récupéré.", profil)
                         }
 
                     } catch (_: Exception) {
-                        mainHandler.post {
-                            callback(false, "Impossible de lire le profil.", null)
+                        retour {
+                            callback(
+                                false,
+                                "Impossible de lire le profil.",
+                                null
+                            )
                         }
                     }
                 }
@@ -151,43 +171,31 @@ object AuthService {
         })
     }
 
-    // Récupérer l'entreprise de l'utilisateur connecté.
     fun obtenirEntrepriseId(
         context: Context,
         callback: (Boolean, String, String?) -> Unit
     ) {
-        obtenirProfil(context) { succes, message, profil ->
-            callback(
-                succes,
-                message,
-                profil?.entrepriseId
-            )
+        obtenirProfil(context) { ok, message, profil ->
+            callback(ok, message, profil?.entrepriseId)
         }
     }
 
-    // Récupérer le rôle de l'utilisateur connecté.
     fun obtenirRole(
         context: Context,
         callback: (Boolean, String, String?) -> Unit
     ) {
-        obtenirProfil(context) { succes, message, profil ->
-            callback(
-                succes,
-                message,
-                profil?.role
-            )
+        obtenirProfil(context) { ok, message, profil ->
+            callback(ok, message, profil?.role)
         }
     }
 
-    // Récupérer l'URL publique d'une photo.
+    // PHOTOS DE PROFIL
+
     private fun urlPubliquePhoto(chemin: String): String {
         return "${SupabaseConfig.url}/storage/v1/object/public/" +
             "photos-profils/$chemin"
     }
 
-    // Envoyer une photo dans Supabase Storage.
-    // Le fichier est stocké dans le dossier de l'entreprise
-    // puis dans celui de l'utilisateur.
     fun envoyerPhotoProfil(
         context: Context,
         utilisateurCibleId: String,
@@ -195,28 +203,27 @@ object AuthService {
         typeMime: String,
         callback: (Boolean, String, String?) -> Unit
     ) {
-        val utilisateurConnecteId = obtenirUtilisateurId(context)
         val token = obtenirAccessToken(context)
 
         if (
-            utilisateurConnecteId.isNullOrBlank() ||
+            obtenirUtilisateurId(context).isNullOrBlank() ||
             token.isNullOrBlank()
         ) {
-            mainHandler.post {
+            retour {
                 callback(false, "Reconnecte-toi à ton compte.", null)
             }
             return
         }
 
         if (image.isEmpty()) {
-            mainHandler.post {
+            retour {
                 callback(false, "Image vide.", null)
             }
             return
         }
 
         if (image.size > 2 * 1024 * 1024) {
-            mainHandler.post {
+            retour {
                 callback(false, "La photo doit faire moins de 2 Mo.", null)
             }
             return
@@ -229,29 +236,22 @@ object AuthService {
                 "image/webp"
             )
         ) {
-            mainHandler.post {
+            retour {
                 callback(false, "Format d'image non accepté.", null)
             }
             return
         }
 
-        // Vérifier que l'utilisateur connecté est administrateur
-        // et que la cible appartient à sa propre entreprise.
-        obtenirProfil(context) { succes, message, profilAdmin ->
+        obtenirProfil(context) { ok, message, admin ->
 
-            if (!succes || profilAdmin == null) {
+            if (!ok || admin == null) {
                 callback(false, message, null)
                 return@obtenirProfil
             }
 
-            val role = profilAdmin.role.lowercase()
-
             if (
-                role !in listOf(
-                    "administrateur",
-                    "admin",
-                    "manager"
-                )
+                admin.role.lowercase() !in
+                listOf("administrateur", "admin", "manager")
             ) {
                 callback(
                     false,
@@ -261,13 +261,10 @@ object AuthService {
                 return@obtenirProfil
             }
 
-            // Vérifier le profil de la personne dont on change la photo.
-            verifierProfilCible(
-                context,
-                utilisateurCibleId
-            ) { cibleOK, cibleMessage, entrepriseCible ->
+            verifierProfilCible(context, utilisateurCibleId) {
+                cibleOk, _, entrepriseCible ->
 
-                if (!cibleOK || entrepriseCible != profilAdmin.entrepriseId) {
+                if (!cibleOk || entrepriseCible != admin.entrepriseId) {
                     callback(
                         false,
                         "Ce compte n'appartient pas à ton entreprise.",
@@ -282,12 +279,9 @@ object AuthService {
                     else -> "jpg"
                 }
 
-                val nomFichier =
-                    "${UUID.randomUUID()}.$extension"
-
                 val chemin =
-                    "${profilAdmin.entrepriseId}/" +
-                    "$utilisateurCibleId/$nomFichier"
+                    "${admin.entrepriseId}/$utilisateurCibleId/" +
+                    "${UUID.randomUUID()}.$extension"
 
                 val url =
                     "${SupabaseConfig.url}/storage/v1/object/" +
@@ -299,7 +293,9 @@ object AuthService {
                     .addHeader("Authorization", "Bearer $token")
                     .addHeader("Content-Type", typeMime)
                     .addHeader("x-upsert", "false")
-                    .post(image.toRequestBody(typeMime.toMediaType()))
+                    .post(
+                        image.toRequestBody(typeMime.toMediaType())
+                    )
                     .build()
 
                 client.newCall(request).enqueue(object : Callback {
@@ -308,7 +304,7 @@ object AuthService {
                         call: Call,
                         e: IOException
                     ) {
-                        mainHandler.post {
+                        retour {
                             callback(
                                 false,
                                 "Erreur lors de l'envoi de la photo.",
@@ -323,7 +319,7 @@ object AuthService {
                     ) {
                         response.use {
                             if (!it.isSuccessful) {
-                                mainHandler.post {
+                                retour {
                                     callback(
                                         false,
                                         "Erreur Storage (${it.code}).",
@@ -339,12 +335,12 @@ object AuthService {
                                 context,
                                 utilisateurCibleId,
                                 photoUrl
-                            ) { miseAJourOK, resultat ->
+                            ) { updateOk, resultat ->
 
                                 callback(
-                                    miseAJourOK,
+                                    updateOk,
                                     resultat,
-                                    if (miseAJourOK) photoUrl else null
+                                    if (updateOk) photoUrl else null
                                 )
                             }
                         }
@@ -354,7 +350,6 @@ object AuthService {
         }
     }
 
-    // Vérifier le profil de la cible avant l'envoi.
     private fun verifierProfilCible(
         context: Context,
         cibleId: String,
@@ -381,7 +376,7 @@ object AuthService {
         client.newCall(request).enqueue(object : Callback {
 
             override fun onFailure(call: Call, e: IOException) {
-                mainHandler.post {
+                retour {
                     callback(false, "Erreur réseau.", null)
                 }
             }
@@ -391,7 +386,7 @@ object AuthService {
                     val body = it.body?.string().orEmpty()
 
                     if (!it.isSuccessful) {
-                        mainHandler.post {
+                        retour {
                             callback(false, "Erreur de vérification.", null)
                         }
                         return
@@ -401,8 +396,12 @@ object AuthService {
                         val profils = JSONArray(body)
 
                         if (profils.length() == 0) {
-                            mainHandler.post {
-                                callback(false, "Profil cible introuvable.", null)
+                            retour {
+                                callback(
+                                    false,
+                                    "Profil cible introuvable.",
+                                    null
+                                )
                             }
                             return
                         }
@@ -410,13 +409,17 @@ object AuthService {
                         val p = profils.getJSONObject(0)
 
                         if (!p.optBoolean("actif", false)) {
-                            mainHandler.post {
-                                callback(false, "Compte cible inactif.", null)
+                            retour {
+                                callback(
+                                    false,
+                                    "Compte cible inactif.",
+                                    null
+                                )
                             }
                             return
                         }
 
-                        mainHandler.post {
+                        retour {
                             callback(
                                 true,
                                 "Profil vérifié.",
@@ -425,8 +428,12 @@ object AuthService {
                         }
 
                     } catch (_: Exception) {
-                        mainHandler.post {
-                            callback(false, "Impossible de lire le profil cible.", null)
+                        retour {
+                            callback(
+                                false,
+                                "Impossible de lire le profil cible.",
+                                null
+                            )
                         }
                     }
                 }
@@ -434,7 +441,6 @@ object AuthService {
         })
     }
 
-    // Enregistrer l'adresse de la photo dans la table profils.
     private fun mettreAJourPhotoProfil(
         context: Context,
         cibleId: String,
@@ -452,11 +458,10 @@ object AuthService {
             put("photo_url", photoUrl)
         }
 
-        val url =
-            "${SupabaseConfig.url}/rest/v1/profils?id=eq.$cibleId"
-
         val request = Request.Builder()
-            .url(url)
+            .url(
+                "${SupabaseConfig.url}/rest/v1/profils?id=eq.$cibleId"
+            )
             .addHeader("apikey", SupabaseConfig.key)
             .addHeader("Authorization", "Bearer $token")
             .addHeader("Content-Type", "application/json")
@@ -467,16 +472,22 @@ object AuthService {
         client.newCall(request).enqueue(object : Callback {
 
             override fun onFailure(call: Call, e: IOException) {
-                mainHandler.post {
-                    callback(false, "Photo envoyée, mais profil non mis à jour.")
+                retour {
+                    callback(
+                        false,
+                        "Photo envoyée, mais profil non mis à jour."
+                    )
                 }
             }
 
             override fun onResponse(call: Call, response: Response) {
                 response.use {
-                    mainHandler.post {
+                    retour {
                         if (it.isSuccessful) {
-                            callback(true, "Photo de profil enregistrée.")
+                            callback(
+                                true,
+                                "Photo de profil enregistrée."
+                            )
                         } else {
                             callback(
                                 false,
@@ -489,31 +500,26 @@ object AuthService {
         })
     }
 
-    // Créer un vendeur et récupérer son identifiant.
-    fun creerVendeurAvecId(
+    // APPEL DE LA FONCTION EDGE SUPABASE
+
+    private fun appelerGestionVendeurs(
         context: Context,
-        nomComplet: String,
-        email: String,
-        motDePasse: String,
-        callback: (Boolean, String, String?) -> Unit
+        donnees: JSONObject,
+        callback: (Boolean, String, JSONObject?) -> Unit
     ) {
         val token = obtenirAccessToken(context)
 
         if (token.isNullOrBlank()) {
-            mainHandler.post {
+            retour {
                 callback(false, "Reconnecte-toi à ton compte.", null)
             }
             return
         }
 
-        val donnees = JSONObject().apply {
-            put("nomComplet", nomComplet.trim())
-            put("email", email.trim())
-            put("motDePasse", motDePasse)
-        }
-
         val request = Request.Builder()
-            .url("${SupabaseConfig.url}/functions/v1/creer-vendeur")
+            .url(
+                "${SupabaseConfig.url}/functions/v1/creer-vendeur"
+            )
             .addHeader("apikey", SupabaseConfig.key)
             .addHeader("Authorization", "Bearer $token")
             .addHeader("Content-Type", "application/json")
@@ -523,7 +529,7 @@ object AuthService {
         client.newCall(request).enqueue(object : Callback {
 
             override fun onFailure(call: Call, e: IOException) {
-                mainHandler.post {
+                retour {
                     callback(
                         false,
                         "Erreur réseau. Vérifie ta connexion Internet.",
@@ -534,44 +540,69 @@ object AuthService {
 
             override fun onResponse(call: Call, response: Response) {
                 response.use {
-                    val corps = it.body?.string().orEmpty()
+                    val body = it.body?.string().orEmpty()
 
                     val resultat = try {
-                        JSONObject(corps)
+                        JSONObject(body)
                     } catch (_: Exception) {
                         JSONObject()
                     }
 
-                    if (
+                    val succes =
                         it.isSuccessful &&
-                        resultat.optBoolean("succes")
-                    ) {
-                        val vendeurId =
-                            resultat.optString("vendeurId")
+                        resultat.optBoolean("succes", false)
 
-                        mainHandler.post {
-                            callback(
-                                true,
-                                "Compte vendeur créé avec succès.",
-                                vendeurId.takeIf { id -> id.isNotBlank() }
-                            )
-                        }
-                    } else {
-                        val message = resultat.optString(
-                            "erreur",
-                            "Impossible de créer le compte vendeur (${it.code})."
+                    val message = if (succes) {
+                        resultat.optString(
+                            "message",
+                            "Opération effectuée avec succès."
                         )
+                    } else {
+                        resultat.optString(
+                            "erreur",
+                            "Erreur serveur (${it.code})."
+                        )
+                    }
 
-                        mainHandler.post {
-                            callback(false, message, null)
-                        }
+                    retour {
+                        callback(succes, message, resultat)
                     }
                 }
             }
         })
     }
 
-    // Garder l'ancienne signature pour ne pas casser MainActivity.
+    // CRÉER UN VENDEUR
+
+    fun creerVendeurAvecId(
+        context: Context,
+        nomComplet: String,
+        email: String,
+        motDePasse: String,
+        callback: (Boolean, String, String?) -> Unit
+    ) {
+        val donnees = JSONObject().apply {
+            put("action", "creer")
+            put("nomComplet", nomComplet.trim())
+            put("email", email.trim())
+            put("motDePasse", motDePasse)
+        }
+
+        appelerGestionVendeurs(context, donnees) {
+            ok, message, resultat ->
+
+            val vendeurId = resultat
+                ?.optString("vendeurId")
+                ?.takeIf {
+                    it.isNotBlank() && it != "null"
+                }
+
+            callback(ok, message, vendeurId)
+        }
+    }
+
+    // Ancienne fonction conservée pour MainActivity.
+
     fun creerVendeur(
         context: Context,
         nomComplet: String,
@@ -584,10 +615,183 @@ object AuthService {
             nomComplet,
             email,
             motDePasse
-        ) { succes, message, _ ->
-            callback(succes, message)
+        ) { ok, message, _ ->
+
+            callback(ok, message)
         }
     }
+
+    // LISTER LES VENDEURS DE L'ENTREPRISE
+
+    fun listerVendeurs(
+        context: Context,
+        callback: (
+            Boolean,
+            String,
+            List<UtilisateurEntreprise>
+        ) -> Unit
+    ) {
+        val donnees = JSONObject().apply {
+            put("action", "lister")
+        }
+
+        appelerGestionVendeurs(context, donnees) {
+            ok, message, resultat ->
+
+            if (!ok || resultat == null) {
+                callback(false, message, emptyList())
+                return@appelerGestionVendeurs
+            }
+
+            try {
+                val array =
+                    resultat.optJSONArray("utilisateurs") ?: JSONArray()
+
+                val liste = mutableListOf<UtilisateurEntreprise>()
+
+                for (i in 0 until array.length()) {
+                    val item = array.getJSONObject(i)
+
+                    val photo = item.optString("photoUrl")
+
+                    liste.add(
+                        UtilisateurEntreprise(
+                            id = item.optString("id"),
+                            nomComplet = item.optString("nomComplet"),
+                            email = item.optString("email"),
+                            role = item.optString("role"),
+                            entrepriseId = item.optString("entrepriseId"),
+                            photoUrl = photo.takeIf {
+                                it.isNotBlank() && it != "null"
+                            },
+                            actif = item.optBoolean("actif", false)
+                        )
+                    )
+                }
+
+                callback(true, message, liste)
+
+            } catch (_: Exception) {
+                callback(
+                    false,
+                    "Impossible de lire la liste des vendeurs.",
+                    emptyList()
+                )
+            }
+        }
+    }
+
+    // MODIFIER LE NOM ET L'EMAIL
+
+    fun modifierVendeur(
+        context: Context,
+        vendeurId: String,
+        nomComplet: String,
+        email: String,
+        callback: (Boolean, String) -> Unit
+    ) {
+        val donnees = JSONObject().apply {
+            put("action", "modifier")
+            put("vendeurId", vendeurId)
+
+            if (nomComplet.isNotBlank()) {
+                put("nomComplet", nomComplet.trim())
+            }
+
+            if (email.isNotBlank()) {
+                put("email", email.trim())
+            }
+        }
+
+        appelerGestionVendeurs(context, donnees) {
+            ok, message, _ ->
+            callback(ok, message)
+        }
+    }
+
+    // CHANGER LE MOT DE PASSE D'UN VENDEUR
+
+    fun changerMotDePasseVendeur(
+        context: Context,
+        vendeurId: String,
+        nouveauMotDePasse: String,
+        callback: (Boolean, String) -> Unit
+    ) {
+        val donnees = JSONObject().apply {
+            put("action", "mot_de_passe")
+            put("vendeurId", vendeurId)
+            put("motDePasse", nouveauMotDePasse)
+        }
+
+        appelerGestionVendeurs(context, donnees) {
+            ok, message, _ ->
+            callback(ok, message)
+        }
+    }
+
+    // DÉSACTIVER UN VENDEUR
+
+    fun desactiverVendeur(
+        context: Context,
+        vendeurId: String,
+        callback: (Boolean, String) -> Unit
+    ) {
+        actionSurVendeur(
+            context,
+            "desactiver",
+            vendeurId,
+            callback
+        )
+    }
+
+    // RÉACTIVER UN VENDEUR
+
+    fun reactiverVendeur(
+        context: Context,
+        vendeurId: String,
+        callback: (Boolean, String) -> Unit
+    ) {
+        actionSurVendeur(
+            context,
+            "reactiver",
+            vendeurId,
+            callback
+        )
+    }
+
+    // SUPPRESSION LOGIQUE POUR CONSERVER L'HISTORIQUE DES VENTES
+
+    fun supprimerVendeur(
+        context: Context,
+        vendeurId: String,
+        callback: (Boolean, String) -> Unit
+    ) {
+        actionSurVendeur(
+            context,
+            "supprimer",
+            vendeurId,
+            callback
+        )
+    }
+
+    private fun actionSurVendeur(
+        context: Context,
+        action: String,
+        vendeurId: String,
+        callback: (Boolean, String) -> Unit
+    ) {
+        val donnees = JSONObject().apply {
+            put("action", action)
+            put("vendeurId", vendeurId)
+        }
+
+        appelerGestionVendeurs(context, donnees) {
+            ok, message, _ ->
+            callback(ok, message)
+        }
+    }
+
+    // CRÉATION D'UN COMPTE
 
     fun creerCompte(
         context: Context,
@@ -609,6 +813,8 @@ object AuthService {
         )
     }
 
+    // CONNEXION
+
     fun connexion(
         context: Context,
         email: String,
@@ -629,6 +835,8 @@ object AuthService {
         )
     }
 
+    // ACTUALISER LA SESSION
+
     fun actualiserSession(
         context: Context,
         callback: (Boolean, String) -> Unit
@@ -637,7 +845,7 @@ object AuthService {
             .getString("refresh_token", null)
 
         if (refreshToken.isNullOrBlank()) {
-            mainHandler.post {
+            retour {
                 callback(false, "Aucune session à actualiser.")
             }
             return
@@ -656,6 +864,8 @@ object AuthService {
         )
     }
 
+    // REQUÊTES AUTH SUPABASE
+
     private fun envoyerRequete(
         context: Context,
         chemin: String,
@@ -673,10 +883,11 @@ object AuthService {
         client.newCall(request).enqueue(object : Callback {
 
             override fun onFailure(call: Call, e: IOException) {
-                mainHandler.post {
+                retour {
                     callback(
                         false,
-                        "Erreur réseau : ${e.message ?: "connexion impossible"}"
+                        "Erreur réseau : " +
+                            (e.message ?: "connexion impossible")
                     )
                 }
             }
@@ -688,6 +899,7 @@ object AuthService {
                     if (!it.isSuccessful) {
                         val message = try {
                             val erreur = JSONObject(body)
+
                             erreur.optString(
                                 "msg",
                                 erreur.optString(
@@ -698,11 +910,12 @@ object AuthService {
                                     )
                                 )
                             )
+
                         } catch (_: Exception) {
                             "Erreur du serveur (code ${it.code})."
                         }
 
-                        mainHandler.post {
+                        retour {
                             callback(false, message)
                         }
                         return
@@ -717,20 +930,30 @@ object AuthService {
                     if (sauvegarderSession) {
                         val accessToken =
                             resultat.optString("access_token")
+
                         val refreshToken =
                             resultat.optString("refresh_token")
+
                         val utilisateur =
                             resultat.optJSONObject("user")
 
                         if (accessToken.isNotBlank()) {
-                            val editeur = preferences(context).edit()
-                                .putString("access_token", accessToken)
+                            val editeur = preferences(context)
+                                .edit()
+                                .putString(
+                                    "access_token",
+                                    accessToken
+                                )
 
                             if (refreshToken.isNotBlank()) {
-                                editeur.putString("refresh_token", refreshToken)
+                                editeur.putString(
+                                    "refresh_token",
+                                    refreshToken
+                                )
                             }
 
-                            val userId = utilisateur?.optString("id")
+                            val userId =
+                                utilisateur?.optString("id")
 
                             if (!userId.isNullOrBlank()) {
                                 editeur.putString("user_id", userId)
@@ -738,19 +961,21 @@ object AuthService {
 
                             editeur.apply()
 
-                            mainHandler.post {
+                            retour {
                                 callback(true, "Connexion réussie.")
                             }
+
                         } else {
-                            mainHandler.post {
+                            retour {
                                 callback(
                                     true,
                                     "Compte créé. Vérifie ton e-mail si Supabase demande une confirmation."
                                 )
                             }
                         }
+
                     } else {
-                        mainHandler.post {
+                        retour {
                             callback(true, "Opération réussie.")
                         }
                     }
