@@ -983,4 +983,192 @@ object AuthService {
             }
         })
     }
+    data class UtilisateurEntreprise(
+        val id: String,
+        val nomComplet: String,
+        val email: String,
+        val role: String,
+        val entrepriseId: String,
+        val photoUrl: String?,
+        val actif: Boolean
+    )
+
+    fun listerVendeurs(
+        context: Context,
+        callback: (Boolean, String, List<UtilisateurEntreprise>) -> Unit
+    ) {
+        val donnees = JSONObject().put("action", "lister")
+
+        appelerGestionVendeurs(context, donnees) { succes, message, resultat ->
+            val liste = mutableListOf<UtilisateurEntreprise>()
+
+            if (succes) {
+                val utilisateurs = resultat?.optJSONArray("utilisateurs")
+                    ?: JSONArray()
+
+                for (i in 0 until utilisateurs.length()) {
+                    val u = utilisateurs.optJSONObject(i) ?: continue
+
+                    liste.add(
+                        UtilisateurEntreprise(
+                            id = u.optString("id"),
+                            nomComplet = u.optString("nomComplet"),
+                            email = u.optString("email"),
+                            role = u.optString("role"),
+                            entrepriseId = u.optString("entrepriseId"),
+                            photoUrl = u.optString("photoUrl")
+                                .takeIf { it.isNotBlank() && it != "null" },
+                            actif = u.optBoolean("actif", false)
+                        )
+                    )
+                }
+            }
+
+            callback(succes, message, liste)
+        }
+    }
+
+    fun modifierVendeur(
+        context: Context,
+        vendeurId: String,
+        nomComplet: String,
+        email: String,
+        callback: (Boolean, String) -> Unit
+    ) {
+        val donnees = JSONObject()
+            .put("action", "modifier")
+            .put("vendeurId", vendeurId)
+            .put("nomComplet", nomComplet)
+            .put("email", email)
+
+        appelerGestionVendeurs(context, donnees) { succes, message, _ ->
+            callback(succes, message)
+        }
+    }
+
+    fun changerMotDePasseVendeur(
+        context: Context,
+        vendeurId: String,
+        motDePasse: String,
+        callback: (Boolean, String) -> Unit
+    ) {
+        val donnees = JSONObject()
+            .put("action", "mot_de_passe")
+            .put("vendeurId", vendeurId)
+            .put("motDePasse", motDePasse)
+
+        appelerGestionVendeurs(context, donnees) { succes, message, _ ->
+            callback(succes, message)
+        }
+    }
+
+    fun desactiverVendeur(
+        context: Context,
+        vendeurId: String,
+        callback: (Boolean, String) -> Unit
+    ) {
+        val donnees = JSONObject()
+            .put("action", "desactiver")
+            .put("vendeurId", vendeurId)
+
+        appelerGestionVendeurs(context, donnees) { succes, message, _ ->
+            callback(succes, message)
+        }
+    }
+
+    fun reactiverVendeur(
+        context: Context,
+        vendeurId: String,
+        callback: (Boolean, String) -> Unit
+    ) {
+        val donnees = JSONObject()
+            .put("action", "reactiver")
+            .put("vendeurId", vendeurId)
+
+        appelerGestionVendeurs(context, donnees) { succes, message, _ ->
+            callback(succes, message)
+        }
+    }
+
+    fun supprimerVendeur(
+        context: Context,
+        vendeurId: String,
+        callback: (Boolean, String) -> Unit
+    ) {
+        val donnees = JSONObject()
+            .put("action", "supprimer")
+            .put("vendeurId", vendeurId)
+
+        appelerGestionVendeurs(context, donnees) { succes, message, _ ->
+            callback(succes, message)
+        }
+    }
+
+    private fun appelerGestionVendeurs(
+        context: Context,
+        donnees: JSONObject,
+        callback: (Boolean, String, JSONObject?) -> Unit
+    ) {
+        val token = obtenirAccessToken(context)
+
+        if (token.isNullOrBlank()) {
+            mainHandler.post {
+                callback(false, "Reconnecte-toi à ton compte.", null)
+            }
+            return
+        }
+
+        val request = Request.Builder()
+            .url("${SupabaseConfig.url}/functions/v1/creer-vendeur")
+            .addHeader("apikey", SupabaseConfig.key)
+            .addHeader("Authorization", "Bearer $token")
+            .addHeader("Content-Type", "application/json")
+            .post(donnees.toString().toRequestBody(jsonType))
+            .build()
+
+        client.newCall(request).enqueue(object : Callback {
+
+            override fun onFailure(call: Call, e: IOException) {
+                mainHandler.post {
+                    callback(
+                        false,
+                        "Erreur réseau : ${e.message ?: "connexion impossible"}",
+                        null
+                    )
+                }
+            }
+
+            override fun onResponse(call: Call, response: Response) {
+                response.use {
+                    val body = it.body?.string().orEmpty()
+
+                    val resultat = try {
+                        JSONObject(body)
+                    } catch (_: Exception) {
+                        JSONObject()
+                    }
+
+                    if (!it.isSuccessful || !resultat.optBoolean("succes", false)) {
+                        val erreur = resultat.optString(
+                            "erreur",
+                            "Erreur du serveur (${it.code})."
+                        )
+
+                        mainHandler.post {
+                            callback(false, erreur, resultat)
+                        }
+                        return
+                    }
+
+                    mainHandler.post {
+                        callback(
+                            true,
+                            "Opération réussie.",
+                            resultat
+                        )
+                    }
+                }
+            }
+        })
+    }
 }
