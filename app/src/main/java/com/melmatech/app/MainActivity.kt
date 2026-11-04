@@ -3225,134 +3225,875 @@ Slider(
     }
 }
 
-                        "Utilisateurs" -> {
+                        
+"Utilisateurs" -> {
 
-                            if (!estAdministrateur) {
-                                Text("Accès réservé à l'administrateur.")
+    if (!estAdministrateur) {
+        Text("Accès réservé à l'administrateur.")
+    } else {
+
+        var vendeurs by remember {
+            mutableStateOf(emptyList<AuthService.UtilisateurEntreprise>())
+        }
+
+        var profilAdmin by remember {
+            mutableStateOf<ProfilUtilisateur?>(null)
+        }
+
+        var rechercheUtilisateur by remember {
+            mutableStateOf("")
+        }
+
+        var filtreUtilisateur by remember {
+            mutableStateOf("Tous")
+        }
+
+        var chargementUtilisateurs by remember {
+            mutableStateOf(false)
+        }
+
+        var messageUtilisateurs by remember {
+            mutableStateOf("")
+        }
+
+        var afficherFormulaire by remember {
+            mutableStateOf(false)
+        }
+
+        var vendeurModifie by remember {
+            mutableStateOf<AuthService.UtilisateurEntreprise?>(null)
+        }
+
+        var nomSaisi by remember {
+            mutableStateOf("")
+        }
+
+        var emailSaisi by remember {
+            mutableStateOf("")
+        }
+
+        var motDePasseSaisi by remember {
+            mutableStateOf("")
+        }
+
+        var afficherMotDePasse by remember {
+            mutableStateOf(false)
+        }
+
+        var vendeurMotDePasse by remember {
+            mutableStateOf<AuthService.UtilisateurEntreprise?>(null)
+        }
+
+        var nouveauMotDePasse by remember {
+            mutableStateOf("")
+        }
+
+        var vendeurAction by remember {
+            mutableStateOf<AuthService.UtilisateurEntreprise?>(null)
+        }
+
+        var typeAction by remember {
+            mutableStateOf("")
+        }
+
+        val violet = Color(0xFF6C3CE9)
+        val fond = Color(0xFFF6F4FB)
+        val vert = Color(0xFF159B68)
+        val rouge = Color(0xFFD94B55)
+
+        val chargerVendeurs: () -> Unit = {
+            chargementUtilisateurs = true
+
+            AuthService.listerVendeurs(context) {
+                    succes, message, liste ->
+
+                chargementUtilisateurs = false
+
+                if (succes) {
+                    vendeurs = liste.filter {
+                        it.role.equals("vendeur", ignoreCase = true)
+                    }
+                    messageUtilisateurs = ""
+                } else {
+                    messageUtilisateurs = message
+                }
+            }
+        }
+
+        LaunchedEffect(Unit) {
+            AuthService.obtenirProfil(context) {
+                    succes, _, profil ->
+                if (succes) {
+                    profilAdmin = profil
+                }
+            }
+
+            chargerVendeurs()
+        }
+
+        val vendeursFiltres = vendeurs.filter { vendeur ->
+
+            val correspondRecherche =
+                vendeur.nomComplet.contains(
+                    rechercheUtilisateur,
+                    ignoreCase = true
+                ) ||
+                vendeur.email.contains(
+                    rechercheUtilisateur,
+                    ignoreCase = true
+                )
+
+            val correspondFiltre = when (filtreUtilisateur) {
+                "Actifs" -> vendeur.actif
+                "Inactifs" -> !vendeur.actif
+                else -> true
+            }
+
+            correspondRecherche && correspondFiltre
+        }
+
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(fond)
+                .padding(horizontal = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+
+            item {
+                Spacer(Modifier.height(8.dp))
+
+                Text(
+                    "Gestion des utilisateurs",
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = Color(0xFF252238)
+                )
+
+                Text(
+                    "Gérez les comptes de votre équipe.",
+                    color = Color.Gray
+                )
+            }
+
+            item {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(20.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = violet
+                    )
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(18.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+
+                        if (!profilAdmin?.photoUrl.isNullOrBlank()) {
+                            Image(
+                                painter = rememberAsyncImagePainter(
+                                    profilAdmin?.photoUrl
+                                ),
+                                contentDescription = "Photo administrateur",
+                                modifier = Modifier
+                                    .size(58.dp)
+                                    .background(
+                                        Color.White,
+                                        RoundedCornerShape(50)
+                                    ),
+                                contentScale = ContentScale.Crop
+                            )
+                        } else {
+                            Box(
+                                modifier = Modifier
+                                    .size(58.dp)
+                                    .background(
+                                        Color.White.copy(alpha = 0.2f),
+                                        RoundedCornerShape(50)
+                                    ),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    "A",
+                                    color = Color.White,
+                                    fontWeight = FontWeight.Bold,
+                                    style = MaterialTheme.typography.headlineMedium
+                                )
+                            }
+                        }
+
+                        Spacer(Modifier.width(14.dp))
+
+                        Column {
+                            Text(
+                                profilAdmin?.nomComplet
+                                    ?: "Administrateur",
+                                color = Color.White,
+                                fontWeight = FontWeight.Bold,
+                                style = MaterialTheme.typography.titleMedium
+                            )
+
+                            Text(
+                                "Administrateur",
+                                color = Color.White.copy(alpha = 0.85f)
+                            )
+
+                            Text(
+                                "Espace de gestion",
+                                color = Color.White.copy(alpha = 0.75f),
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                        }
+                    }
+                }
+            }
+
+            item {
+                Button(
+                    onClick = {
+                        vendeurModifie = null
+                        nomSaisi = ""
+                        emailSaisi = ""
+                        motDePasseSaisi = ""
+                        messageUtilisateurs = ""
+                        afficherFormulaire = true
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(54.dp),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = violet
+                    )
+                ) {
+                    Text(
+                        "+  Ajouter un vendeur",
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+
+            item {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+
+                    @Composable
+                    fun Statistique(
+                        titre: String,
+                        nombre: Int,
+                        couleur: Color
+                    ) {
+                        Card(
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(16.dp),
+                            colors = CardDefaults.cardColors(
+                                containerColor = Color.White
+                            )
+                        ) {
+                            Column(
+                                modifier = Modifier.padding(12.dp)
+                            ) {
+                                Text(
+                                    nombre.toString(),
+                                    color = couleur,
+                                    style = MaterialTheme.typography.headlineSmall,
+                                    fontWeight = FontWeight.Bold
+                                )
+
+                                Text(
+                                    titre,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = Color.Gray
+                                )
+                            }
+                        }
+                    }
+
+                    Statistique(
+                        "Total",
+                        vendeurs.size,
+                        violet
+                    )
+
+                    Statistique(
+                        "Actifs",
+                        vendeurs.count { it.actif },
+                        vert
+                    )
+
+                    Statistique(
+                        "Inactifs",
+                        vendeurs.count { !it.actif },
+                        rouge
+                    )
+                }
+            }
+
+            item {
+                OutlinedTextField(
+                    value = rechercheUtilisateur,
+                    onValueChange = {
+                        rechercheUtilisateur = it
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                    shape = RoundedCornerShape(14.dp),
+                    label = { Text("Rechercher un vendeur") },
+                    placeholder = {
+                        Text("Nom ou adresse e-mail")
+                    }
+                )
+            }
+
+            item {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    listOf("Tous", "Actifs", "Inactifs").forEach { filtre ->
+
+                        FilterChip(
+                            selected = filtreUtilisateur == filtre,
+                            onClick = {
+                                filtreUtilisateur = filtre
+                            },
+                            label = { Text(filtre) }
+                        )
+                    }
+                }
+            }
+
+            item {
+                Text(
+                    "Équipe commerciale",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+
+            if (chargementUtilisateurs) {
+                item {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(24.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        CircularProgressIndicator(color = violet)
+                    }
+                }
+            }
+
+            if (messageUtilisateurs.isNotBlank()) {
+                item {
+                    Text(
+                        messageUtilisateurs,
+                        color = rouge
+                    )
+                }
+            }
+
+            if (!chargementUtilisateurs && vendeursFiltres.isEmpty()) {
+                item {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(16.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = Color.White
+                        )
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(24.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Text(
+                                "Aucun vendeur trouvé",
+                                fontWeight = FontWeight.Bold
+                            )
+                            Text(
+                                "Ajoutez un vendeur ou modifiez votre recherche.",
+                                color = Color.Gray
+                            )
+                        }
+                    }
+                }
+            }
+
+            items(
+                vendeursFiltres,
+                key = { it.id }
+            ) { vendeur ->
+
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(18.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = Color.White
+                    ),
+                    elevation = CardDefaults.cardElevation(
+                        defaultElevation = 2.dp
+                    )
+                ) {
+                    Column(
+                        modifier = Modifier.padding(14.dp),
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+
+                            if (!vendeur.photoUrl.isNullOrBlank()) {
+                                Image(
+                                    painter = rememberAsyncImagePainter(
+                                        vendeur.photoUrl
+                                    ),
+                                    contentDescription = "Photo vendeur",
+                                    modifier = Modifier
+                                        .size(52.dp)
+                                        .background(
+                                            fond,
+                                            RoundedCornerShape(50)
+                                        ),
+                                    contentScale = ContentScale.Crop
+                                )
                             } else {
-
-                                var nomVendeur by remember {
-                                    mutableStateOf("")
-                                }
-
-                                var emailVendeur by remember {
-                                    mutableStateOf("")
-                                }
-
-                                var motDePasseVendeur by remember {
-                                    mutableStateOf("")
-                                }
-
-                                var messageVendeur by remember {
-                                    mutableStateOf("")
-                                }
-
-                                var chargementVendeur by remember {
-                                    mutableStateOf(false)
-                                }
-
-                                LazyColumn(
-                                    verticalArrangement =
-                                        Arrangement.spacedBy(12.dp)
+                                Box(
+                                    modifier = Modifier
+                                        .size(52.dp)
+                                        .background(
+                                            violet.copy(alpha = 0.12f),
+                                            RoundedCornerShape(50)
+                                        ),
+                                    contentAlignment = Alignment.Center
                                 ) {
-                                    item {
-                                        Text(
-                                            "Gestion des utilisateurs",
-                                            style = MaterialTheme.typography.headlineSmall
-                                        )
+                                    Text(
+                                        vendeur.nomComplet
+                                            .firstOrNull()
+                                            ?.uppercase()
+                                            ?: "V",
+                                        color = violet,
+                                        fontWeight = FontWeight.Bold,
+                                        style = MaterialTheme.typography.titleLarge
+                                    )
+                                }
+                            }
 
-                                        Text("Créer les comptes des vendeurs.")
-                                    }
+                            Spacer(Modifier.width(12.dp))
 
-                                    item {
-                                        OutlinedTextField(
-                                            value = nomVendeur,
-                                            onValueChange = {
-                                                nomVendeur = it
-                                            },
-                                            label = {
-                                                Text("Nom complet du vendeur")
-                                            },
-                                            modifier = Modifier.fillMaxWidth(),
-                                            enabled = !chargementVendeur
-                                        )
+                            Column(
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Text(
+                                    vendeur.nomComplet,
+                                    fontWeight = FontWeight.Bold,
+                                    style = MaterialTheme.typography.titleMedium
+                                )
 
-                                        OutlinedTextField(
-                                            value = emailVendeur,
-                                            onValueChange = {
-                                                emailVendeur = it
-                                            },
-                                            label = {
-                                                Text("Adresse e-mail")
-                                            },
-                                            modifier = Modifier.fillMaxWidth(),
-                                            enabled = !chargementVendeur
-                                        )
+                                Text(
+                                    vendeur.email,
+                                    color = Color.Gray,
+                                    style = MaterialTheme.typography.bodySmall
+                                )
 
-                                        OutlinedTextField(
-                                            value = motDePasseVendeur,
-                                            onValueChange = {
-                                                motDePasseVendeur = it
-                                            },
-                                            label = {
-                                                Text("Mot de passe temporaire")
-                                            },
-                                            visualTransformation =
-                                                PasswordVisualTransformation(),
-                                            modifier = Modifier.fillMaxWidth(),
-                                            enabled = !chargementVendeur
-                                        )
+                                Text(
+                                    "Vendeur",
+                                    color = violet,
+                                    style = MaterialTheme.typography.bodySmall
+                                )
+                            }
 
-                                        Button(
-                                            onClick = {
-                                                val n = nomVendeur.trim()
-                                                val e = emailVendeur.trim()
+                            Surface(
+                                shape = RoundedCornerShape(20.dp),
+                                color = if (vendeur.actif)
+                                    vert.copy(alpha = 0.12f)
+                                else
+                                    rouge.copy(alpha = 0.12f)
+                            ) {
+                                Text(
+                                    if (vendeur.actif) "Actif" else "Inactif",
+                                    modifier = Modifier.padding(
+                                        horizontal = 10.dp,
+                                        vertical = 6.dp
+                                    ),
+                                    color = if (vendeur.actif) vert else rouge,
+                                    style = MaterialTheme.typography.labelMedium,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
 
-                                                if (
-                                                    n.isBlank() ||
-                                                    !e.contains("@") ||
-                                                    motDePasseVendeur.length < 8
-                                                ) {
-                                                    messageVendeur =
-                                                        "Vérifie le nom, l'e-mail et le mot de passe."
-                                                } else {
-                                                    chargementVendeur = true
+                        HorizontalDivider(color = fond)
 
-                                                    AuthService.creerVendeur(
-                                                        context,
-                                                        n,
-                                                        e,
-                                                        motDePasseVendeur
-                                                    ) { succes, message ->
-                                                        chargementVendeur = false
-                                                        messageVendeur = message
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
 
-                                                        if (succes) {
-                                                            nomVendeur = ""
-                                                            emailVendeur = ""
-                                                            motDePasseVendeur = ""
-                                                        }
-                                                    }
-                                                }
-                                            },
-                                            modifier = Modifier.fillMaxWidth(),
-                                            enabled = !chargementVendeur
-                                        ) {
-                                            if (chargementVendeur) {
-                                                CircularProgressIndicator(
-                                                    modifier = Modifier.size(20.dp),
-                                                    strokeWidth = 2.dp
-                                                )
-                                            } else {
-                                                Text("Créer le compte vendeur")
-                                            }
+                            TextButton(
+                                onClick = {
+                                    vendeurModifie = vendeur
+                                    nomSaisi = vendeur.nomComplet
+                                    emailSaisi = vendeur.email
+                                    messageUtilisateurs = ""
+                                    afficherFormulaire = true
+                                }
+                            ) {
+                                Text("Modifier")
+                            }
+
+                            TextButton(
+                                onClick = {
+                                    vendeurMotDePasse = vendeur
+                                    nouveauMotDePasse = ""
+                                }
+                            ) {
+                                Text("Mot de passe")
+                            }
+                        }
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+
+                            TextButton(
+                                onClick = {
+                                    vendeurAction = vendeur
+                                    typeAction = if (vendeur.actif)
+                                        "desactiver"
+                                    else
+                                        "reactiver"
+                                }
+                            ) {
+                                Text(
+                                    if (vendeur.actif)
+                                        "Désactiver"
+                                    else
+                                        "Réactiver",
+                                    color = if (vendeur.actif) rouge else vert
+                                )
+                            }
+
+                            TextButton(
+                                onClick = {
+                                    vendeurAction = vendeur
+                                    typeAction = "supprimer"
+                                }
+                            ) {
+                                Text(
+                                    "Supprimer",
+                                    color = rouge
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
+            item {
+                Spacer(Modifier.height(20.dp))
+            }
+        }
+
+        if (afficherFormulaire) {
+            AlertDialog(
+                onDismissRequest = {
+                    if (!chargementUtilisateurs) {
+                        afficherFormulaire = false
+                    }
+                },
+                title = {
+                    Text(
+                        if (vendeurModifie == null)
+                            "Ajouter un vendeur"
+                        else
+                            "Modifier le vendeur"
+                    )
+                },
+                text = {
+                    Column(
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        OutlinedTextField(
+                            value = nomSaisi,
+                            onValueChange = { nomSaisi = it },
+                            label = { Text("Nom complet") },
+                            singleLine = true
+                        )
+
+                        OutlinedTextField(
+                            value = emailSaisi,
+                            onValueChange = { emailSaisi = it },
+                            label = { Text("Adresse e-mail") },
+                            singleLine = true
+                        )
+
+                        if (vendeurModifie == null) {
+                            OutlinedTextField(
+                                value = motDePasseSaisi,
+                                onValueChange = {
+                                    motDePasseSaisi = it
+                                },
+                                label = {
+                                    Text("Mot de passe temporaire")
+                                },
+                                visualTransformation =
+                                    PasswordVisualTransformation(),
+                                singleLine = true
+                            )
+                        }
+
+                        if (messageUtilisateurs.isNotBlank()) {
+                            Text(
+                                messageUtilisateurs,
+                                color = rouge
+                            )
+                        }
+                    }
+                },
+                confirmButton = {
+                    TextButton(
+                        enabled = !chargementUtilisateurs,
+                        onClick = {
+                            val nom = nomSaisi.trim()
+                            val email = emailSaisi.trim()
+
+                            if (
+                                nom.isBlank() ||
+                                !email.contains("@")
+                            ) {
+                                messageUtilisateurs =
+                                    "Vérifie le nom et l'adresse e-mail."
+                            } else if (
+                                vendeurModifie == null &&
+                                motDePasseSaisi.length < 8
+                            ) {
+                                messageUtilisateurs =
+                                    "Le mot de passe doit contenir au moins 8 caractères."
+                            } else {
+                                chargementUtilisateurs = true
+
+                                if (vendeurModifie == null) {
+                                    AuthService.creerVendeur(
+                                        context,
+                                        nom,
+                                        email,
+                                        motDePasseSaisi
+                                    ) { succes, message ->
+
+                                        chargementUtilisateurs = false
+                                        messageUtilisateurs = message
+
+                                        if (succes) {
+                                            afficherFormulaire = false
+                                            motDePasseSaisi = ""
+                                            chargerVendeurs()
                                         }
+                                    }
+                                } else {
+                                    AuthService.modifierVendeur(
+                                        context,
+                                        vendeurModifie!!.id,
+                                        nom,
+                                        email
+                                    ) { succes, message ->
 
-                                        Text(messageVendeur)
+                                        chargementUtilisateurs = false
+                                        messageUtilisateurs = message
+
+                                        if (succes) {
+                                            afficherFormulaire = false
+                                            chargerVendeurs()
+                                        }
                                     }
                                 }
                             }
                         }
+                    ) {
+                        Text(
+                            if (chargementUtilisateurs)
+                                "Patiente..."
+                            else
+                                "Enregistrer"
+                        )
+                    }
+                },
+                dismissButton = {
+                    TextButton(
+                        onClick = {
+                            afficherFormulaire = false
+                        }
+                    ) {
+                        Text("Annuler")
+                    }
+                }
+            )
+        }
+
+        vendeurMotDePasse?.let { vendeur ->
+
+            AlertDialog(
+                onDismissRequest = {
+                    vendeurMotDePasse = null
+                },
+                title = {
+                    Text("Changer le mot de passe")
+                },
+                text = {
+                    Column {
+                        Text(vendeur.nomComplet)
+
+                        OutlinedTextField(
+                            value = nouveauMotDePasse,
+                            onValueChange = {
+                                nouveauMotDePasse = it
+                            },
+                            label = {
+                                Text("Nouveau mot de passe")
+                            },
+                            visualTransformation =
+                                PasswordVisualTransformation(),
+                            singleLine = true
+                        )
+                    }
+                },
+                confirmButton = {
+                    TextButton(
+                        onClick = {
+                            if (nouveauMotDePasse.length < 8) {
+                                messageUtilisateurs =
+                                    "Minimum 8 caractères."
+                            } else {
+                                chargementUtilisateurs = true
+
+                                AuthService.changerMotDePasseVendeur(
+                                    context,
+                                    vendeur.id,
+                                    nouveauMotDePasse
+                                ) { succes, message ->
+
+                                    chargementUtilisateurs = false
+                                    messageUtilisateurs = message
+
+                                    if (succes) {
+                                        vendeurMotDePasse = null
+                                        nouveauMotDePasse = ""
+                                    }
+                                }
+                            }
+                        }
+                    ) {
+                        Text("Confirmer")
+                    }
+                },
+                dismissButton = {
+                    TextButton(
+                        onClick = {
+                            vendeurMotDePasse = null
+                        }
+                    ) {
+                        Text("Annuler")
+                    }
+                }
+            )
+        }
+
+        vendeurAction?.let { vendeur ->
+
+            val titreAction = when (typeAction) {
+                "desactiver" -> "Désactiver ce vendeur ?"
+                "reactiver" -> "Réactiver ce vendeur ?"
+                else -> "Supprimer ce vendeur ?"
+            }
+
+            AlertDialog(
+                onDismissRequest = {
+                    vendeurAction = null
+                },
+                title = {
+                    Text(titreAction)
+                },
+                text = {
+                    Text(
+                        when (typeAction) {
+                            "desactiver" ->
+                                "Le vendeur ne pourra plus accéder à son compte."
+                            "reactiver" ->
+                                "Le vendeur pourra de nouveau accéder à son compte."
+                            else ->
+                                "Le compte sera supprimé de la gestion. Vérifie avant de continuer."
+                        }
+                    )
+                },
+                confirmButton = {
+                    TextButton(
+                        onClick = {
+                            chargementUtilisateurs = true
+
+                            val action: (
+                                (Boolean, String) -> Unit
+                            ) -> Unit = { callback ->
+
+                                when (typeAction) {
+                                    "desactiver" ->
+                                        AuthService.desactiverVendeur(
+                                            context,
+                                            vendeur.id,
+                                            callback
+                                        )
+
+                                    "reactiver" ->
+                                        AuthService.reactiverVendeur(
+                                            context,
+                                            vendeur.id,
+                                            callback
+                                        )
+
+                                    else ->
+                                        AuthService.supprimerVendeur(
+                                            context,
+                                            vendeur.id,
+                                            callback
+                                        )
+                                }
+                            }
+
+                            action { succes, message ->
+
+                                chargementUtilisateurs = false
+                                messageUtilisateurs = message
+                                vendeurAction = null
+
+                                if (succes) {
+                                    chargerVendeurs()
+                                }
+                            }
+                        }
+                    ) {
+                        Text("Confirmer")
+                    }
+                },
+                dismissButton = {
+                    TextButton(
+                        onClick = {
+                            vendeurAction = null
+                        }
+                    ) {
+                        Text("Annuler")
+                    }
+                }
+            )
+        }
+    }
+}
+ 
 
                         else -> {
                             Text("Page introuvable.")
