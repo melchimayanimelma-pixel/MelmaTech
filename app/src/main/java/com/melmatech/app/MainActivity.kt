@@ -3751,11 +3751,8 @@ val choisirPhotoUtilisateur =
                                     ),
                                     contentDescription = "Photo vendeur",
                                     modifier = Modifier
-                                        .size(52.dp)
-                                        .background(
-                                            fond,
-                                            RoundedCornerShape(50)
-                                        ),
+    .size(52.dp)
+    .clip(CircleShape),
                                     contentScale = ContentScale.Crop
                                 )
                             } else {
