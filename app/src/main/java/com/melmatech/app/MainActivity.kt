@@ -3479,11 +3479,8 @@ val choisirPhotoUtilisateur =
                                 ),
                                 contentDescription = "Photo administrateur",
                                 modifier = Modifier
-                                    .size(58.dp)
-                                    .background(
-                                        Color.White,
-                                        RoundedCornerShape(50)
-                                    ),
+    .size(58.dp)
+    .clip(CircleShape),
                                 contentScale = ContentScale.Crop
                             )
                         } else {
