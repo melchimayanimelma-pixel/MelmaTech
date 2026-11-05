@@ -71,6 +71,20 @@ import androidx.compose.material.icons.filled.PhotoCamera
 import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.shape.CircleShape
 
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.gestures.detectTransformGestures
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.unit.IntSize
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.window.Dialog
+import kotlin.math.max
+import kotlin.math.roundToInt
+
+
 data class Produit(
     val id: Long,
     val nom: String,
@@ -4832,4 +4846,180 @@ private fun genererRapportDocumentPdf(
         document.close()
     }
 }
+
+@Composable
+fun EditeurPhotoProfil(
+    bitmap: Bitmap,
+    onAnnuler: () -> Unit,
+    onValider: (Bitmap) -> Unit
+) {
+    var zoom by remember { mutableStateOf(1f) }
+    var decalage by remember { mutableStateOf(Offset.Zero) }
+    var tailleZone by remember { mutableStateOf(IntSize.Zero) }
+
+    Dialog(onDismissRequest = onAnnuler) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(
+                    MaterialTheme.colorScheme.surface,
+                    RoundedCornerShape(20.dp)
+                )
+                .padding(16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(
+                text = "Recadrer la photo",
+                style = MaterialTheme.typography.titleLarge
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .aspectRatio(1f)
+                    .clip(CircleShape)
+                    .background(Color.Black)
+            ) {
+                Canvas(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .onSizeChanged { tailleZone = it }
+                        .pointerInput(bitmap) {
+                            detectTransformGestures {
+                                    _, pan, zoomChange, _ ->
+
+                                zoom = (zoom * zoomChange)
+                                    .coerceIn(1f, 5f)
+
+                                decalage += pan
+                            }
+                        }
+                ) {
+                    val cote = minOf(size.width, size.height)
+
+                    val echelleBase = maxOf(
+                        cote / bitmap.width,
+                        cote / bitmap.height
+                    )
+
+                    val echelle = echelleBase * zoom
+
+                    val largeur = bitmap.width * echelle
+                    val hauteur = bitmap.height * echelle
+
+                    val gauche =
+                        (size.width - largeur) / 2f + decalage.x
+
+                    val haut =
+                        (size.height - hauteur) / 2f + decalage.y
+
+                    drawImage(
+                        image = bitmap.asImageBitmap(),
+                        dstOffset = IntOffset(
+                            gauche.roundToInt(),
+                            haut.roundToInt()
+                        ),
+                        dstSize = IntSize(
+                            largeur.roundToInt(),
+                            hauteur.roundToInt()
+                        )
+                    )
+
+                    drawCircle(
+                        color = Color.White,
+                        style = Stroke(width = 3.dp.toPx())
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            Text(
+                text = "Déplace et agrandis la photo avec tes doigts.",
+                style = MaterialTheme.typography.bodySmall
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                TextButton(onClick = onAnnuler) {
+                    Text("Annuler")
+                }
+
+                Button(
+                    onClick = {
+                        val cote = tailleZone.width
+                            .coerceAtMost(tailleZone.height)
+                            .toFloat()
+
+                        if (cote > 0f) {
+                            val echelleBase = maxOf(
+                                cote / bitmap.width,
+                                cote / bitmap.height
+                            )
+
+                            val echelle = echelleBase * zoom
+
+                            val largeur = bitmap.width * echelle
+                            val hauteur = bitmap.height * echelle
+
+                            val gauche =
+                                (cote - largeur) / 2f + decalage.x
+
+                            val haut =
+                                (cote - hauteur) / 2f + decalage.y
+
+                            val centreX =
+                                (cote / 2f - gauche) / echelle
+
+                            val centreY =
+                                (cote / 2f - haut) / echelle
+
+                            val tailleSource = cote / echelle
+
+                            val x = (centreX - tailleSource / 2f)
+                                .roundToInt()
+                                .coerceIn(
+                                    0,
+                                    bitmap.width - tailleSource.roundToInt()
+                                )
+
+                            val y = (centreY - tailleSource / 2f)
+                                .roundToInt()
+                                .coerceIn(
+                                    0,
+                                    bitmap.height - tailleSource.roundToInt()
+                                )
+
+                            val coteSource = tailleSource
+                                .roundToInt()
+                                .coerceAtLeast(1)
+                                .coerceAtMost(
+                                    minOf(bitmap.width - x, bitmap.height - y)
+                                )
+
+                            val photoRecadree = Bitmap.createBitmap(
+                                bitmap,
+                                x,
+                                y,
+                                coteSource,
+                                coteSource
+                            )
+
+                            onValider(photoRecadree)
+                        }
+                    }
+                ) {
+                    Text("Valider")
+                }
+            }
+        }
+    }
+}
+
 
