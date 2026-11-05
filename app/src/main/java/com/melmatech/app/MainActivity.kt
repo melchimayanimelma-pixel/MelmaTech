@@ -68,6 +68,8 @@ import java.util.concurrent.TimeUnit
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.PhotoCamera
+import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.shape.CircleShape
 
 data class Produit(
     val id: Long,
