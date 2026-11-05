@@ -3317,6 +3317,7 @@ var chargementPhoto by remember {
     mutableStateOf(false)
 }
 
+
 val choisirPhotoUtilisateur =
     rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
@@ -3331,48 +3332,40 @@ val choisirPhotoUtilisateur =
                     context.contentResolver.getType(uri)
                         ?: "image/jpeg"
 
-                val image = context.contentResolver
-                    .openInputStream(uri)
-                    ?.use { it.readBytes() }
-
-                if (image == null) {
+                if (typeMime !in listOf(
+                        "image/jpeg",
+                        "image/png",
+                        "image/webp"
+                    )
+                ) {
                     chargementPhoto = false
                     messageUtilisateurs =
-                        "Impossible de lire cette photo."
+                        "Choisis une photo JPG, PNG ou WEBP."
                 } else {
 
-                    AuthService.envoyerPhotoProfil(
-                        context = context,
-                        utilisateurCibleId = utilisateurPhotoId!!,
-                        image = image,
-                        typeMime = typeMime
-                    ) { succes, message, photoUrl ->
+                    val image = context.contentResolver
+                        .openInputStream(uri)
+                        ?.use { it.readBytes() }
+
+                    if (image == null || image.isEmpty()) {
+                        chargementPhoto = false
+                        messageUtilisateurs =
+                            "Impossible de lire cette photo."
+                    } else {
+
+                        val bitmap = BitmapFactory.decodeByteArray(
+                            image,
+                            0,
+                            image.size
+                        )
 
                         chargementPhoto = false
-                        messageUtilisateurs = message
 
-                        if (succes && photoUrl != null) {
-
-                            if (utilisateurPhotoId ==
-                                profilAdmin?.id
-                            ) {
-                                profilAdmin =
-                                    profilAdmin?.copy(
-                                        photoUrl = photoUrl
-                                    )
-                            } else {
-                                vendeurs = vendeurs.map { vendeur ->
-                                    if (vendeur.id ==
-                                        utilisateurPhotoId
-                                    ) {
-                                        vendeur.copy(
-                                            photoUrl = photoUrl
-                                        )
-                                    } else {
-                                        vendeur
-                                    }
-                                }
-                            }
+                        if (bitmap == null) {
+                            messageUtilisateurs =
+                                "Impossible de décoder cette photo."
+                        } else {
+                            photoARecadrer = bitmap
                         }
                     }
                 }
@@ -3384,6 +3377,7 @@ val choisirPhotoUtilisateur =
             }
         }
     }
+
 
         val chargerVendeurs: () -> Unit = {
             chargementUtilisateurs = true
