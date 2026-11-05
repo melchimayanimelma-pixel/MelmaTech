@@ -3524,6 +3524,23 @@ val choisirPhotoUtilisateur =
                                 color = Color.White.copy(alpha = 0.75f),
                                 style = MaterialTheme.typography.bodySmall
                             )
+                            TextButton(
+    onClick = {
+        utilisateurPhotoId = profilAdmin?.id
+        if (utilisateurPhotoId != null) {
+            choisirPhotoUtilisateur.launch("image/*")
+        }
+    },
+    enabled = !chargementPhoto,
+    contentPadding = PaddingValues(0.dp)
+) {
+    Text(
+        if (chargementPhoto) "Envoi de la photo..."
+        else "📷 Changer la photo",
+        color = Color.White,
+        fontWeight = FontWeight.Bold
+    )
+                            }
                         }
                     }
                 }
