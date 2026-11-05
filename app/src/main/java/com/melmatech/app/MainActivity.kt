@@ -3825,6 +3825,27 @@ val choisirPhotoUtilisateur =
                             }
                         }
 
+                        Row(
+    modifier = Modifier.fillMaxWidth(),
+    horizontalArrangement = Arrangement.End
+) {
+    TextButton(
+        onClick = {
+            utilisateurPhotoId = vendeur.id
+            choisirPhotoUtilisateur.launch("image/*")
+        },
+        enabled = !chargementPhoto
+    ) {
+        Icon(
+            imageVector = Icons.Filled.PhotoCamera,
+            contentDescription = "Changer la photo"
+        )
+
+        Spacer(Modifier.width(6.dp))
+
+        Text("Changer la photo")
+    }
+                        }
                         HorizontalDivider(color = fond)
 
                         Row(
