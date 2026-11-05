@@ -3309,6 +3309,9 @@ Slider(
 var utilisateurPhotoId by remember {
     mutableStateOf<String?>(null)
 }
+var photoARecadrer by remember {
+    mutableStateOf<Bitmap?>(null)
+}
 
 var chargementPhoto by remember {
     mutableStateOf(false)
