@@ -3391,6 +3391,62 @@ val choisirPhotoUtilisateur =
             }
         }
     }
+    
+val validerPhotoRecadree: (Bitmap) -> Unit = { bitmap ->
+
+    val cibleId = utilisateurPhotoId
+
+    if (!cibleId.isNullOrBlank()) {
+
+        chargementPhoto = true
+
+        val sortie = java.io.ByteArrayOutputStream()
+
+        bitmap.compress(
+            Bitmap.CompressFormat.JPEG,
+            90,
+            sortie
+        )
+
+        val imageFinale = sortie.toByteArray()
+
+        AuthService.envoyerPhotoProfil(
+            context = context,
+            utilisateurCibleId = cibleId,
+            image = imageFinale,
+            typeMime = "image/jpeg"
+        ) { succes, message, photoUrl ->
+
+            chargementPhoto = false
+            messageUtilisateurs = message
+
+            if (succes && photoUrl != null) {
+
+                if (cibleId == profilAdmin?.id) {
+
+                    profilAdmin = profilAdmin?.copy(
+                        photoUrl = photoUrl
+                    )
+
+                } else {
+
+                    vendeurs = vendeurs.map { vendeur ->
+
+                        if (vendeur.id == cibleId) {
+                            vendeur.copy(photoUrl = photoUrl)
+                        } else {
+                            vendeur
+                        }
+                    }
+                }
+
+                photoARecadrer = null
+                utilisateurPhotoId = null
+            }
+        }
+    }
+}
+
 
 
         val chargerVendeurs: () -> Unit = {
