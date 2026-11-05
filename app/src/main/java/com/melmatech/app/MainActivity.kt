@@ -3303,6 +3303,82 @@ Slider(
         val fond = Color(0xFFF6F4FB)
         val vert = Color(0xFF159B68)
         val rouge = Color(0xFFD94B55)
+        // Gestion des photos de profil
+var utilisateurPhotoId by remember {
+    mutableStateOf<String?>(null)
+}
+
+var chargementPhoto by remember {
+    mutableStateOf(false)
+}
+
+val choisirPhotoUtilisateur =
+    rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+
+        if (uri != null && utilisateurPhotoId != null) {
+
+            chargementPhoto = true
+
+            try {
+                val typeMime =
+                    context.contentResolver.getType(uri)
+                        ?: "image/jpeg"
+
+                val image = context.contentResolver
+                    .openInputStream(uri)
+                    ?.use { it.readBytes() }
+
+                if (image == null) {
+                    chargementPhoto = false
+                    messageUtilisateurs =
+                        "Impossible de lire cette photo."
+                } else {
+
+                    AuthService.envoyerPhotoProfil(
+                        context = context,
+                        utilisateurCibleId = utilisateurPhotoId!!,
+                        image = image,
+                        typeMime = typeMime
+                    ) { succes, message, photoUrl ->
+
+                        chargementPhoto = false
+                        messageUtilisateurs = message
+
+                        if (succes && photoUrl != null) {
+
+                            if (utilisateurPhotoId ==
+                                profilAdmin?.id
+                            ) {
+                                profilAdmin =
+                                    profilAdmin?.copy(
+                                        photoUrl = photoUrl
+                                    )
+                            } else {
+                                vendeurs = vendeurs.map { vendeur ->
+                                    if (vendeur.id ==
+                                        utilisateurPhotoId
+                                    ) {
+                                        vendeur.copy(
+                                            photoUrl = photoUrl
+                                        )
+                                    } else {
+                                        vendeur
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+            } catch (e: Exception) {
+                chargementPhoto = false
+                messageUtilisateurs =
+                    "Erreur lors de la lecture de la photo."
+            }
+        }
+    }
 
         val chargerVendeurs: () -> Unit = {
             chargementUtilisateurs = true
