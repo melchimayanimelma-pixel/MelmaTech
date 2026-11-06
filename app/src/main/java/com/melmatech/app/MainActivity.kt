@@ -90,6 +90,8 @@ import androidx.compose.material.icons.filled.LockReset
 import androidx.compose.material.icons.filled.Block
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Search
 
 
 data class Produit(
