@@ -89,6 +89,7 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.LockReset
 import androidx.compose.material.icons.filled.Block
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.ui.text.style.TextOverflow
 
 
 data class Produit(
@@ -3798,196 +3799,247 @@ val validerPhotoRecadree: (Bitmap) -> Unit = { bitmap ->
                 key = { it.id }
             ) { vendeur ->
 
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(18.dp),
-                    colors = CardDefaults.cardColors(
-                        containerColor = Color.White
+                
+Card(
+    modifier = Modifier.fillMaxWidth(),
+    shape = RoundedCornerShape(22.dp),
+    colors = CardDefaults.cardColors(
+        containerColor = Color.White
+    ),
+    elevation = CardDefaults.cardElevation(
+        defaultElevation = 3.dp
+    )
+) {
+    Column(
+        modifier = Modifier.padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp)
+    ) {
+
+        // INFORMATIONS DU VENDEUR
+
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+
+            if (!vendeur.photoUrl.isNullOrBlank()) {
+                Image(
+                    painter = rememberAsyncImagePainter(
+                        vendeur.photoUrl
                     ),
-                    elevation = CardDefaults.cardElevation(
-                        defaultElevation = 2.dp
-                    )
+                    contentDescription = "Photo vendeur",
+                    modifier = Modifier
+                        .size(58.dp)
+                        .clip(CircleShape),
+                    contentScale = ContentScale.Crop
+                )
+            } else {
+                Box(
+                    modifier = Modifier
+                        .size(58.dp)
+                        .clip(CircleShape)
+                        .background(violet.copy(alpha = 0.12f)),
+                    contentAlignment = Alignment.Center
                 ) {
-                    Column(
-                        modifier = Modifier.padding(14.dp),
-                        verticalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-
-                            if (!vendeur.photoUrl.isNullOrBlank()) {
-                                Image(
-                                    painter = rememberAsyncImagePainter(
-                                        vendeur.photoUrl
-                                    ),
-                                    contentDescription = "Photo vendeur",
-                                    modifier = Modifier
-    .size(52.dp)
-    .clip(CircleShape),
-                                    contentScale = ContentScale.Crop
-                                )
-                            } else {
-                                Box(
-                                    modifier = Modifier
-                                        .size(52.dp)
-                                        .background(
-                                            violet.copy(alpha = 0.12f),
-                                            RoundedCornerShape(50)
-                                        ),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Text(
-                                        vendeur.nomComplet
-                                            .firstOrNull()
-                                            ?.uppercase()
-                                            ?: "V",
-                                        color = violet,
-                                        fontWeight = FontWeight.Bold,
-                                        style = MaterialTheme.typography.titleLarge
-                                    )
-                                }
-                            }
-
-                            Spacer(Modifier.width(12.dp))
-
-                            Column(
-                                modifier = Modifier.weight(1f)
-                            ) {
-                                Text(
-                                    vendeur.nomComplet,
-                                    fontWeight = FontWeight.Bold,
-                                    style = MaterialTheme.typography.titleMedium
-                                )
-
-                                Text(
-                                    vendeur.email,
-                                    color = Color.Gray,
-                                    style = MaterialTheme.typography.bodySmall
-                                )
-
-                                Text(
-                                    "Vendeur",
-                                    color = violet,
-                                    style = MaterialTheme.typography.bodySmall
-                                )
-                            }
-
-                            Surface(
-                                shape = RoundedCornerShape(20.dp),
-                                color = if (vendeur.actif)
-                                    vert.copy(alpha = 0.12f)
-                                else
-                                    rouge.copy(alpha = 0.12f)
-                            ) {
-                                Text(
-                                    if (vendeur.actif) "Actif" else "Inactif",
-                                    modifier = Modifier.padding(
-                                        horizontal = 10.dp,
-                                        vertical = 6.dp
-                                    ),
-                                    color = if (vendeur.actif) vert else rouge,
-                                    style = MaterialTheme.typography.labelMedium,
-                                    fontWeight = FontWeight.Bold
-                                )
-                            }
-                        }
-
-                        
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.End
-                        ) {
-                            IconButton(
-                                onClick = {
-                                    utilisateurPhotoId = vendeur.id
-                                    choisirPhotoUtilisateur.launch("image/*")
-                                },
-                                enabled = !chargementPhoto
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Filled.PhotoCamera,
-                                    contentDescription = "Changer la photo",
-                                    tint = violet
-                                )
-                            }
-                        }
-
-                        HorizontalDivider(color = fond)
-
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceEvenly,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            IconButton(
-                                onClick = {
-                                    vendeurModifie = vendeur
-                                    nomSaisi = vendeur.nomComplet
-                                    emailSaisi = vendeur.email
-                                    messageUtilisateurs = ""
-                                    afficherFormulaire = true
-                                }
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Filled.Edit,
-                                    contentDescription = "Modifier",
-                                    tint = Color(0xFF2563EB)
-                                )
-                            }
-
-                            IconButton(
-                                onClick = {
-                                    vendeurMotDePasse = vendeur
-                                    nouveauMotDePasse = ""
-                                }
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Filled.LockReset,
-                                    contentDescription = "Mot de passe",
-                                    tint = Color(0xFF8B5CF6)
-                                )
-                            }
-
-                            IconButton(
-                                onClick = {
-                                    vendeurAction = vendeur
-                                    typeAction = if (vendeur.actif)
-                                        "desactiver"
-                                    else
-                                        "reactiver"
-                                }
-                            ) {
-                                Icon(
-                                    imageVector = if (vendeur.actif)
-                                        Icons.Filled.Block
-                                    else
-                                        Icons.Filled.CheckCircle,
-                                    contentDescription = if (vendeur.actif)
-                                        "Désactiver"
-                                    else
-                                        "Réactiver",
-                                    tint = if (vendeur.actif) rouge else vert
-                                )
-                            }
-
-                            IconButton(
-                                onClick = {
-                                    vendeurAction = vendeur
-                                    typeAction = "supprimer"
-                                }
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Filled.Delete,
-                                    contentDescription = "Supprimer",
-                                    tint = rouge
-                                )
-                            }
-                        }
-
-                    }
+                    Text(
+                        vendeur.nomComplet.firstOrNull()
+                            ?.uppercase() ?: "V",
+                        color = violet,
+                        fontWeight = FontWeight.Bold,
+                        style = MaterialTheme.typography.titleLarge
+                    )
                 }
+            }
+
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(3.dp)
+            ) {
+                Text(
+                    vendeur.nomComplet,
+                    fontWeight = FontWeight.Bold,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = Color(0xFF252238)
+                )
+
+                Text(
+                    vendeur.email,
+                    color = Color.Gray,
+                    style = MaterialTheme.typography.bodySmall,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+
+                Text(
+                    "Vendeur",
+                    color = violet,
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.SemiBold
+                )
+            }
+
+            Surface(
+                shape = RoundedCornerShape(20.dp),
+                color = if (vendeur.actif)
+                    Color(0xFFE4F5EF)
+                else
+                    Color(0xFFFCE8EA)
+            ) {
+                Text(
+                    if (vendeur.actif) "Actif" else "Inactif",
+                    modifier = Modifier.padding(
+                        horizontal = 11.dp,
+                        vertical = 7.dp
+                    ),
+                    color = if (vendeur.actif)
+                        Color(0xFF15966B)
+                    else
+                        Color(0xFFD04452),
+                    fontWeight = FontWeight.Bold,
+                    style = MaterialTheme.typography.labelMedium
+                )
+            }
+        }
+
+        // CHANGER LA PHOTO
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.End
+        ) {
+            TextButton(
+                onClick = {
+                    utilisateurPhotoId = vendeur.id
+                    choisirPhotoUtilisateur.launch("image/*")
+                },
+                enabled = !chargementPhoto
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.PhotoCamera,
+                    contentDescription = "Changer la photo",
+                    tint = violet,
+                    modifier = Modifier.size(19.dp)
+                )
+
+                Spacer(Modifier.width(6.dp))
+
+                Text(
+                    "Changer la photo",
+                    color = violet,
+                    fontWeight = FontWeight.SemiBold
+                )
+            }
+        }
+
+        HorizontalDivider(
+            color = Color(0xFFF0EDF5)
+        )
+
+        // ACTIONS DU VENDEUR
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceEvenly,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+
+            IconButton(
+                onClick = {
+                    vendeurModifie = vendeur
+                    nomSaisi = vendeur.nomComplet
+                    emailSaisi = vendeur.email
+                    messageUtilisateurs = ""
+                    afficherFormulaire = true
+                },
+                modifier = Modifier
+                    .size(44.dp)
+                    .background(
+                        Color(0xFFEAF1FF),
+                        RoundedCornerShape(14.dp)
+                    )
+            ) {
+                Icon(
+                    Icons.Filled.Edit,
+                    contentDescription = "Modifier",
+                    tint = Color(0xFF2563EB)
+                )
+            }
+
+            IconButton(
+                onClick = {
+                    vendeurMotDePasse = vendeur
+                    nouveauMotDePasse = ""
+                },
+                modifier = Modifier
+                    .size(44.dp)
+                    .background(
+                        Color(0xFFF1EAFE),
+                        RoundedCornerShape(14.dp)
+                    )
+            ) {
+                Icon(
+                    Icons.Filled.LockReset,
+                    contentDescription = "Mot de passe",
+                    tint = Color(0xFF8B5CF6)
+                )
+            }
+
+            IconButton(
+                onClick = {
+                    vendeurAction = vendeur
+                    typeAction = if (vendeur.actif)
+                        "desactiver"
+                    else
+                        "reactiver"
+                },
+                modifier = Modifier
+                    .size(44.dp)
+                    .background(
+                        if (vendeur.actif)
+                            Color(0xFFFFF2E5)
+                        else
+                            Color(0xFFE4F5EF),
+                        RoundedCornerShape(14.dp)
+                    )
+            ) {
+                Icon(
+                    if (vendeur.actif)
+                        Icons.Filled.Block
+                    else
+                        Icons.Filled.CheckCircle,
+                    contentDescription = if (vendeur.actif)
+                        "Désactiver"
+                    else
+                        "Réactiver",
+                    tint = if (vendeur.actif)
+                        Color(0xFFD97706)
+                    else
+                        Color(0xFF15966B)
+                )
+            }
+
+            IconButton(
+                onClick = {
+                    vendeurAction = vendeur
+                    typeAction = "supprimer"
+                },
+                modifier = Modifier
+                    .size(44.dp)
+                    .background(
+                        Color(0xFFFCE8EA),
+                        RoundedCornerShape(14.dp)
+                    )
+            ) {
+                Icon(
+                    Icons.Filled.Delete,
+                    contentDescription = "Supprimer",
+                    tint = Color(0xFFD04452)
+                )
+            }
+        }
+    }
+}
+
             }
 
             item {
