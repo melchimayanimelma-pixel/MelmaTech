@@ -92,6 +92,8 @@ import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Email
 
 
 data class Produit(
