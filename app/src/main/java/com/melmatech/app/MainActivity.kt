@@ -3894,35 +3894,34 @@ val validerPhotoRecadree: (Bitmap) -> Unit = { bitmap ->
                             }
                         }
 
+                        
                         Row(
-    modifier = Modifier.fillMaxWidth(),
-    horizontalArrangement = Arrangement.End
-) {
-    TextButton(
-        onClick = {
-            utilisateurPhotoId = vendeur.id
-            choisirPhotoUtilisateur.launch("image/*")
-        },
-        enabled = !chargementPhoto
-    ) {
-        Icon(
-            imageVector = Icons.Filled.PhotoCamera,
-            contentDescription = "Changer la photo"
-        )
-
-        Spacer(Modifier.width(6.dp))
-
-        Text("Changer la photo")
-    }
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.End
+                        ) {
+                            IconButton(
+                                onClick = {
+                                    utilisateurPhotoId = vendeur.id
+                                    choisirPhotoUtilisateur.launch("image/*")
+                                },
+                                enabled = !chargementPhoto
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Filled.PhotoCamera,
+                                    contentDescription = "Changer la photo",
+                                    tint = violet
+                                )
+                            }
                         }
+
                         HorizontalDivider(color = fond)
 
                         Row(
                             modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            horizontalArrangement = Arrangement.SpaceEvenly,
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-
-                            TextButton(
+                            IconButton(
                                 onClick = {
                                     vendeurModifie = vendeur
                                     nomSaisi = vendeur.nomComplet
@@ -3931,25 +3930,27 @@ val validerPhotoRecadree: (Bitmap) -> Unit = { bitmap ->
                                     afficherFormulaire = true
                                 }
                             ) {
-                                Text("Modifier")
+                                Icon(
+                                    imageVector = Icons.Filled.Edit,
+                                    contentDescription = "Modifier",
+                                    tint = Color(0xFF2563EB)
+                                )
                             }
 
-                            TextButton(
+                            IconButton(
                                 onClick = {
                                     vendeurMotDePasse = vendeur
                                     nouveauMotDePasse = ""
                                 }
                             ) {
-                                Text("Mot de passe")
+                                Icon(
+                                    imageVector = Icons.Filled.LockReset,
+                                    contentDescription = "Mot de passe",
+                                    tint = Color(0xFF8B5CF6)
+                                )
                             }
-                        }
 
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(6.dp)
-                        ) {
-
-                            TextButton(
+                            IconButton(
                                 onClick = {
                                     vendeurAction = vendeur
                                     typeAction = if (vendeur.actif)
@@ -3958,27 +3959,33 @@ val validerPhotoRecadree: (Bitmap) -> Unit = { bitmap ->
                                         "reactiver"
                                 }
                             ) {
-                                Text(
-                                    if (vendeur.actif)
+                                Icon(
+                                    imageVector = if (vendeur.actif)
+                                        Icons.Filled.Block
+                                    else
+                                        Icons.Filled.CheckCircle,
+                                    contentDescription = if (vendeur.actif)
                                         "Désactiver"
                                     else
                                         "Réactiver",
-                                    color = if (vendeur.actif) rouge else vert
+                                    tint = if (vendeur.actif) rouge else vert
                                 )
                             }
 
-                            TextButton(
+                            IconButton(
                                 onClick = {
                                     vendeurAction = vendeur
                                     typeAction = "supprimer"
                                 }
                             ) {
-                                Text(
-                                    "Supprimer",
-                                    color = rouge
+                                Icon(
+                                    imageVector = Icons.Filled.Delete,
+                                    contentDescription = "Supprimer",
+                                    tint = rouge
                                 )
                             }
                         }
+
                     }
                 }
             }
