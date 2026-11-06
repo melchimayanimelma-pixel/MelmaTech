@@ -3515,28 +3515,42 @@ val validerPhotoRecadree: (Bitmap) -> Unit = { bitmap ->
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
 
+            
+            // EN-TÊTE DE GESTION DES UTILISATEURS
+
             item {
-                Spacer(Modifier.height(8.dp))
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 8.dp),
+                    verticalArrangement = Arrangement.spacedBy(5.dp)
+                ) {
+                    Text(
+                        "Gestion des utilisateurs",
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = Color(0xFF252238)
+                    )
 
-                Text(
-                    "Gestion des utilisateurs",
-                    style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.Bold,
-                    color = Color(0xFF252238)
-                )
-
-                Text(
-                    "Gérez les comptes de votre équipe.",
-                    color = Color.Gray
-                )
+                    Text(
+                        "Gérez les accès et les membres de votre équipe.",
+                        color = Color.Gray,
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                }
             }
+
+            // CARTE ADMINISTRATEUR
 
             item {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(20.dp),
+                    shape = RoundedCornerShape(22.dp),
                     colors = CardDefaults.cardColors(
                         containerColor = violet
+                    ),
+                    elevation = CardDefaults.cardElevation(
+                        defaultElevation = 3.dp
                     )
                 ) {
                     Row(
@@ -3553,17 +3567,17 @@ val validerPhotoRecadree: (Bitmap) -> Unit = { bitmap ->
                                 ),
                                 contentDescription = "Photo administrateur",
                                 modifier = Modifier
-    .size(58.dp)
-    .clip(CircleShape),
+                                    .size(68.dp)
+                                    .clip(CircleShape),
                                 contentScale = ContentScale.Crop
                             )
                         } else {
                             Box(
                                 modifier = Modifier
-                                    .size(58.dp)
+                                    .size(68.dp)
+                                    .clip(CircleShape)
                                     .background(
-                                        Color.White.copy(alpha = 0.2f),
-                                        RoundedCornerShape(50)
+                                        Color.White.copy(alpha = 0.2f)
                                     ),
                                 contentAlignment = Alignment.Center
                             ) {
@@ -3578,10 +3592,13 @@ val validerPhotoRecadree: (Bitmap) -> Unit = { bitmap ->
 
                         Spacer(Modifier.width(14.dp))
 
-                        Column {
+                        Column(
+                            modifier = Modifier.weight(1f),
+                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
                             Text(
                                 profilAdmin?.nomComplet
-                                    ?: "Administrateur",
+                                    ?: "Administrateur MelmaTech",
                                 color = Color.White,
                                 fontWeight = FontWeight.Bold,
                                 style = MaterialTheme.typography.titleMedium
@@ -3589,7 +3606,7 @@ val validerPhotoRecadree: (Bitmap) -> Unit = { bitmap ->
 
                             Text(
                                 "Administrateur",
-                                color = Color.White.copy(alpha = 0.85f)
+                                color = Color.White.copy(alpha = 0.9f)
                             )
 
                             Text(
@@ -3597,27 +3614,41 @@ val validerPhotoRecadree: (Bitmap) -> Unit = { bitmap ->
                                 color = Color.White.copy(alpha = 0.75f),
                                 style = MaterialTheme.typography.bodySmall
                             )
+
                             TextButton(
-    onClick = {
-        utilisateurPhotoId = profilAdmin?.id
-        if (utilisateurPhotoId != null) {
-            choisirPhotoUtilisateur.launch("image/*")
-        }
-    },
-    enabled = !chargementPhoto,
-    contentPadding = PaddingValues(0.dp)
-) {
-    Text(
-        if (chargementPhoto) "Envoi de la photo..."
-        else "📷 Changer la photo",
-        color = Color.White,
-        fontWeight = FontWeight.Bold
-    )
+                                onClick = {
+                                    utilisateurPhotoId = profilAdmin?.id
+                                    if (utilisateurPhotoId != null) {
+                                        choisirPhotoUtilisateur.launch("image/*")
+                                    }
+                                },
+                                enabled = !chargementPhoto,
+                                contentPadding = PaddingValues(0.dp)
+                            ) {
+                                Icon(
+                                    Icons.Filled.PhotoCamera,
+                                    contentDescription = null,
+                                    tint = Color.White,
+                                    modifier = Modifier.size(18.dp)
+                                )
+
+                                Spacer(Modifier.width(6.dp))
+
+                                Text(
+                                    if (chargementPhoto)
+                                        "Envoi en cours..."
+                                    else
+                                        "Changer la photo",
+                                    color = Color.White,
+                                    fontWeight = FontWeight.Bold
+                                )
                             }
                         }
                     }
                 }
             }
+
+            // BOUTON AJOUTER UN VENDEUR
 
             item {
                 Button(
@@ -3631,76 +3662,112 @@ val validerPhotoRecadree: (Bitmap) -> Unit = { bitmap ->
                     },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(54.dp),
+                        .height(56.dp),
                     shape = RoundedCornerShape(16.dp),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = violet
                     )
                 ) {
+                    Icon(
+                        Icons.Filled.Add,
+                        contentDescription = null
+                    )
+
+                    Spacer(Modifier.width(8.dp))
+
                     Text(
-                        "+  Ajouter un vendeur",
+                        "Ajouter un vendeur",
                         fontWeight = FontWeight.Bold
                     )
                 }
             }
 
+            // STATISTIQUES
+
             item {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
 
-                    @Composable
-                    fun Statistique(
-                        titre: String,
-                        nombre: Int,
-                        couleur: Color
+                    Card(
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(18.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = Color.White
+                        )
                     ) {
-                        Card(
-                            modifier = Modifier.weight(1f),
-                            shape = RoundedCornerShape(16.dp),
-                            colors = CardDefaults.cardColors(
-                                containerColor = Color.White
-                            )
+                        Column(
+                            modifier = Modifier.padding(12.dp),
+                            verticalArrangement = Arrangement.spacedBy(5.dp)
                         ) {
-                            Column(
-                                modifier = Modifier.padding(12.dp)
-                            ) {
-                                Text(
-                                    nombre.toString(),
-                                    color = couleur,
-                                    style = MaterialTheme.typography.headlineSmall,
-                                    fontWeight = FontWeight.Bold
-                                )
-
-                                Text(
-                                    titre,
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = Color.Gray
-                                )
-                            }
+                            Text(
+                                vendeurs.size.toString(),
+                                color = violet,
+                                style = MaterialTheme.typography.headlineMedium,
+                                fontWeight = FontWeight.ExtraBold
+                            )
+                            Text(
+                                "Total",
+                                color = Color.Gray,
+                                style = MaterialTheme.typography.bodySmall
+                            )
                         }
                     }
 
-                    Statistique(
-                        "Total",
-                        vendeurs.size,
-                        violet
-                    )
+                    Card(
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(18.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = Color.White
+                        )
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(12.dp),
+                            verticalArrangement = Arrangement.spacedBy(5.dp)
+                        ) {
+                            Text(
+                                vendeurs.count { it.actif }.toString(),
+                                color = vert,
+                                style = MaterialTheme.typography.headlineMedium,
+                                fontWeight = FontWeight.ExtraBold
+                            )
+                            Text(
+                                "Actifs",
+                                color = Color.Gray,
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                        }
+                    }
 
-                    Statistique(
-                        "Actifs",
-                        vendeurs.count { it.actif },
-                        vert
-                    )
-
-                    Statistique(
-                        "Inactifs",
-                        vendeurs.count { !it.actif },
-                        rouge
-                    )
+                    Card(
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(18.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = Color.White
+                        )
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(12.dp),
+                            verticalArrangement = Arrangement.spacedBy(5.dp)
+                        ) {
+                            Text(
+                                vendeurs.count { !it.actif }.toString(),
+                                color = rouge,
+                                style = MaterialTheme.typography.headlineMedium,
+                                fontWeight = FontWeight.ExtraBold
+                            )
+                            Text(
+                                "Inactifs",
+                                color = Color.Gray,
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                        }
+                    }
                 }
             }
+
+            // RECHERCHE
 
             item {
                 OutlinedTextField(
@@ -3710,13 +3777,24 @@ val validerPhotoRecadree: (Bitmap) -> Unit = { bitmap ->
                     },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
-                    shape = RoundedCornerShape(14.dp),
-                    label = { Text("Rechercher un vendeur") },
+                    shape = RoundedCornerShape(16.dp),
+                    label = {
+                        Text("Rechercher un vendeur")
+                    },
                     placeholder = {
                         Text("Nom ou adresse e-mail")
+                    },
+                    leadingIcon = {
+                        Icon(
+                            Icons.Filled.Search,
+                            contentDescription = "Rechercher",
+                            tint = violet
+                        )
                     }
                 )
             }
+
+            // FILTRES
 
             item {
                 Row(
@@ -3730,7 +3808,19 @@ val validerPhotoRecadree: (Bitmap) -> Unit = { bitmap ->
                             onClick = {
                                 filtreUtilisateur = filtre
                             },
-                            label = { Text(filtre) }
+                            label = {
+                                Text(
+                                    filtre,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                            },
+                            shape = RoundedCornerShape(14.dp),
+                            colors = FilterChipDefaults.filterChipColors(
+                                selectedContainerColor = violet.copy(
+                                    alpha = 0.13f
+                                ),
+                                selectedLabelColor = violet
+                            )
                         )
                     }
                 }
