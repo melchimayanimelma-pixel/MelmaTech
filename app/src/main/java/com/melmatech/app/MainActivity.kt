@@ -1576,439 +1576,999 @@ val enregistrerFactureLauncher =
                         
                         "Ventes" -> {
 
-                            val suggestions = produits.filter {
-                                produitChoisi == null &&
-                                recherche.isNotBlank() &&
-                                it.nom.contains(
-                                    recherche.trim(),
-                                    ignoreCase = true
-                                ) &&
-                                it.quantite > 0
-                            }.take(6)
+    var ongletVente by remember {
+        mutableStateOf("Nouvelle vente")
+    }
 
-                            val totalPanier = panier.sumOf { it.total }
+    val chiffreAffairesVentes = ventes.sumOf { it.total }
+    val nombreVentes = ventes.size
+    val articlesVendus = ventes.sumOf { vente ->
+        vente.lignes.sumOf { it.quantite }
+    }
 
-                            LazyColumn(
-                                verticalArrangement =
-                                    Arrangement.spacedBy(8.dp)
+    val suggestions = produits.filter { produit ->
+        produitChoisi == null &&
+        recherche.isNotBlank() &&
+        produit.nom.contains(
+            recherche.trim(),
+            ignoreCase = true
+        ) &&
+        produit.quantite > 0
+    }.take(8)
+
+    val totalPanier = panier.sumOf { it.total }
+
+    LazyColumn(
+        modifier = Modifier.fillMaxSize(),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+        contentPadding = PaddingValues(bottom = 20.dp)
+    ) {
+
+        // EN-TÊTE
+        item {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(
+                        Color(0xFF6C3CE9),
+                        RoundedCornerShape(20.dp)
+                    )
+                    .padding(18.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                Text(
+                    "MelmaTech",
+                    color = Color.White,
+                    style = MaterialTheme.typography.titleMedium
+                )
+
+                Text(
+                    "Gestion des ventes",
+                    color = Color.White,
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.Bold
+                )
+
+                Text(
+                    "Enregistrez vos ventes et suivez vos paiements.",
+                    color = Color.White.copy(alpha = 0.85f)
+                )
+            }
+        }
+
+        // STATISTIQUES
+        item {
+            Text(
+                "Vue d'ensemble",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold
+            )
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+
+                Card(
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Column(
+                        modifier = Modifier.padding(10.dp)
+                    ) {
+                        Text(
+                            "Chiffre d'affaires",
+                            style = MaterialTheme.typography.bodySmall
+                        )
+
+                        Text(
+                            argent(chiffreAffairesVentes, devise),
+                            color = Color(0xFF6C3CE9),
+                            fontWeight = FontWeight.Bold,
+                            style = MaterialTheme.typography.titleMedium
+                        )
+                    }
+                }
+
+                Card(
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Column(
+                        modifier = Modifier.padding(10.dp)
+                    ) {
+                        Text(
+                            "Ventes",
+                            style = MaterialTheme.typography.bodySmall
+                        )
+
+                        Text(
+                            nombreVentes.toString(),
+                            color = Color(0xFF6C3CE9),
+                            fontWeight = FontWeight.Bold,
+                            style = MaterialTheme.typography.titleMedium
+                        )
+                    }
+                }
+
+                Card(
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Column(
+                        modifier = Modifier.padding(10.dp)
+                    ) {
+                        Text(
+                            "Articles vendus",
+                            style = MaterialTheme.typography.bodySmall
+                        )
+
+                        Text(
+                            articlesVendus.toString(),
+                            color = Color(0xFF6C3CE9),
+                            fontWeight = FontWeight.Bold,
+                            style = MaterialTheme.typography.titleMedium
+                        )
+                    }
+                }
+            }
+        }
+
+        // NAVIGATION ENTRE LES DEUX ONGLETS
+        item {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(
+                        Color(0xFFF0EBFA),
+                        RoundedCornerShape(12.dp)
+                    )
+                    .padding(4.dp),
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+
+                listOf(
+                    "Nouvelle vente",
+                    "Historique"
+                ).forEach { onglet ->
+
+                    val selectionne = ongletVente == onglet
+
+                    Button(
+                        onClick = {
+                            ongletVente = onglet
+                        },
+                        modifier = Modifier.weight(1f),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = if (selectionne)
+                                Color(0xFF6C3CE9)
+                            else
+                                Color.Transparent,
+                            contentColor = if (selectionne)
+                                Color.White
+                            else
+                                Color(0xFF5426A8)
+                        )
+                    ) {
+                        Text(
+                            onglet,
+                            maxLines = 1
+                        )
+                    }
+                }
+            }
+        }
+
+        // ==========================================
+        // ONGLET NOUVELLE VENTE
+        // ==========================================
+
+        if (ongletVente == "Nouvelle vente") {
+
+            item {
+                Text(
+                    "Informations du client",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold
+                )
+
+                OutlinedTextField(
+                    value = client,
+                    onValueChange = {
+                        client = it
+                    },
+                    label = {
+                        Text("Nom du client")
+                    },
+                    placeholder = {
+                        Text("Entrez le nom du client")
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true
+                )
+            }
+
+            item {
+                Text(
+                    "Ajouter des produits",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold
+                )
+
+                OutlinedTextField(
+                    value = recherche,
+                    onValueChange = {
+                        recherche = it
+                        produitChoisi = null
+                    },
+                    label = {
+                        Text("Rechercher un produit")
+                    },
+                    placeholder = {
+                        Text("Tapez les premières lettres...")
+                    },
+                    leadingIcon = {
+                        Icon(
+                            Icons.Filled.Search,
+                            contentDescription = "Rechercher"
+                        )
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true
+                )
+            }
+
+            // SUGGESTIONS DE PRODUITS
+            if (suggestions.isNotEmpty()) {
+
+                items(
+                    suggestions,
+                    key = { it.id }
+                ) { produit ->
+
+                    Card(
+                        onClick = {
+                            produitChoisi = produit
+                            recherche = produit.nom
+                            quantiteSaisie = "1"
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(14.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+
+                            Column(
+                                modifier = Modifier.weight(1f)
                             ) {
-                                item {
-                                    Text(
-                                        "Vente rapide",
-                                        style = MaterialTheme.typography.headlineSmall
-                                    )
+                                Text(
+                                    produit.nom,
+                                    fontWeight = FontWeight.Bold
+                                )
 
-                                    OutlinedTextField(
-                                        value = client,
-                                        onValueChange = { client = it },
-                                        label = { Text("Nom du client") },
-                                        modifier = Modifier.fillMaxWidth()
-                                    )
+                                Text(
+                                    "Prix : ${argent(produit.vente, devise)}",
+                                    color = Color(0xFF6C3CE9)
+                                )
 
-                                    OutlinedTextField(
-                                        value = recherche,
-                                        onValueChange = {
-                                            recherche = it
-                                            produitChoisi = null
-                                        },
-                                        label = {
-                                            Text("Rechercher un produit")
-                                        },
-                                        placeholder = {
-                                            Text("Tape les premières lettres...")
-                                        },
-                                        modifier = Modifier.fillMaxWidth()
-                                    )
-                                }
+                                Text(
+                                    "Stock disponible : ${produit.quantite}",
+                                    style = MaterialTheme.typography.bodySmall
+                                )
+                            }
 
-                                items(suggestions, key = { it.id }) { p ->
-                                    Card(
-                                        onClick = {
-                                            produitChoisi = p
-                                            recherche = p.nom
-                                            quantiteSaisie = "1"
-                                        },
-                                        modifier = Modifier.fillMaxWidth()
-                                    ) {
-                                        Column(
-                                            Modifier.padding(12.dp)
-                                        ) {
-                                            Text(p.nom)
-                                            Text(
-    "${argent(p.vente, devise)} — Stock : ${p.quantite}"
-)
+                            Icon(
+                                Icons.Filled.Add,
+                                contentDescription = "Sélectionner",
+                                tint = Color(0xFF6C3CE9)
+                            )
+                        }
+                    }
+                }
+            }
+
+            // PRODUIT SÉLECTIONNÉ
+            item {
+
+                produitChoisi?.let { produit ->
+
+                    Card(
+                        colors = CardDefaults.cardColors(
+                            containerColor = Color(0xFFF1EBFC)
+                        )
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(14.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+
+                            Text(
+                                "Produit sélectionné",
+                                color = Color(0xFF6C3CE9),
+                                fontWeight = FontWeight.Bold
+                            )
+
+                            Text(
+                                produit.nom,
+                                style = MaterialTheme.typography.titleMedium
+                            )
+
+                            Text(
+                                "Prix unitaire : ${argent(produit.vente, devise)}"
+                            )
+
+                            Text(
+                                "Stock disponible : ${produit.quantite}"
+                            )
+
+                            OutlinedTextField(
+                                value = quantiteSaisie,
+                                onValueChange = {
+                                    quantiteSaisie = it
+                                },
+                                label = {
+                                    Text("Quantité")
+                                },
+                                keyboardOptions = KeyboardOptions(
+                                    keyboardType = KeyboardType.Number
+                                ),
+                                modifier = Modifier.fillMaxWidth(),
+                                singleLine = true
+                            )
+
+                            Button(
+                                onClick = {
+
+                                    val quantite =
+                                        quantiteSaisie.toIntOrNull()
+
+                                    val dejaAjoute = panier
+                                        .filter {
+                                            it.produitId == produit.id
                                         }
+                                        .sumOf { it.quantite }
+
+                                    if (
+                                        quantite != null &&
+                                        quantite > 0 &&
+                                        quantite + dejaAjoute <= produit.quantite
+                                    ) {
+
+                                        val index = panier.indexOfFirst {
+                                            it.produitId == produit.id
+                                        }
+
+                                        panier = if (index >= 0) {
+
+                                            panier.mapIndexed { i, ligne ->
+
+                                                if (i == index) {
+                                                    ligne.copy(
+                                                        quantite =
+                                                            ligne.quantite + quantite
+                                                    )
+                                                } else {
+                                                    ligne
+                                                }
+                                            }
+
+                                        } else {
+
+                                            panier + LigneVente(
+                                                produit.id,
+                                                produit.nom,
+                                                quantite,
+                                                produit.vente,
+                                                produit.achat
+                                            )
+                                        }
+
+                                        produitChoisi = null
+                                        recherche = ""
+                                        quantiteSaisie = "1"
+                                        messageVente = ""
+
+                                    } else {
+
+                                        messageVente =
+                                            "Quantité invalide ou stock insuffisant."
+                                    }
+                                },
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Icon(
+                                    Icons.Filled.Add,
+                                    contentDescription = null
+                                )
+
+                                Spacer(Modifier.width(6.dp))
+
+                                Text("Ajouter au panier")
+                            }
+                        }
+                    }
+                }
+            }
+
+            // PANIER
+            item {
+                Text(
+                    "Mon panier (${panier.size} lignes)",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+
+            if (panier.isEmpty()) {
+
+                item {
+                    Card(
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(20.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Text("🛒")
+
+                            Text(
+                                "Votre panier est vide.",
+                                color = Color.Gray
+                            )
+                        }
+                    }
+                }
+
+            } else {
+
+                items(
+                    panier,
+                    key = { it.produitId }
+                ) { ligne ->
+
+                    Card(
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+
+                            Column(
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Text(
+                                    ligne.nom,
+                                    fontWeight = FontWeight.Bold
+                                )
+
+                                Text("Quantité : ${ligne.quantite}")
+
+                                Text(
+                                    argent(ligne.total, devise),
+                                    color = Color(0xFF6C3CE9),
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+
+                            IconButton(
+                                onClick = {
+                                    panier = panier.filter {
+                                        it.produitId != ligne.produitId
                                     }
                                 }
+                            ) {
+                                Icon(
+                                    Icons.Filled.Delete,
+                                    contentDescription = "Retirer",
+                                    tint = Color.Red
+                                )
+                            }
+                        }
+                    }
+                }
+            }
 
-                                item {
-                                    produitChoisi?.let { p ->
+            // PAIEMENT ET VALIDATION
+            item {
 
-                                        Text("Produit choisi : ${p.nom}")
+                Card(
+                    colors = CardDefaults.cardColors(
+                        containerColor = Color(0xFFF1EBFC)
+                    )
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
 
-                                        OutlinedTextField(
-                                            value = quantiteSaisie,
-                                            onValueChange = {
-                                                quantiteSaisie = it
-                                            },
-                                            label = { Text("Quantité") },
-                                            keyboardOptions = KeyboardOptions(
-                                                keyboardType = KeyboardType.Number
-                                            ),
-                                            modifier = Modifier.fillMaxWidth()
+                        Text(
+                            "Récapitulatif",
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold
+                        )
+
+                        Text(
+                            "Total à payer : ${argent(totalPanier, devise)}",
+                            style = MaterialTheme.typography.headlineSmall,
+                            color = Color(0xFF6C3CE9),
+                            fontWeight = FontWeight.Bold
+                        )
+
+                        OutlinedTextField(
+                            value = paiement,
+                            onValueChange = {
+                                paiement = it
+                            },
+                            label = {
+                                Text("Montant payé maintenant")
+                            },
+                            placeholder = {
+                                Text("Exemple : 20")
+                            },
+                            keyboardOptions = KeyboardOptions(
+                                keyboardType = KeyboardType.Decimal
+                            ),
+                            modifier = Modifier.fillMaxWidth(),
+                            singleLine = true
+                        )
+
+                        Text(
+                            "Le montant restant sera automatiquement enregistré comme dette du client.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Color.Gray
+                        )
+
+                        Button(
+                            onClick = {
+
+                                val montantPaye = paiement
+                                    .replace(",", ".")
+                                    .toDoubleOrNull()
+
+                                if (
+                                    panier.isEmpty() ||
+                                    client.isBlank() ||
+                                    montantPaye == null ||
+                                    montantPaye < 0 ||
+                                    montantPaye > totalPanier
+                                ) {
+
+                                    messageVente =
+                                        "Vérifiez le client, le panier et le paiement."
+
+                                } else {
+
+                                    val stockOK = panier.all { ligne ->
+
+                                        val produit = produits.find {
+                                            it.id == ligne.produitId
+                                        }
+
+                                        produit != null &&
+                                        ligne.quantite <= produit.quantite
+                                    }
+
+                                    if (!stockOK) {
+
+                                        messageVente = "Stock insuffisant."
+
+                                    } else {
+
+                                        val id = System.currentTimeMillis()
+
+                                        val nouvelleVente = Vente(
+                                            id,
+                                            client.trim(),
+                                            panier.toList(),
+                                            montantPaye,
+                                            id
                                         )
 
-                                        Button(
-                                            onClick = {
-                                                val q =
-                                                    quantiteSaisie.toIntOrNull()
+                                        // Mise à jour du stock
+                                        panier.forEach { ligne ->
 
-                                                val dejaAjoute = panier
-                                                    .filter {
-                                                        it.produitId == p.id
-                                                    }
-                                                    .sumOf { it.quantite }
+                                            val index = produits.indexOfFirst {
+                                                it.id == ligne.produitId
+                                            }
 
-                                                if (
-                                                    q != null &&
-                                                    q > 0 &&
-                                                    q + dejaAjoute <= p.quantite
-                                                ) {
-                                                    val index = panier.indexOfFirst {
-                                                        it.produitId == p.id
-                                                    }
+                                            if (index >= 0) {
 
-                                                    panier = if (index >= 0) {
-                                                        panier.mapIndexed { i, ligne ->
-                                                            if (i == index) {
-                                                                ligne.copy(
-                                                                    quantite =
-                                                                        ligne.quantite + q
-                                                                )
-                                                            } else ligne
-                                                        }
-                                                    } else {
-                                                        panier + LigneVente(
-                                                            p.id,
-                                                            p.nom,
-                                                            q,
-                                                            p.vente,
-                                                            p.achat
-                                                        )
-                                                    }
+                                                val produit = produits[index]
 
-                                                    produitChoisi = null
-                                                    recherche = ""
-                                                    quantiteSaisie = "1"
-                                                    messageVente = ""
-                                                } else {
-                                                    messageVente =
-                                                        "Quantité invalide ou stock insuffisant."
-                                                }
-                                            },
-                                            modifier = Modifier.fillMaxWidth()
-                                        ) {
-                                            Text("Ajouter au panier")
-                                        }
-                                    }
-
-                                    HorizontalDivider()
-
-                                    Text(
-                                        "Panier (${panier.size} lignes)",
-                                        style = MaterialTheme.typography.titleLarge
-                                    )
-                                }
-
-                                items(panier, key = { it.produitId }) { ligne ->
-                                    Card {
-                                        Column(
-                                            Modifier.padding(12.dp)
-                                        ) {
-                                            Text(ligne.nom)
-                                            Text("Quantité : ${ligne.quantite}")
-                                            Text("Total : ${argent(ligne.total, devise)}")
-
-                                            TextButton(
-                                                onClick = {
-                                                    panier = panier.filter {
-                                                        it.produitId != ligne.produitId
-                                                    }
-                                                }
-                                            ) {
-                                                Text("Retirer")
+                                                produits[index] = produit.copy(
+                                                    quantite =
+                                                        produit.quantite - ligne.quantite
+                                                )
                                             }
                                         }
+
+                                        // Enregistrement de la vente
+                                        ventes.add(nouvelleVente)
+
+                                        derniereVenteValidee = nouvelleVente
+
+                                        sauvegarderProduits()
+                                        sauvegarderVentes()
+
+                                        messageVente =
+                                            "Vente enregistrée. Facture n° $id"
+
+                                        // Réinitialisation du formulaire
+                                        panier = emptyList()
+                                        client = ""
+                                        recherche = ""
+                                        produitChoisi = null
+                                        quantiteSaisie = "1"
+                                        paiement = ""
+
                                     }
                                 }
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                            enabled = panier.isNotEmpty()
+                        ) {
+                            Text("Valider la vente")
+                        }
 
-                                item {
-                                    Text(
-                                        "TOTAL : ${argent(totalPanier, devise)}",
-                                        style = MaterialTheme.typography.headlineSmall
+                        if (messageVente.isNotBlank()) {
+                            Text(
+                                messageVente,
+                                color = if (
+                                    messageVente.startsWith("Vente enregistrée")
+                                ) Color(0xFF16803C)
+                                else Color.Red
+                            )
+                        }
+                    }
+                }
+            }
+
+            // FACTURE APRÈS VALIDATION
+            item {
+
+                derniereVenteValidee?.let { vente ->
+
+                    Card(
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(14.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+
+                            Text(
+                                "Vente enregistrée",
+                                fontWeight = FontWeight.Bold,
+                                color = Color(0xFF16803C)
+                            )
+
+                            Text("Facture n° ${vente.id}")
+
+                            Button(
+                                onClick = {
+
+                                    val fichier = genererFacturePdf(
+                                        context,
+                                        vente,
+                                        devise,
+                                        nomEntreprise,
+                                        adresseEntreprise,
+                                        telephoneEntreprise,
+                                        emailEntreprise,
+                                        rccmEntreprise,
+                                        idNatEntreprise,
+                                        impotEntreprise,
+                                        logoEntreprise
                                     )
 
+                                    fichierFactureEnAttente = fichier
+
+                                    enregistrerFactureLauncher.launch(
+                                        "Facture-${vente.id}.pdf"
+                                    )
+                                },
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Text("Enregistrer la facture PDF")
+                            }
+
+                            OutlinedButton(
+                                onClick = {
+
+                                    val fichier = genererFacturePdf(
+                                        context,
+                                        vente,
+                                        devise,
+                                        nomEntreprise,
+                                        adresseEntreprise,
+                                        telephoneEntreprise,
+                                        emailEntreprise,
+                                        rccmEntreprise,
+                                        idNatEntreprise,
+                                        impotEntreprise,
+                                        logoEntreprise
+                                    )
+
+                                    imprimerFacture(context, fichier)
+                                },
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Text("Imprimer la facture")
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // ==========================================
+        // ONGLET HISTORIQUE
+        // ==========================================
+
+        else {
+
+            item {
+                Text(
+                    "Historique des ventes",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold
+                )
+
+                Text(
+                    "Consultez les transactions et les paiements de vos clients.",
+                    color = Color.Gray
+                )
+            }
+
+            if (ventes.isEmpty()) {
+
+                item {
+                    Card(
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(24.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Text("Aucune vente enregistrée.")
+                        }
+                    }
+                }
+
+            } else {
+
+                items(
+                    ventes.toList().reversed(),
+                    key = { it.id }
+                ) { vente ->
+
+                    Card(
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(14.dp),
+                            verticalArrangement = Arrangement.spacedBy(7.dp)
+                        ) {
+
+                            Text(
+                                "Facture n° ${vente.id}",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = Color(0xFF6C3CE9)
+                            )
+
+                            Text("Client : ${vente.client}")
+
+                            Text(
+                                "Date : ${formaterDate(vente.date)}",
+                                style = MaterialTheme.typography.bodySmall
+                            )
+
+                            HorizontalDivider()
+
+                            vente.lignes.forEach { ligne ->
+
+                                Text(
+                                    "${ligne.nom} × ${ligne.quantite}"
+                                )
+
+                                Text(
+                                    argent(ligne.total, devise),
+                                    color = Color.Gray
+                                )
+                            }
+
+                            HorizontalDivider()
+
+                            Text(
+                                "Total : ${argent(vente.total, devise)}",
+                                fontWeight = FontWeight.Bold
+                            )
+
+                            Text(
+                                "Payé : ${argent(vente.paye, devise)}",
+                                color = Color(0xFF16803C)
+                            )
+
+                            Text(
+                                "Reste : ${argent(vente.reste, devise)}",
+                                color = if (vente.reste > 0)
+                                    Color(0xFFD97706)
+                                else
+                                    Color(0xFF16803C),
+                                fontWeight = FontWeight.Bold
+                            )
+
+                            // PAIEMENT SUPPLÉMENTAIRE
+                            if (vente.reste > 0) {
+
+                                if (paiementId == vente.id) {
+
                                     OutlinedTextField(
-                                        value = paiement,
-                                        onValueChange = { paiement = it },
+                                        value = paiementSupplementaire,
+                                        onValueChange = {
+                                            paiementSupplementaire = it
+                                        },
                                         label = {
-                                            Text("Montant payé maintenant (USD)")
+                                            Text("Paiement supplémentaire")
                                         },
                                         keyboardOptions = KeyboardOptions(
                                             keyboardType = KeyboardType.Decimal
                                         ),
-                                        modifier = Modifier.fillMaxWidth()
+                                        modifier = Modifier.fillMaxWidth(),
+                                        singleLine = true
                                     )
 
                                     Button(
                                         onClick = {
-                                            val montantPaye = paiement
-                                                .replace(",", ".")
-                                                .toDoubleOrNull()
+
+                                            val montant =
+                                                paiementSupplementaire
+                                                    .replace(",", ".")
+                                                    .toDoubleOrNull()
 
                                             if (
-                                                panier.isEmpty() ||
-                                                client.isBlank() ||
-                                                montantPaye == null ||
-                                                montantPaye < 0 ||
-                                                montantPaye > totalPanier
+                                                montant != null &&
+                                                montant > 0 &&
+                                                montant <= vente.reste
                                             ) {
+
+                                                val index = ventes.indexOfFirst {
+                                                    it.id == vente.id
+                                                }
+
+                                                if (index >= 0) {
+
+                                                    ventes[index] = vente.copy(
+                                                        paye = vente.paye + montant
+                                                    )
+
+                                                    sauvegarderVentes()
+                                                }
+
+                                                paiementId = null
+                                                paiementSupplementaire = ""
+
                                                 messageVente =
-                                                    "Vérifie le client, le panier et le paiement."
+                                                    "Paiement enregistré."
+
                                             } else {
 
-                                                val stockOK = panier.all { ligne ->
-                                                    val p = produits.find {
-                                                        it.id == ligne.produitId
-                                                    }
-
-                                                    p != null &&
-                                                        ligne.quantite <= p.quantite
-                                                }
-
-                                                if (!stockOK) {
-                                                    messageVente =
-                                                        "Stock insuffisant."
-                                                } else {
-
-                                                    val id =
-                                                        System.currentTimeMillis()
-
-                                                    val nouvelleVente = Vente(
-                                                        id,
-                                                        client.trim(),
-                                                        panier.toList(),
-                                                        montantPaye,
-                                                        id
-                                                    )
-                                                    derniereVenteValidee = nouvelleVente
-
-                                                    panier.forEach { ligne ->
-                                                        val index =
-                                                            produits.indexOfFirst {
-                                                                it.id == ligne.produitId
-                                                            }
-
-                                                        if (index >= 0) {
-                                                            val p = produits[index]
-
-                                                            produits[index] =
-                                                                p.copy(
-                                                                    quantite =
-                                                                        p.quantite - ligne.quantite
-                                                                )
-                                                        }
-                                                    }
-
-                                                    ventes.add(nouvelleVente)
-
-                                                    sauvegarderProduits()
-                                                    sauvegarderVentes()
-
-                                                    messageVente =
-                                                        "Vente enregistrée. Facture n° $id"
-
-                                                    panier = emptyList()
-                                                    client = ""
-                                                    recherche = ""
-                                                    produitChoisi = null
-                                                    paiement = ""
-                                                }
+                                                messageVente =
+                                                    "Montant invalide."
                                             }
                                         },
                                         modifier = Modifier.fillMaxWidth()
                                     ) {
-                                        Text("Valider la vente")
+                                        Text("Confirmer le paiement")
                                     }
 
-                                    Text(messageVente)
-                                    derniereVenteValidee?.let { vente ->
-
-    Card {
-        Column(
-            modifier = Modifier.padding(12.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            Text("Facture n° ${vente.id}")
-
-            Button(
-    onClick = {
-        val fichier = genererFacturePdf(
-            context,
-            vente,
-            devise,
-            nomEntreprise,
-            adresseEntreprise,
-            telephoneEntreprise,
-            emailEntreprise,
-            rccmEntreprise,
-            idNatEntreprise,
-            impotEntreprise,
-            logoEntreprise
-        )
-
-        fichierFactureEnAttente = fichier
-
-        enregistrerFactureLauncher.launch(
-            "Facture-${vente.id}.pdf"
-        )
-    },
-    modifier = Modifier.fillMaxWidth()
-) {
-    Text("Enregistrer la facture PDF")
-}
-
-Button(
-    onClick = {
-        derniereVenteValidee?.let { vente ->
-            val fichier = genererFacturePdf(
-                context,
-                vente,
-                devise,
-                nomEntreprise,
-                adresseEntreprise,
-                telephoneEntreprise,
-                emailEntreprise,
-                rccmEntreprise,
-                idNatEntreprise,
-                impotEntreprise,
-                logoEntreprise
-            )
-
-            imprimerFacture(context, fichier)
-        }
-    },
-    modifier = Modifier.fillMaxWidth()
-) {
-    Text("Imprimer la facture")
-}
-        }
-    }
-                                    }
-
-                                    HorizontalDivider()
-
-                                    Text(
-                                        "Historique des ventes",
-                                        style = MaterialTheme.typography.titleLarge
-                                    )
-                                }
-
-                                items(
-                                    ventes.toList().reversed(),
-                                    key = { it.id }
-                                ) { v ->
-
-                                    Card {
-                                        Column(
-                                            Modifier.padding(12.dp),
-                                            verticalArrangement =
-                                                Arrangement.spacedBy(4.dp)
-                                        ) {
-                                            Text(
-                                                "Facture n° ${v.id}",
-                                                style = MaterialTheme.typography.titleMedium
-                                            )
-
-                                            Text("Client : ${v.client}")
-
-                                            v.lignes.forEach { ligne ->
-                                                Text(
-    "${ligne.nom} × ${ligne.quantite} = ${argent(ligne.total, devise)}"
-                                                )
-                                            }
-
-                                            Text("Total : ${argent(v.total, devise)}")
-Text("Payé : ${argent(v.paye, devise)}")
-Text("Reste : ${argent(v.reste, devise)}")
-                                            if (v.reste > 0) {
-                                                if (paiementId == v.id) {
-
-                                                    OutlinedTextField(
-                                                        value = paiementSupplementaire,
-                                                        onValueChange = {
-                                                            paiementSupplementaire = it
-                                                        },
-                                                        label = {
-                                                            Text("Paiement supplémentaire")
-                                                        },
-                                                        modifier = Modifier.fillMaxWidth()
-                                                    )
-
-                                                    Button(
-                                                        onClick = {
-                                                            val m =
-                                                                paiementSupplementaire
-                                                                    .replace(",", ".")
-                                                                    .toDoubleOrNull()
-
-                                                            if (
-                                                                m != null &&
-                                                                m > 0 &&
-                                                                m <= v.reste
-                                                            ) {
-                                                                val index =
-                                                                    ventes.indexOfFirst {
-                                                                        it.id == v.id
-                                                                    }
-
-                                                                if (index >= 0) {
-                                                                    ventes[index] =
-                                                                        v.copy(
-                                                                            paye = v.paye + m
-                                                                        )
-                                                                    sauvegarderVentes()
-                                                                }
-
-                                                                paiementId = null
-                                                                paiementSupplementaire = ""
-                                                                messageVente =
-                                                                    "Paiement enregistré."
-                                                            } else {
-                                                                messageVente =
-                                                                    "Montant invalide."
-                                                            }
-                                                        }
-                                                    ) {
-                                                        Text("Enregistrer le paiement")
-                                                    }
-                                                } else {
-                                                    TextButton(
-                                                        onClick = {
-                                                            paiementId = v.id
-                                                            paiementSupplementaire = ""
-                                                        }
-                                                    ) {
-                                                        Text("Ajouter un paiement")
-                                                    }
-                                                }
-                                            }
+                                    TextButton(
+                                        onClick = {
+                                            paiementId = null
+                                            paiementSupplementaire = ""
                                         }
+                                    ) {
+                                        Text("Annuler")
+                                    }
+
+                                } else {
+
+                                    OutlinedButton(
+                                        onClick = {
+                                            paiementId = vente.id
+                                            paiementSupplementaire = ""
+                                        },
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
+                                        Text("Enregistrer un paiement")
                                     }
                                 }
                             }
-                        }
 
+                            // FACTURE
+                            OutlinedButton(
+                                onClick = {
+
+                                    val fichier = genererFacturePdf(
+                                        context,
+                                        vente,
+                                        devise,
+                                        nomEntreprise,
+                                        adresseEntreprise,
+                                        telephoneEntreprise,
+                                        emailEntreprise,
+                                        rccmEntreprise,
+                                        idNatEntreprise,
+                                        impotEntreprise,
+                                        logoEntreprise
+                                    )
+
+                                    fichierFactureEnAttente = fichier
+
+                                    enregistrerFactureLauncher.launch(
+                                        "Facture-${vente.id}.pdf"
+                                    )
+                                },
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Text("Enregistrer la facture PDF")
+                            }
+
+                            OutlinedButton(
+                                onClick = {
+
+                                    val fichier = genererFacturePdf(
+                                        context,
+                                        vente,
+                                        devise,
+                                        nomEntreprise,
+                                        adresseEntreprise,
+                                        telephoneEntreprise,
+                                        emailEntreprise,
+                                        rccmEntreprise,
+                                        idNatEntreprise,
+                                        impotEntreprise,
+                                        logoEntreprise
+                                    )
+
+                                    imprimerFacture(context, fichier)
+                                },
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Text("Imprimer la facture")
+                            }
+
+                            if (messageVente.isNotBlank()) {
+                                Text(
+                                    messageVente,
+                                    color = Color(0xFF16803C)
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+                        }
+                                    
+                                            
             
                         "Rapports" -> {
 
