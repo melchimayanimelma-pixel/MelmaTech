@@ -4260,7 +4260,7 @@ Card(
                                 },
                                 leadingIcon = {
                                     Icon(
-                                        Icons.Filled.Lock,
+                                        Icons.Filled.LockReset,
                                         contentDescription = null
                                     )
                                 },
