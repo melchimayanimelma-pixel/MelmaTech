@@ -4139,7 +4139,7 @@ Card(
             }
         }
 
-        if (afficherFormulaire) {
+                if (afficherFormulaire) {
             AlertDialog(
                 onDismissRequest = {
                     if (!chargementUtilisateurs) {
@@ -4147,29 +4147,59 @@ Card(
                     }
                 },
                 title = {
-                    Text(
-                        if (vendeurModifie == null)
-                            "Ajouter un vendeur"
-                        else
-                            "Modifier le vendeur"
-                    )
+                    Column(
+                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Text(
+                            text = if (vendeurModifie == null)
+                                "Nouveau vendeur"
+                            else
+                                "Modifier le vendeur",
+                            style = MaterialTheme.typography.titleLarge
+                        )
+
+                        Text(
+                            text = if (vendeurModifie == null)
+                                "Ajoutez les informations du nouveau membre de votre équipe."
+                            else
+                                "Modifiez les informations de ce membre de votre équipe.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                 },
                 text = {
                     Column(
-                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                        verticalArrangement = Arrangement.spacedBy(14.dp)
                     ) {
                         OutlinedTextField(
                             value = nomSaisi,
-                            onValueChange = { nomSaisi = it },
-                            label = { Text("Nom complet") },
-                            singleLine = true
+                            onValueChange = {
+                                nomSaisi = it
+                            },
+                            label = {
+                                Text("Nom complet")
+                            },
+                            placeholder = {
+                                Text("Ex. : Jean Dupont")
+                            },
+                            singleLine = true,
+                            enabled = !chargementUtilisateurs
                         )
 
                         OutlinedTextField(
                             value = emailSaisi,
-                            onValueChange = { emailSaisi = it },
-                            label = { Text("Adresse e-mail") },
-                            singleLine = true
+                            onValueChange = {
+                                emailSaisi = it
+                            },
+                            label = {
+                                Text("Adresse e-mail")
+                            },
+                            placeholder = {
+                                Text("exemple@email.com")
+                            },
+                            singleLine = true,
+                            enabled = !chargementUtilisateurs
                         )
 
                         if (vendeurModifie == null) {
@@ -4181,16 +4211,27 @@ Card(
                                 label = {
                                     Text("Mot de passe temporaire")
                                 },
+                                placeholder = {
+                                    Text("Minimum 8 caractères")
+                                },
                                 visualTransformation =
                                     PasswordVisualTransformation(),
-                                singleLine = true
+                                singleLine = true,
+                                enabled = !chargementUtilisateurs
+                            )
+
+                            Text(
+                                text = "Le vendeur pourra utiliser ces identifiants pour accéder à son compte.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
 
                         if (messageUtilisateurs.isNotBlank()) {
                             Text(
-                                messageUtilisateurs,
-                                color = rouge
+                                text = messageUtilisateurs,
+                                color = rouge,
+                                style = MaterialTheme.typography.bodySmall
                             )
                         }
                     }
@@ -4257,6 +4298,8 @@ Card(
                         Text(
                             if (chargementUtilisateurs)
                                 "Patiente..."
+                            else if (vendeurModifie == null)
+                                "Créer le vendeur"
                             else
                                 "Enregistrer"
                         )
@@ -4264,6 +4307,7 @@ Card(
                 },
                 dismissButton = {
                     TextButton(
+                        enabled = !chargementUtilisateurs,
                         onClick = {
                             afficherFormulaire = false
                         }
@@ -4272,7 +4316,7 @@ Card(
                     }
                 }
             )
-        }
+                }
 
         vendeurMotDePasse?.let { vendeur ->
 
