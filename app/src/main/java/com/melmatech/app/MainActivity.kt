@@ -4271,6 +4271,18 @@ val validerPhotoRecadree: (Bitmap) -> Unit = { bitmap ->
                 }
             )
         }
+        photoARecadrer?.let { bitmap ->
+    EditeurPhotoProfil(
+        bitmap = bitmap,
+        onAnnuler = {
+            photoARecadrer = null
+            utilisateurPhotoId = null
+        },
+        onValider = { photoRecadree ->
+            validerPhotoRecadree(photoRecadree)
+        }
+    )
+        }
     }
 }
  
