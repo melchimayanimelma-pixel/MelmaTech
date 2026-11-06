@@ -83,6 +83,12 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.window.Dialog
 import kotlin.math.max
 import kotlin.math.roundToInt
+import androidx.compose.material3.IconButton
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.LockReset
+import androidx.compose.material.icons.filled.Block
+import androidx.compose.material.icons.filled.CheckCircle
 
 
 data class Produit(
