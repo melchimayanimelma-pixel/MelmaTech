@@ -4141,38 +4141,61 @@ Card(
             }
         }
 
-                if (afficherFormulaire) {
+                        if (afficherFormulaire) {
             AlertDialog(
                 onDismissRequest = {
                     if (!chargementUtilisateurs) {
                         afficherFormulaire = false
                     }
                 },
+                containerColor = Color(0xFFF3F0FA),
+                titleContentColor = Color(0xFF30145F),
+                textContentColor = Color(0xFF655D70),
                 title = {
                     Column(
-                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
+                        Box(
+                            modifier = Modifier
+                                .size(48.dp)
+                                .background(
+                                    Color(0xFF4B258D),
+                                    RoundedCornerShape(14.dp)
+                                ),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = if (vendeurModifie == null)
+                                    Icons.Filled.Person
+                                else
+                                    Icons.Filled.Edit,
+                                contentDescription = null,
+                                tint = Color.White
+                            )
+                        }
+
                         Text(
                             text = if (vendeurModifie == null)
-                                "Nouveau vendeur"
+                                "Ajouter un vendeur"
                             else
                                 "Modifier le vendeur",
-                            style = MaterialTheme.typography.titleLarge
+                            style = MaterialTheme.typography.headlineSmall,
+                            color = Color(0xFF30145F)
                         )
 
                         Text(
                             text = if (vendeurModifie == null)
-                                "Ajoutez les informations du nouveau membre de votre équipe."
+                                "Créez un accès pour un nouveau membre de votre équipe."
                             else
                                 "Modifiez les informations de ce membre de votre équipe.",
                             style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            color = Color(0xFF655D70)
                         )
                     }
                 },
                 text = {
                     Column(
-                        verticalArrangement = Arrangement.spacedBy(14.dp)
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         OutlinedTextField(
                             value = nomSaisi,
@@ -4182,11 +4205,22 @@ Card(
                             label = {
                                 Text("Nom complet")
                             },
-                            placeholder = {
-                                Text("Ex. : Jean Dupont")
+                            leadingIcon = {
+                                Icon(
+                                    Icons.Filled.Person,
+                                    contentDescription = null
+                                )
                             },
                             singleLine = true,
-                            enabled = !chargementUtilisateurs
+                            enabled = !chargementUtilisateurs,
+                            shape = RoundedCornerShape(14.dp),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = Color(0xFF6540A5),
+                                unfocusedBorderColor = Color(0xFFD8D0E3),
+                                focusedLeadingIconColor = Color(0xFF6540A5),
+                                unfocusedLeadingIconColor = Color(0xFF81778F),
+                                focusedLabelColor = Color(0xFF6540A5)
+                            )
                         )
 
                         OutlinedTextField(
@@ -4197,11 +4231,22 @@ Card(
                             label = {
                                 Text("Adresse e-mail")
                             },
-                            placeholder = {
-                                Text("exemple@email.com")
+                            leadingIcon = {
+                                Icon(
+                                    Icons.Filled.Email,
+                                    contentDescription = null
+                                )
                             },
                             singleLine = true,
-                            enabled = !chargementUtilisateurs
+                            enabled = !chargementUtilisateurs,
+                            shape = RoundedCornerShape(14.dp),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = Color(0xFF6540A5),
+                                unfocusedBorderColor = Color(0xFFD8D0E3),
+                                focusedLeadingIconColor = Color(0xFF6540A5),
+                                unfocusedLeadingIconColor = Color(0xFF81778F),
+                                focusedLabelColor = Color(0xFF6540A5)
+                            )
                         )
 
                         if (vendeurModifie == null) {
@@ -4213,19 +4258,30 @@ Card(
                                 label = {
                                     Text("Mot de passe temporaire")
                                 },
-                                placeholder = {
-                                    Text("Minimum 8 caractères")
+                                leadingIcon = {
+                                    Icon(
+                                        Icons.Filled.Lock,
+                                        contentDescription = null
+                                    )
                                 },
                                 visualTransformation =
                                     PasswordVisualTransformation(),
                                 singleLine = true,
-                                enabled = !chargementUtilisateurs
+                                enabled = !chargementUtilisateurs,
+                                shape = RoundedCornerShape(14.dp),
+                                colors = OutlinedTextFieldDefaults.colors(
+                                    focusedBorderColor = Color(0xFF6540A5),
+                                    unfocusedBorderColor = Color(0xFFD8D0E3),
+                                    focusedLeadingIconColor = Color(0xFF6540A5),
+                                    unfocusedLeadingIconColor = Color(0xFF81778F),
+                                    focusedLabelColor = Color(0xFF6540A5)
+                                )
                             )
 
                             Text(
                                 text = "Le vendeur pourra utiliser ces identifiants pour accéder à son compte.",
                                 style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                color = Color(0xFF655D70)
                             )
                         }
 
@@ -4239,7 +4295,7 @@ Card(
                     }
                 },
                 confirmButton = {
-                    TextButton(
+                    Button(
                         enabled = !chargementUtilisateurs,
                         onClick = {
                             val nom = nomSaisi.trim()
@@ -4295,7 +4351,12 @@ Card(
                                     }
                                 }
                             }
-                        }
+                        },
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Color(0xFF4B258D),
+                            contentColor = Color.White
+                        ),
+                        shape = RoundedCornerShape(12.dp)
                     ) {
                         Text(
                             if (chargementUtilisateurs)
@@ -4312,13 +4373,16 @@ Card(
                         enabled = !chargementUtilisateurs,
                         onClick = {
                             afficherFormulaire = false
-                        }
+                        },
+                        colors = ButtonDefaults.textButtonColors(
+                            contentColor = Color(0xFF4B258D)
+                        )
                     ) {
                         Text("Annuler")
                     }
                 }
             )
-                }
+                        }
 
         vendeurMotDePasse?.let { vendeur ->
 
