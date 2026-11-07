@@ -606,6 +606,49 @@ object AuthService {
         }
     }
 
+    // Modifier le mot de passe du compte actuellement connecté via Supabase Auth.
+    fun changerMonMotDePasse(
+        context: Context,
+        nouveauMotDePasse: String,
+        callback: (Boolean, String) -> Unit
+    ) {
+        val token = obtenirAccessToken(context)
+        if (token.isNullOrBlank()) {
+            mainHandler.post { callback(false, "Session expirée. Reconnecte-toi.") }
+            return
+        }
+        if (nouveauMotDePasse.length < 6) {
+            mainHandler.post { callback(false, "Le mot de passe doit contenir au moins 6 caractères.") }
+            return
+        }
+
+        val donnees = JSONObject().put("password", nouveauMotDePasse)
+        val request = Request.Builder()
+            .url("${SupabaseConfig.url}/auth/v1/user")
+            .addHeader("apikey", SupabaseConfig.key)
+            .addHeader("Authorization", "Bearer $token")
+            .addHeader("Content-Type", "application/json")
+            .put(donnees.toString().toRequestBody(jsonType))
+            .build()
+
+        client.newCall(request).enqueue(object : Callback {
+            override fun onFailure(call: Call, e: IOException) {
+                mainHandler.post { callback(false, "Erreur réseau lors du changement de mot de passe.") }
+            }
+
+            override fun onResponse(call: Call, response: Response) {
+                response.use {
+                    val succes = it.isSuccessful
+                    val message = if (succes) "Mot de passe modifié avec succès." else {
+                        val detail = it.body?.string().orEmpty()
+                        if (detail.isNotBlank()) "Supabase a refusé le changement de mot de passe." else "Impossible de modifier le mot de passe (${it.code})."
+                    }
+                    mainHandler.post { callback(succes, message) }
+                }
+            }
+        })
+    }
+
     // Modifier le mot de passe d'un vendeur.
     fun changerMotDePasseVendeur(
         context: Context,

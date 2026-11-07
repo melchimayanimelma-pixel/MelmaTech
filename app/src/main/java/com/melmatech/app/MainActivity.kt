@@ -890,13 +890,13 @@ val enregistrerFactureLauncher =
 
     val stockTotal = produits.sumOf { it.quantite }
 
-    val produitsEnAlerte = produits.count {
-        it.quantite in 1..5
-    }
+    val produitsEnAlerte = if (prefs.getBoolean("param_alerte_stock", true)) produits.count {
+        it.quantite in 1..prefs.getInt("param_seuil_stock", 5).coerceAtLeast(0)
+    } else 0
 
-    val produitsEpuises = produits.count {
+    val produitsEpuises = if (prefs.getBoolean("param_alerte_rupture", true)) produits.count {
         it.quantite <= 0
-    }
+    } else 0
 
     val valeurStock = produits.sumOf {
         it.achat * it.quantite
@@ -2273,7 +2273,9 @@ val enregistrerFactureLauncher =
                                         rccmEntreprise,
                                         idNatEntreprise,
                                         impotEntreprise,
-                                        logoEntreprise
+                                        logoEntreprise,
+                                        prefs.getString("param_prefixe_facture", "FAC-") ?: "FAC-",
+                                        prefs.getString("param_pied_facture", "Merci pour votre confiance.") ?: "Merci pour votre confiance."
                                     )
 
                                     fichierFactureEnAttente = fichier
@@ -2301,7 +2303,9 @@ val enregistrerFactureLauncher =
                                         rccmEntreprise,
                                         idNatEntreprise,
                                         impotEntreprise,
-                                        logoEntreprise
+                                        logoEntreprise,
+                                        prefs.getString("param_prefixe_facture", "FAC-") ?: "FAC-",
+                                        prefs.getString("param_pied_facture", "Merci pour votre confiance.") ?: "Merci pour votre confiance."
                                     )
 
                                     imprimerFacture(context, fichier)
@@ -2520,7 +2524,9 @@ val enregistrerFactureLauncher =
                                         rccmEntreprise,
                                         idNatEntreprise,
                                         impotEntreprise,
-                                        logoEntreprise
+                                        logoEntreprise,
+                                        prefs.getString("param_prefixe_facture", "FAC-") ?: "FAC-",
+                                        prefs.getString("param_pied_facture", "Merci pour votre confiance.") ?: "Merci pour votre confiance."
                                     )
 
                                     fichierFactureEnAttente = fichier
@@ -2548,7 +2554,9 @@ val enregistrerFactureLauncher =
                                         rccmEntreprise,
                                         idNatEntreprise,
                                         impotEntreprise,
-                                        logoEntreprise
+                                        logoEntreprise,
+                                        prefs.getString("param_prefixe_facture", "FAC-") ?: "FAC-",
+                                        prefs.getString("param_pied_facture", "Merci pour votre confiance.") ?: "Merci pour votre confiance."
                                     )
 
                                     imprimerFacture(context, fichier)
@@ -4088,57 +4096,201 @@ Slider(
 }
 
                         "Paramètres" -> {
-    Column(
-        Modifier
-            .fillMaxWidth()
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        Text(
-            "Paramètres",
-            style = MaterialTheme.typography.headlineSmall
-        )
+    var section by remember { mutableStateOf("Accueil") }
+    var seuilStock by remember { mutableStateOf(prefs.getInt("param_seuil_stock", 5).toString()) }
+    var prefixeFacture by remember { mutableStateOf(prefs.getString("param_prefixe_facture", "FAC-") ?: "FAC-") }
+    var piedFacture by remember { mutableStateOf(prefs.getString("param_pied_facture", "Merci pour votre confiance.") ?: "Merci pour votre confiance.") }
+    var alerteStock by remember { mutableStateOf(prefs.getBoolean("param_alerte_stock", true)) }
+    var alerteRupture by remember { mutableStateOf(prefs.getBoolean("param_alerte_rupture", true)) }
+    var alerteDette by remember { mutableStateOf(prefs.getBoolean("param_alerte_dette", true)) }
+    var nouveauMotDePasse by remember { mutableStateOf("") }
+    var confirmationMotDePasse by remember { mutableStateOf("") }
+    var messageParametres by remember { mutableStateOf("") }
+    var traitementSauvegarde by remember { mutableStateOf(false) }
 
-        Text("Configuration de MelmaTech")
-
-        Text("Choisir la devise principale")
-
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            OutlinedButton(
-                onClick = {
-                    devise = "USD"
-                    prefs.edit()
-                        .putString("devise", "USD")
-                        .apply()
+    val exporterDonnees = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.CreateDocument("application/json")
+    ) { uri ->
+        if (uri != null) {
+            try {
+                val sauvegarde = JSONObject().apply {
+                    put("format", "MelmaTechBackup")
+                    put("version", 1)
+                    put("date", System.currentTimeMillis())
+                    put("produits", prefs.getString("produits", "[]"))
+                    put("ventes_nouvelles", prefs.getString("ventes_nouvelles", "[]"))
+                    put("depenses", prefs.getString("depenses", "[]"))
+                    val cles = listOf("devise", "entreprise_nom", "entreprise_adresse", "entreprise_telephone", "entreprise_email", "entreprise_rccm", "entreprise_idnat", "entreprise_impot", "entreprise_logo", "entreprise_lieu", "entreprise_gerant", "entreprise_fonction_gerant", "entreprise_logo_taille", "param_seuil_stock", "param_prefixe_facture", "param_pied_facture", "param_alerte_stock", "param_alerte_rupture", "param_alerte_dette")
+                    val reglages = JSONObject()
+                    cles.forEach { cle ->
+                        when (cle) {
+                            "entreprise_logo_taille" -> reglages.put(cle, prefs.getFloat(cle, 1f).toDouble())
+                            "param_seuil_stock" -> reglages.put(cle, prefs.getInt(cle, 5))
+                            "param_alerte_stock", "param_alerte_rupture", "param_alerte_dette" -> reglages.put(cle, prefs.getBoolean(cle, true))
+                            else -> reglages.put(cle, prefs.getString(cle, "") ?: "")
+                        }
+                    }
+                    put("reglages", reglages)
                 }
-            ) {
-                Text(if (devise == "USD") "✓ USD ($)" else "USD ($)")
-            }
+                context.contentResolver.openOutputStream(uri)?.use { it.write(sauvegarde.toString(2).toByteArray(Charsets.UTF_8)) }
+                messageParametres = "Sauvegarde exportée avec succès."
+            } catch (e: Exception) { messageParametres = "Échec de l'export : ${e.message}" }
+        }
+        traitementSauvegarde = false
+    }
 
-            OutlinedButton(
-                onClick = {
-                    devise = "CDF"
-                    prefs.edit()
-                        .putString("devise", "CDF")
-                        .apply()
+    val importerDonnees = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        if (uri != null) {
+            try {
+                val contenu = context.contentResolver.openInputStream(uri)?.bufferedReader()?.use { it.readText() }
+                    ?: throw IllegalStateException("Fichier illisible")
+                val sauvegarde = JSONObject(contenu)
+                require(sauvegarde.optString("format") == "MelmaTechBackup") { "Ce fichier n'est pas une sauvegarde MelmaTech." }
+                val produitsJson = sauvegarde.getString("produits")
+                val ventesJson = sauvegarde.getString("ventes_nouvelles")
+                val depensesJson = sauvegarde.getString("depenses")
+                // Vérifier les trois structures avant toute modification.
+                JSONArray(produitsJson); JSONArray(ventesJson); JSONArray(depensesJson)
+                val editeur = prefs.edit()
+                    .putString("produits", produitsJson)
+                    .putString("ventes_nouvelles", ventesJson)
+                    .putString("depenses", depensesJson)
+                val reglages = sauvegarde.optJSONObject("reglages")
+                if (reglages != null) {
+                    val cles = listOf("devise", "entreprise_nom", "entreprise_adresse", "entreprise_telephone", "entreprise_email", "entreprise_rccm", "entreprise_idnat", "entreprise_impot", "entreprise_logo", "entreprise_lieu", "entreprise_gerant", "entreprise_fonction_gerant", "param_prefixe_facture", "param_pied_facture")
+                    cles.forEach { cle -> if (reglages.has(cle) && !reglages.isNull(cle)) editeur.putString(cle, reglages.optString(cle)) }
+                    if (reglages.has("entreprise_logo_taille")) editeur.putFloat("entreprise_logo_taille", reglages.optDouble("entreprise_logo_taille", 1.0).toFloat())
+                    if (reglages.has("param_seuil_stock")) editeur.putInt("param_seuil_stock", reglages.optInt("param_seuil_stock", 5))
+                    listOf("param_alerte_stock", "param_alerte_rupture", "param_alerte_dette").forEach { cle -> if (reglages.has(cle)) editeur.putBoolean(cle, reglages.optBoolean(cle, true)) }
                 }
-            ) {
-                Text(if (devise == "CDF") "✓ CDF (FC)" else "CDF (FC)")
+                editeur.apply()
+                // Recharger immédiatement les listes en mémoire avec les données validées.
+                produits.clear()
+                val pArray = JSONArray(produitsJson)
+                for (i in 0 until pArray.length()) {
+                    val p = pArray.getJSONObject(i)
+                    produits.add(Produit(p.getLong("id"), p.getString("nom"), p.getDouble("achat"), p.getDouble("vente"), p.getInt("quantite"), if (p.isNull("supabaseId")) null else p.optString("supabaseId")))
+                }
+                ventes.clear()
+                val vArray = JSONArray(ventesJson)
+                for (i in 0 until vArray.length()) {
+                    val v = vArray.getJSONObject(i)
+                    val lignes = mutableListOf<LigneVente>()
+                    val lArray = v.getJSONArray("lignes")
+                    for (j in 0 until lArray.length()) {
+                        val l = lArray.getJSONObject(j)
+                        lignes.add(LigneVente(l.getLong("produitId"), l.getString("nom"), l.getInt("quantite"), l.getDouble("prixUnitaire"), l.getDouble("prixAchat")))
+                    }
+                    ventes.add(Vente(v.getLong("id"), v.getString("client"), lignes, v.getDouble("paye"), v.getLong("date")))
+                }
+                depenses.clear()
+                val dArray = JSONArray(depensesJson)
+                for (i in 0 until dArray.length()) {
+                    val d = dArray.getJSONObject(i)
+                    depenses.add(Depense(d.getLong("id"), d.getString("description"), d.getDouble("montant"), d.getLong("date")))
+                }
+                devise = prefs.getString("devise", "USD") ?: "USD"
+                nomEntreprise = prefs.getString("entreprise_nom", "") ?: ""
+                adresseEntreprise = prefs.getString("entreprise_adresse", "") ?: ""
+                telephoneEntreprise = prefs.getString("entreprise_telephone", "") ?: ""
+                emailEntreprise = prefs.getString("entreprise_email", "") ?: ""
+                rccmEntreprise = prefs.getString("entreprise_rccm", "") ?: ""
+                idNatEntreprise = prefs.getString("entreprise_idnat", "") ?: ""
+                impotEntreprise = prefs.getString("entreprise_impot", "") ?: ""
+                logoEntreprise = prefs.getString("entreprise_logo", "") ?: ""
+                seuilStock = prefs.getInt("param_seuil_stock", 5).toString()
+                prefixeFacture = prefs.getString("param_prefixe_facture", "FAC-") ?: "FAC-"
+                piedFacture = prefs.getString("param_pied_facture", "Merci pour votre confiance.") ?: "Merci pour votre confiance."
+                messageParametres = "Sauvegarde restaurée avec succès. Les données locales ont été rechargées."
+            } catch (e: Exception) { messageParametres = "Sauvegarde invalide ou incompatible : ${e.message}" }
+        }
+        traitementSauvegarde = false
+    }
+
+    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Text("Paramètres", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+        Text("Configuration générale de MelmaTech", color = MaterialTheme.colorScheme.onSurfaceVariant)
+        if (section == "Accueil") {
+            val rubriques = if (estAdministrateur) listOf(
+                "Finances" to "Devise et suivi financier",
+                "Factures" to "Numérotation et pied de facture",
+                "Alertes" to "Seuils et notifications dans l'application",
+                "Sécurité" to "Mot de passe et accès",
+                "Sauvegarde" to "Exporter ou restaurer les données",
+                "À propos" to "Version et informations MelmaTech"
+            ) else listOf(
+                "Sécurité" to "Mot de passe de votre compte",
+                "À propos" to "Version et informations MelmaTech"
+            )
+            rubriques.forEach { (titre, description) ->
+                OutlinedButton(onClick = { section = titre }, modifier = Modifier.fillMaxWidth()) {
+                    Column(Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
+                        Text(titre, fontWeight = FontWeight.SemiBold)
+                        Text(description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
             }
+        } else {
+            Text(section, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+            when (section) {
+                "Finances" -> {
+                    Text("Devise d'affichage")
+                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        OutlinedButton(onClick = { devise = "USD"; prefs.edit().putString("devise", "USD").apply() }) { Text(if (devise == "USD") "✓ USD ($)" else "USD ($)") }
+                        OutlinedButton(onClick = { devise = "CDF"; prefs.edit().putString("devise", "CDF").apply() }) { Text(if (devise == "CDF") "✓ CDF (FC)" else "CDF (FC)") }
+                    }
+                    Text("Devise actuelle : $devise")
+                    Text("Le changement de devise modifie uniquement l'affichage. Les montants déjà enregistrés ne sont pas convertis.", style = MaterialTheme.typography.bodySmall)
+                    OutlinedTextField(value = seuilStock, onValueChange = { seuilStock = it.filter(Char::isDigit).take(5) }, label = { Text("Seuil de stock faible") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.fillMaxWidth())
+                    Button(onClick = { val n = seuilStock.toIntOrNull(); if (n == null || n < 0) messageParametres = "Saisis un seuil valide." else { prefs.edit().putInt("param_seuil_stock", n).apply(); messageParametres = "Préférences financières enregistrées." } }, modifier = Modifier.fillMaxWidth()) { Text("Enregistrer") }
+                    Text("Suivi des créances : les montants restant à payer sont déjà calculés à partir des ventes.", style = MaterialTheme.typography.bodySmall)
+                }
+                "Factures" -> {
+                    OutlinedTextField(value = prefixeFacture, onValueChange = { prefixeFacture = it.take(12) }, label = { Text("Préfixe de facture") }, modifier = Modifier.fillMaxWidth())
+                    OutlinedTextField(value = piedFacture, onValueChange = { piedFacture = it.take(180) }, label = { Text("Message en bas de facture") }, modifier = Modifier.fillMaxWidth(), minLines = 2)
+                    Button(onClick = { prefs.edit().putString("param_prefixe_facture", prefixeFacture).putString("param_pied_facture", piedFacture).apply(); messageParametres = "Paramètres de facture enregistrés." }, modifier = Modifier.fillMaxWidth()) { Text("Enregistrer") }
+                    Text("Le préfixe sera utilisé dans les prochaines factures PDF. Les anciens numéros de vente restent inchangés.", style = MaterialTheme.typography.bodySmall)
+                }
+                "Alertes" -> {
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) { Text("Stock faible"); Switch(checked = alerteStock, onCheckedChange = { alerteStock = it; prefs.edit().putBoolean("param_alerte_stock", it).apply() }) }
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) { Text("Rupture de stock"); Switch(checked = alerteRupture, onCheckedChange = { alerteRupture = it; prefs.edit().putBoolean("param_alerte_rupture", it).apply() }) }
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) { Text("Dettes clients"); Switch(checked = alerteDette, onCheckedChange = { alerteDette = it; prefs.edit().putBoolean("param_alerte_dette", it).apply() }) }
+                    Text("Produits sous le seuil : ${if (alerteStock) produits.count { it.quantite in 1..prefs.getInt("param_seuil_stock", 5).coerceAtLeast(0) } else 0}")
+                    Text("Produits en rupture : ${if (alerteRupture) produits.count { it.quantite <= 0 } else 0}")
+                    Text("Ventes avec un solde dû : ${if (alerteDette) ventes.count { it.reste > 0.0 } else 0}")
+                    Text("Les alertes sont affichées ici et dans les indicateurs de stock. Elles ne créent pas de notifications système en arrière-plan.", style = MaterialTheme.typography.bodySmall)
+                }
+                "Sécurité" -> {
+                    Text("Changer le mot de passe du compte connecté")
+                    OutlinedTextField(value = nouveauMotDePasse, onValueChange = { nouveauMotDePasse = it }, label = { Text("Nouveau mot de passe") }, visualTransformation = PasswordVisualTransformation(), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password), modifier = Modifier.fillMaxWidth())
+                    OutlinedTextField(value = confirmationMotDePasse, onValueChange = { confirmationMotDePasse = it }, label = { Text("Confirmer le mot de passe") }, visualTransformation = PasswordVisualTransformation(), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password), modifier = Modifier.fillMaxWidth())
+                    Button(onClick = {
+                        when { nouveauMotDePasse.length < 6 -> messageParametres = "Le mot de passe doit contenir au moins 6 caractères."; nouveauMotDePasse != confirmationMotDePasse -> messageParametres = "Les deux mots de passe ne correspondent pas."; else -> AuthService.changerMonMotDePasse(context, nouveauMotDePasse) { ok, msg -> messageParametres = msg; if (ok) { nouveauMotDePasse = ""; confirmationMotDePasse = "" } } }
+                    }, modifier = Modifier.fillMaxWidth()) { Text("Modifier le mot de passe") }
+                    Text("Les droits administrateur/vendeur restent contrôlés par le rôle du compte. Cette rubrique ne permet pas de donner des droits supplémentaires.", style = MaterialTheme.typography.bodySmall)
+                }
+                "Sauvegarde" -> {
+                    Text("Exporter une copie des produits, ventes, dépenses et réglages de l'entreprise.")
+                    Button(enabled = !traitementSauvegarde, onClick = { traitementSauvegarde = true; exporterDonnees.launch("MelmaTech-sauvegarde.json") }, modifier = Modifier.fillMaxWidth()) { Text("Exporter la sauvegarde JSON") }
+                    Divider()
+                    Text("La restauration remplace les données locales actuelles par celles du fichier choisi. Effectue d'abord un export de sécurité.", color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+                    OutlinedButton(enabled = !traitementSauvegarde, onClick = { traitementSauvegarde = true; importerDonnees.launch(arrayOf("application/json", "text/*")) }, modifier = Modifier.fillMaxWidth()) { Text("Restaurer depuis un fichier JSON") }
+                    Text("La restauration est locale. Elle ne remplace pas automatiquement les données déjà synchronisées sur Supabase.", style = MaterialTheme.typography.bodySmall)
+                }
+                "À propos" -> {
+                    Text("MelmaTech", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+                    Text("Application de gestion commerciale")
+                    Text("Version : 1.0")
+                    Text("Gestion des produits, ventes, factures, dépenses et rapports.")
+                    Text("Conception : MelmaTech")
+                }
+            }
+            if (messageParametres.isNotBlank()) Text(messageParametres, color = MaterialTheme.colorScheme.primary)
+            OutlinedButton(onClick = { messageParametres = ""; section = "Accueil" }, modifier = Modifier.fillMaxWidth()) { Text("Retour aux paramètres") }
         }
-
-        Text("Devise actuelle : $devise")
-
-        Text("Version : 1.0")
-
-        OutlinedButton(
-            onClick = { page = "Plus" },
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Text("Retour")
-        }
+        OutlinedButton(onClick = { page = "Plus" }, modifier = Modifier.fillMaxWidth()) { Text("Retour") }
     }
 }
 
@@ -5768,7 +5920,9 @@ private fun genererFacturePdf(
     rccmEntreprise: String,
     idNatEntreprise: String,
         impotEntreprise: String,
-    logoEntreprise: String
+    logoEntreprise: String,
+    prefixeFacture: String = "",
+    piedFacture: String = ""
 ): File {
 
     val document = PdfDocument()
@@ -5839,7 +5993,7 @@ private fun genererFacturePdf(
     canvas.drawText("FACTURE", 40f, y, titre)
     y += 30f
 
-    canvas.drawText("N° facture : ${vente.id}", 40f, y, texte)
+    canvas.drawText("N° facture : $prefixeFacture${vente.id}", 40f, y, texte)
     y += 20f
 
     val date = SimpleDateFormat(
@@ -5902,10 +6056,10 @@ private fun genererFacturePdf(
     )
 
     y += 55f
-    canvas.drawText(
-        "Merci pour votre confiance !",
-        40f, y, texte
-    )
+    if (piedFacture.isNotBlank()) {
+        y += 28f
+        canvas.drawText(piedFacture.take(85), 40f, y, texte)
+    }
 
     document.finishPage(page)
 
