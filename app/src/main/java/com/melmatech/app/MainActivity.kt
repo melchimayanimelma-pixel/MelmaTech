@@ -95,6 +95,8 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.ui.res.painterResource
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 
 
 data class Produit(
@@ -5188,6 +5190,7 @@ fun DashboardCard(titre: String, montant: String) {
     }
 }
 
+
 @Composable
 fun EcranConnexion(
     email: String,
@@ -5200,83 +5203,226 @@ fun EcranConnexion(
     onChangerMode: () -> Unit,
     onValider: () -> Unit
 ) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(24.dp),
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally
+    val noir = Color(0xFF030805)
+    val fondChamp = Color(0xFF101B14)
+    val vert = Color(0xFF00E51B)
+    val vertCitron = Color(0xFFA8FF00)
+    val blanc = Color.White
+    val gris = Color(0xFFB0BDB3)
+
+    var afficherMotDePasse by remember {
+        mutableStateOf(false)
+    }
+
+    MaterialTheme(
+        colorScheme = darkColorScheme(
+            primary = vert,
+            secondary = vertCitron,
+            background = noir,
+            surface = fondChamp,
+            onPrimary = noir,
+            onBackground = blanc,
+            onSurface = blanc
+        )
     ) {
-        Image(
-    painter = painterResource(id = R.drawable.melmatech_logo),
-    contentDescription = "Logo MelmaTech",
-    modifier = Modifier
-        .fillMaxWidth()
-        .height(150.dp),
-    contentScale = ContentScale.Fit
-)
-
-        Spacer(Modifier.height(12.dp))
-
-        Text(
-            if (modeCreationCompte) "Créer un compte" else "Connexion",
-            style = MaterialTheme.typography.titleLarge
-        )
-
-        Spacer(Modifier.height(20.dp))
-
-        OutlinedTextField(
-            value = email,
-            onValueChange = onEmailChange,
-            label = { Text("Adresse e-mail") },
-            singleLine = true,
-            enabled = !chargement,
-            modifier = Modifier.fillMaxWidth()
-        )
-
-        Spacer(Modifier.height(12.dp))
-
-        OutlinedTextField(
-            value = motDePasse,
-            onValueChange = onMotDePasseChange,
-            label = { Text("Mot de passe") },
-            singleLine = true,
-            enabled = !chargement,
-            visualTransformation = PasswordVisualTransformation(),
-            modifier = Modifier.fillMaxWidth()
-        )
-
-        Spacer(Modifier.height(16.dp))
-
-        Button(
-            onClick = onValider,
-            enabled = !chargement,
-            modifier = Modifier.fillMaxWidth()
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(noir)
         ) {
-            Text(
-                if (chargement) "Patiente..."
-                else if (modeCreationCompte) "Créer mon compte"
-                else "Se connecter"
-            )
-        }
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = 24.dp, vertical = 24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
 
-        TextButton(
-            onClick = onChangerMode,
-            enabled = !chargement
-        ) {
-            Text(
-                if (modeCreationCompte)
-                    "J'ai déjà un compte"
-                else
-                    "Créer un nouveau compte"
-            )
-        }
+                Spacer(Modifier.height(16.dp))
 
-        if (message.isNotBlank()) {
-            Text(message)
+                // LOGO OFFICIEL
+                Image(
+                    painter = painterResource(
+                        id = R.drawable.melmatech_logo
+                    ),
+                    contentDescription = "Logo MelmaTech",
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(175.dp),
+                    contentScale = ContentScale.Fit
+                )
+
+                Spacer(Modifier.height(20.dp))
+
+                Text(
+                    text = if (modeCreationCompte)
+                        "Créer votre compte"
+                    else
+                        "Bienvenue",
+                    style = MaterialTheme.typography.headlineMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = blanc
+                )
+
+                Spacer(Modifier.height(8.dp))
+
+                Text(
+                    text = if (modeCreationCompte)
+                        "Rejoignez MelmaTech et gérez votre commerce"
+                    else
+                        "Connectez-vous à votre espace professionnel",
+                    color = gris,
+                    style = MaterialTheme.typography.bodyMedium
+                )
+
+                Spacer(Modifier.height(32.dp))
+
+                // ADRESSE E-MAIL
+                OutlinedTextField(
+                    value = email,
+                    onValueChange = onEmailChange,
+                    label = {
+                        Text("Adresse e-mail")
+                    },
+                    placeholder = {
+                        Text(
+                            "Entrez votre adresse e-mail",
+                            color = gris
+                        )
+                    },
+                    singleLine = true,
+                    enabled = !chargement,
+                    keyboardOptions = KeyboardOptions(
+                        keyboardType = KeyboardType.Email
+                    ),
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                Spacer(Modifier.height(16.dp))
+
+                // MOT DE PASSE
+                OutlinedTextField(
+                    value = motDePasse,
+                    onValueChange = onMotDePasseChange,
+                    label = {
+                        Text("Mot de passe")
+                    },
+                    placeholder = {
+                        Text(
+                            "Entrez votre mot de passe",
+                            color = gris
+                        )
+                    },
+                    singleLine = true,
+                    enabled = !chargement,
+                    visualTransformation = if (afficherMotDePasse)
+                        VisualTransformation.None
+                    else
+                        PasswordVisualTransformation(),
+                    trailingIcon = {
+                        TextButton(
+                            onClick = {
+                                afficherMotDePasse =
+                                    !afficherMotDePasse
+                            },
+                            enabled = !chargement
+                        ) {
+                            Text(
+                                if (afficherMotDePasse)
+                                    "Masquer"
+                                else
+                                    "Afficher",
+                                color = vertCitron
+                            )
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                Spacer(Modifier.height(24.dp))
+
+                // BOUTON PRINCIPAL
+                Button(
+                    onClick = onValider,
+                    enabled = !chargement,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(56.dp),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = vert,
+                        contentColor = noir,
+                        disabledContainerColor = Color(0xFF285C32),
+                        disabledContentColor = gris
+                    )
+                ) {
+                    if (chargement) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(24.dp),
+                            color = blanc,
+                            strokeWidth = 2.dp
+                        )
+                        Spacer(Modifier.width(10.dp))
+                        Text("Patientez...")
+                    } else {
+                        Text(
+                            text = if (modeCreationCompte)
+                                "Créer mon compte"
+                            else
+                                "Se connecter",
+                            fontWeight = FontWeight.Bold,
+                            style = MaterialTheme.typography.titleMedium
+                        )
+                    }
+                }
+
+                Spacer(Modifier.height(18.dp))
+
+                // CHANGEMENT DE MODE
+                TextButton(
+                    onClick = onChangerMode,
+                    enabled = !chargement
+                ) {
+                    Text(
+                        text = if (modeCreationCompte)
+                            "J'ai déjà un compte ? Se connecter"
+                        else
+                            "Créer un nouveau compte",
+                        color = vertCitron,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+
+                // MESSAGE DE RETOUR
+                if (message.isNotBlank()) {
+                    Spacer(Modifier.height(16.dp))
+
+                    Text(
+                        text = message,
+                        color = if (
+                            message.contains(
+                                "erreur",
+                                ignoreCase = true
+                            )
+                        ) Color(0xFFFF7777)
+                        else vertCitron,
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                }
+
+                Spacer(Modifier.height(24.dp))
+
+                Text(
+                    text = "MelmaTech • Gestion commerciale",
+                    color = Color(0xFF718477),
+                    style = MaterialTheme.typography.labelSmall
+                )
+            }
         }
     }
 }
+
 class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
