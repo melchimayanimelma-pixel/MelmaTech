@@ -789,6 +789,16 @@ val enregistrerFactureLauncher =
                     )
                     .padding(20.dp)
             ) {
+                Image(
+    painter = painterResource(id = R.drawable.melmatech_logo),
+    contentDescription = "Logo MelmaTech",
+    modifier = Modifier
+        .fillMaxWidth()
+        .height(100.dp),
+    contentScale = ContentScale.Fit
+)
+
+Spacer(Modifier.height(12.dp))
                 Text(
                     text = "Bienvenue sur MelmaTech",
                     style = MaterialTheme.typography.headlineSmall,
