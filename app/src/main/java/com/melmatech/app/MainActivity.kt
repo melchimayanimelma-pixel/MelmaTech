@@ -685,12 +685,15 @@ val enregistrerFactureLauncher =
     topBar = {
         TopAppBar(
     title = {
-        Text(
-            text = "MelmaTech",
-            color = Color(0xFF6C3CE9),
-            fontWeight = FontWeight.Bold
-        )
-    },
+    Image(
+        painter = painterResource(id = R.drawable.melmatech_logo),
+        contentDescription = "MelmaTech",
+        modifier = Modifier
+            .width(180.dp)
+            .height(55.dp),
+        contentScale = ContentScale.Fit
+    )
+},
     colors = TopAppBarDefaults.topAppBarColors(
         containerColor = Color.White
     )
