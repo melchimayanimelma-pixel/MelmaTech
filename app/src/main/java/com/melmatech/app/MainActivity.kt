@@ -2571,10 +2571,10 @@ val enregistrerFactureLauncher =
         }
     }
                         }
-                                    
-                                            
+                                                    
             
-                        "Rapports" -> {
+                        
+"Rapports" -> {
 
     var periode by remember { mutableStateOf("Tout") }
 
@@ -2592,7 +2592,10 @@ val enregistrerFactureLauncher =
             }
 
             "Cette semaine" -> {
-                cal.set(java.util.Calendar.DAY_OF_WEEK, java.util.Calendar.MONDAY)
+                cal.set(
+                    java.util.Calendar.DAY_OF_WEEK,
+                    java.util.Calendar.MONDAY
+                )
                 cal.set(java.util.Calendar.HOUR_OF_DAY, 0)
                 cal.set(java.util.Calendar.MINUTE, 0)
                 cal.set(java.util.Calendar.SECOND, 0)
@@ -2627,54 +2630,77 @@ val enregistrerFactureLauncher =
     val encaissePeriode = ventesFiltrees.sumOf { it.paye }
     val dettesPeriode = ventesFiltrees.sumOf { it.reste }
     val coutPeriode = ventesFiltrees.sumOf { it.cout }
-    val rapportProduits = ventesFiltrees
-    .flatMap { it.lignes }
-    .groupBy { it.produitId }
-    .map { (_, lignes) ->
-        val premiereLigne = lignes.first()
+    val depensesPeriode = depensesFiltrees.sumOf { it.montant }
 
-        val quantiteVendue = lignes.sumOf { it.quantite }
-        val chiffreAffaires = lignes.sumOf { it.total }
-        val coutMarchandises = lignes.sumOf {
-            it.prixAchat * it.quantite
+    val beneficeBrut = caPeriode - coutPeriode
+    val beneficeNet = beneficeBrut - depensesPeriode
+
+    val rapportProduits = ventesFiltrees
+        .flatMap { it.lignes }
+        .groupBy { it.produitId }
+        .map { (_, lignes) ->
+            val premiereLigne = lignes.first()
+            val quantiteVendue = lignes.sumOf { it.quantite }
+            val chiffreAffaires = lignes.sumOf { it.total }
+
+            Triple(
+                premiereLigne.nom,
+                quantiteVendue,
+                chiffreAffaires
+            )
+        }
+        .sortedByDescending { it.second }
+
+    val produitsFaibles = produits.filter {
+        it.quantite in 1..5
+    }
+
+    val produitsEpuises = produits.filter {
+        it.quantite <= 0
+    }
+
+    // Contenu du rapport des ventes.
+    val contenuRapportVentes = buildList {
+        add("Période : $periode")
+        add("")
+        add("RÉSUMÉ DES VENTES")
+        add("Chiffre d'affaires : ${argent(caPeriode, devise)}")
+        add("Montant encaissé : ${argent(encaissePeriode, devise)}")
+        add("Dettes clients : ${argent(dettesPeriode, devise)}")
+        add("Coût des marchandises : ${argent(coutPeriode, devise)}")
+        add("")
+        add("PRODUITS VENDUS")
+
+        rapportProduits.forEach { produit ->
+            add(
+                "${produit.first} | Quantité : ${produit.second} | Total : ${
+                    argent(produit.third, devise)
+                }"
+            )
         }
 
-        Triple(
-            premiereLigne.nom,
-            quantiteVendue,
-            chiffreAffaires
-        )
-    }
-    .sortedByDescending { it.second }
-    val contenuRapportVentes = buildList {
-    add("Période : $periode")
-    add("")
-    add("RÉSUMÉ DES VENTES")
-    add("Chiffre d'affaires : ${argent(caPeriode, devise)}")
-    add("Montant encaissé : ${argent(encaissePeriode, devise)}")
-    add("Dettes clients : ${argent(dettesPeriode, devise)}")
-    add("Coût des marchandises : ${argent(coutPeriode, devise)}")
-    add("")
-    add("PRODUITS VENDUS")
+        add("")
+        add("HISTORIQUE DES VENTES")
 
-    rapportProduits.forEach { produit ->
-        add("${produit.first} | Quantité : ${produit.second} | Total : ${argent(produit.third, devise)}")
+        ventesFiltrees.forEach { vente ->
+            add("Client : ${vente.client}")
+            add(
+                "Date : ${
+                    SimpleDateFormat(
+                        "dd/MM/yyyy",
+                        Locale.getDefault()
+                    ).format(Date(vente.date))
+                }"
+            )
+            add("Montant : ${argent(vente.total, devise)}")
+            add("Payé : ${argent(vente.paye, devise)}")
+            add("Reste : ${argent(vente.reste, devise)}")
+            add("------------------------------")
+        }
     }
 
-    add("")
-    add("HISTORIQUE DES VENTES")
-
-    ventesFiltrees.forEach { vente ->
-        add("Client : ${vente.client}")
-        add("Date : ${java.text.SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(Date(vente.date))}")
-        add("Montant : ${argent(vente.total, devise)}")
-        add("Payé : ${argent(vente.paye, devise)}")
-        add("Reste : ${argent(vente.reste, devise)}")
-        add("------------------------------")
-    }
-    }
-    val depensesPeriode = depensesFiltrees.sumOf { it.montant }
-        val contenuRapportDepenses = buildList {
+    // Contenu du rapport des dépenses.
+    val contenuRapportDepenses = buildList {
         add("Période : $periode")
         add("")
         add("RÉSUMÉ DES DÉPENSES")
@@ -2686,7 +2712,7 @@ val enregistrerFactureLauncher =
             add("Description : ${depense.description}")
             add(
                 "Date : ${
-                    java.text.SimpleDateFormat(
+                    SimpleDateFormat(
                         "dd/MM/yyyy",
                         Locale.getDefault()
                     ).format(Date(depense.date))
@@ -2695,10 +2721,9 @@ val enregistrerFactureLauncher =
             add("Montant : ${argent(depense.montant, devise)}")
             add("------------------------------")
         }
-        }
-    val beneficeBrut = caPeriode - coutPeriode
-                                val beneficeNet = beneficeBrut - depensesPeriode
+    }
 
+    // Contenu du rapport des bénéfices.
     val contenuRapportBenefices = buildList {
         add("Période : $periode")
         add("")
@@ -2712,20 +2737,16 @@ val enregistrerFactureLauncher =
         add(argent(beneficeNet, devise))
     }
 
-    val produitsFaibles = produits.filter {
-        it.quantite in 1..5
-    }
-
-    val produitsEpuises = produits.filter {
-        it.quantite <= 0
-    }
-        val contenuRapportStock = buildList {
-        add("Date du rapport : ${
-            java.text.SimpleDateFormat(
-                "dd/MM/yyyy",
-                Locale.getDefault()
-            ).format(Date())
-        }")
+    // Contenu du rapport du stock.
+    val contenuRapportStock = buildList {
+        add(
+            "Date du rapport : ${
+                SimpleDateFormat(
+                    "dd/MM/yyyy",
+                    Locale.getDefault()
+                ).format(Date())
+            }"
+        )
         add("")
         add("RÉSUMÉ DU STOCK")
         add("Nombre total de produits : ${produits.size}")
@@ -2740,382 +2761,492 @@ val enregistrerFactureLauncher =
             add("Prix de vente : ${argent(produit.vente, devise)}")
 
             when {
-                produit.quantite <= 0 -> add("État : ÉPUISÉ")
-                produit.quantite <= 5 -> add("État : STOCK FAIBLE")
-                else -> add("État : DISPONIBLE")
+                produit.quantite <= 0 ->
+                    add("État : ÉPUISÉ")
+
+                produit.quantite <= 5 ->
+                    add("État : STOCK FAIBLE")
+
+                else ->
+                    add("État : DISPONIBLE")
             }
 
             add("------------------------------")
         }
+    }
+
+    // Génération du fichier PDF avec les informations de l'entreprise.
+    fun creerFichierRapport(
+        titre: String,
+        contenu: List<String>,
+        periodePdf: String = periode
+    ): File {
+        return genererRapportDocumentPdf(
+            context = context,
+            titreRapport = titre,
+            periode = periodePdf,
+            contenu = contenu,
+            nomEntreprise = nomEntreprise,
+            adresseEntreprise = adresseEntreprise,
+            telephoneEntreprise = telephoneEntreprise,
+            emailEntreprise = emailEntreprise,
+            rccmEntreprise = rccmEntreprise,
+            idNatEntreprise = idNatEntreprise,
+            impotEntreprise = impotEntreprise,
+            logoEntreprise = logoEntreprise,
+            lieuEntreprise = lieuEntreprise,
+            nomGerant = nomGerant,
+            fonctionGerant = fonctionGerant
+        )
+    }
+
+    // Carte statistique réutilisable.
+    @Composable
+    fun CarteStatistique(
+        titre: String,
+        valeur: String,
+        couleur: Color = Color(0xFF6C3CE9)
+    ) {
+        Card(
+            modifier = Modifier.weight(1f),
+            shape = RoundedCornerShape(16.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = Color.White
+            ),
+            elevation = CardDefaults.cardElevation(
+                defaultElevation = 2.dp
+            )
+        ) {
+            Column(
+                modifier = Modifier.padding(14.dp),
+                verticalArrangement = Arrangement.spacedBy(7.dp)
+            ) {
+                Text(
+                    titre,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Color(0xFF777777)
+                )
+
+                Text(
+                    valeur,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = couleur
+                )
             }
+        }
+    }
+
+    // En-tête d'une section.
+    @Composable
+    fun TitreSection(
+        numero: String,
+        titre: String,
+        description: String
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(38.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(Color(0xFFEDE5FF)),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    numero,
+                    color = Color(0xFF6C3CE9),
+                    fontWeight = FontWeight.Bold
+                )
+            }
+
+            Column {
+                Text(
+                    titre,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+
+                Text(
+                    description,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Color.Gray
+                )
+            }
+        }
+    }
+
+    // Actions PDF.
+    @Composable
+    fun ActionsRapport(
+        titre: String,
+        contenu: List<String>,
+        nomFichier: String,
+        periodePdf: String = periode
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Button(
+                onClick = {
+                    fichierRapportEnAttente =
+                        creerFichierRapport(
+                            titre,
+                            contenu,
+                            periodePdf
+                        )
+
+                    enregistrerRapportLauncher.launch(nomFichier)
+                },
+                modifier = Modifier.weight(1f)
+            ) {
+                Text(
+                    "PDF",
+                    maxLines = 1
+                )
+            }
+
+            OutlinedButton(
+                onClick = {
+                    val fichier = creerFichierRapport(
+                        titre,
+                        contenu,
+                        periodePdf
+                    )
+
+                    imprimerRapport(context, fichier)
+                },
+                modifier = Modifier.weight(1f)
+            ) {
+                Text(
+                    "Imprimer",
+                    maxLines = 1
+                )
+            }
+        }
+    }
 
     LazyColumn(
-        verticalArrangement = Arrangement.spacedBy(10.dp)
+        modifier = Modifier.fillMaxSize(),
+        verticalArrangement = Arrangement.spacedBy(14.dp),
+        contentPadding = PaddingValues(bottom = 24.dp)
     ) {
+
+        // En-tête général.
         item {
-            Text(
-                "Rapports du commerce",
-                style = MaterialTheme.typography.headlineSmall
-            )
-            Text("Analyse détaillée de votre activité.")
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(
+                        Color(0xFF6C3CE9),
+                        RoundedCornerShape(20.dp)
+                    )
+                    .padding(20.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Text(
+                    "TABLEAU DE BORD",
+                    color = Color.White.copy(alpha = 0.8f),
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.Bold
+                )
+
+                Text(
+                    "Rapports et analyses",
+                    color = Color.White,
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.Bold
+                )
+
+                Text(
+                    "Suivez les performances et la santé financière de votre commerce.",
+                    color = Color.White.copy(alpha = 0.9f),
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            }
         }
-                item {
-            HorizontalDivider()
 
-            Text(
-                "Rapport des ventes",
-                style = MaterialTheme.typography.titleLarge
-            )
-
-            Button(
-                onClick = {
-                    val fichier = genererRapportDocumentPdf(
-                        context = context,
-                        titreRapport = "RAPPORT DES VENTES",
-                        periode = periode,
-                        contenu = contenuRapportVentes,
-                        nomEntreprise = nomEntreprise,
-                        adresseEntreprise = adresseEntreprise,
-                        telephoneEntreprise = telephoneEntreprise,
-                        emailEntreprise = emailEntreprise,
-                        rccmEntreprise = rccmEntreprise,
-                        idNatEntreprise = idNatEntreprise,
-                        impotEntreprise = impotEntreprise,
-                        logoEntreprise = logoEntreprise,
-                        lieuEntreprise = lieuEntreprise,
-                        nomGerant = nomGerant,
-                        fonctionGerant = fonctionGerant
-                    )
-
-                    fichierRapportEnAttente = fichier
-                    enregistrerRapportLauncher.launch(
-                        "Rapport-Ventes.pdf"
-                    )
-                },
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text("Enregistrer les ventes en PDF")
-            }
-
-            OutlinedButton(
-                onClick = {
-                    val fichier = genererRapportDocumentPdf(
-                        context = context,
-                        titreRapport = "RAPPORT DES VENTES",
-                        periode = periode,
-                        contenu = contenuRapportVentes,
-                        nomEntreprise = nomEntreprise,
-                        adresseEntreprise = adresseEntreprise,
-                        telephoneEntreprise = telephoneEntreprise,
-                        emailEntreprise = emailEntreprise,
-                        rccmEntreprise = rccmEntreprise,
-                        idNatEntreprise = idNatEntreprise,
-                        impotEntreprise = impotEntreprise,
-                        logoEntreprise = logoEntreprise,
-                        lieuEntreprise = lieuEntreprise,
-                        nomGerant = nomGerant,
-                        fonctionGerant = fonctionGerant
-                    )
-
-                    imprimerRapport(context, fichier)
-                },
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text("Imprimer le rapport des ventes")
-            }
-                }
-
-                item {
-            HorizontalDivider()
-
-            Text(
-                "Rapport des dépenses",
-                style = MaterialTheme.typography.titleLarge
-            )
-
-            Button(
-                onClick = {
-                    val fichier = genererRapportDocumentPdf(
-                        context = context,
-                        titreRapport = "RAPPORT DES DÉPENSES",
-                        periode = periode,
-                        contenu = contenuRapportDepenses,
-                        nomEntreprise = nomEntreprise,
-                        adresseEntreprise = adresseEntreprise,
-                        telephoneEntreprise = telephoneEntreprise,
-                        emailEntreprise = emailEntreprise,
-                        rccmEntreprise = rccmEntreprise,
-                        idNatEntreprise = idNatEntreprise,
-                        impotEntreprise = impotEntreprise,
-                        logoEntreprise = logoEntreprise,
-                        lieuEntreprise = lieuEntreprise,
-                        nomGerant = nomGerant,
-                        fonctionGerant = fonctionGerant
-                    )
-
-                    fichierRapportEnAttente = fichier
-                    enregistrerRapportLauncher.launch(
-                        "Rapport-Depenses.pdf"
-                    )
-                },
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text("Enregistrer les dépenses en PDF")
-            }
-
-            OutlinedButton(
-                onClick = {
-                    val fichier = genererRapportDocumentPdf(
-                        context = context,
-                        titreRapport = "RAPPORT DES DÉPENSES",
-                        periode = periode,
-                        contenu = contenuRapportDepenses,
-                        nomEntreprise = nomEntreprise,
-                        adresseEntreprise = adresseEntreprise,
-                        telephoneEntreprise = telephoneEntreprise,
-                        emailEntreprise = emailEntreprise,
-                        rccmEntreprise = rccmEntreprise,
-                        idNatEntreprise = idNatEntreprise,
-                        impotEntreprise = impotEntreprise,
-                        logoEntreprise = logoEntreprise,
-                        lieuEntreprise = lieuEntreprise,
-                        nomGerant = nomGerant,
-                        fonctionGerant = fonctionGerant
-                    )
-
-                    imprimerRapport(context, fichier)
-                },
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text("Imprimer le rapport des dépenses")
-            }
-                }
-                        item {
-            HorizontalDivider()
-
-            Text(
-                "Rapport des bénéfices",
-                style = MaterialTheme.typography.titleLarge
-            )
-
-            Button(
-                onClick = {
-                    val fichier = genererRapportDocumentPdf(
-                        context = context,
-                        titreRapport = "RAPPORT DES BÉNÉFICES",
-                        periode = periode,
-                        contenu = contenuRapportBenefices,
-                        nomEntreprise = nomEntreprise,
-                        adresseEntreprise = adresseEntreprise,
-                        telephoneEntreprise = telephoneEntreprise,
-                        emailEntreprise = emailEntreprise,
-                        rccmEntreprise = rccmEntreprise,
-                        idNatEntreprise = idNatEntreprise,
-                        impotEntreprise = impotEntreprise,
-                        logoEntreprise = logoEntreprise,
-                        lieuEntreprise = lieuEntreprise,
-                        nomGerant = nomGerant,
-                        fonctionGerant = fonctionGerant
-                    )
-
-                    fichierRapportEnAttente = fichier
-                    enregistrerRapportLauncher.launch(
-                        "Rapport-Benefices.pdf"
-                    )
-                },
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text("Enregistrer les bénéfices en PDF")
-            }
-
-            OutlinedButton(
-                onClick = {
-                    val fichier = genererRapportDocumentPdf(
-                        context = context,
-                        titreRapport = "RAPPORT DES BÉNÉFICES",
-                        periode = periode,
-                        contenu = contenuRapportBenefices,
-                        nomEntreprise = nomEntreprise,
-                        adresseEntreprise = adresseEntreprise,
-                        telephoneEntreprise = telephoneEntreprise,
-                        emailEntreprise = emailEntreprise,
-                        rccmEntreprise = rccmEntreprise,
-                        idNatEntreprise = idNatEntreprise,
-                        impotEntreprise = impotEntreprise,
-                        logoEntreprise = logoEntreprise,
-                        lieuEntreprise = lieuEntreprise,
-                        nomGerant = nomGerant,
-                        fonctionGerant = fonctionGerant
-                    )
-
-                    imprimerRapport(context, fichier)
-                },
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text("Imprimer le rapport des bénéfices")
-            }
-                        }
-                                item {
-            HorizontalDivider()
-
-            Text(
-                "Rapport du stock",
-                style = MaterialTheme.typography.titleLarge
-            )
-
-            Button(
-                onClick = {
-                    val fichier = genererRapportDocumentPdf(
-                        context = context,
-                        titreRapport = "RAPPORT DU STOCK",
-                        periode = "Situation actuelle du stock",
-                        contenu = contenuRapportStock,
-                        nomEntreprise = nomEntreprise,
-                        adresseEntreprise = adresseEntreprise,
-                        telephoneEntreprise = telephoneEntreprise,
-                        emailEntreprise = emailEntreprise,
-                        rccmEntreprise = rccmEntreprise,
-                        idNatEntreprise = idNatEntreprise,
-                        impotEntreprise = impotEntreprise,
-                        logoEntreprise = logoEntreprise,
-                        lieuEntreprise = lieuEntreprise,
-                        nomGerant = nomGerant,
-                        fonctionGerant = fonctionGerant
-                    )
-
-                    fichierRapportEnAttente = fichier
-                    enregistrerRapportLauncher.launch("Rapport-Stock.pdf")
-                },
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text("Enregistrer le stock en PDF")
-            }
-
-            OutlinedButton(
-                onClick = {
-                    val fichier = genererRapportDocumentPdf(
-                        context = context,
-                        titreRapport = "RAPPORT DU STOCK",
-                        periode = "Situation actuelle du stock",
-                        contenu = contenuRapportStock,
-                        nomEntreprise = nomEntreprise,
-                        adresseEntreprise = adresseEntreprise,
-                        telephoneEntreprise = telephoneEntreprise,
-                        emailEntreprise = emailEntreprise,
-                        rccmEntreprise = rccmEntreprise,
-                        idNatEntreprise = idNatEntreprise,
-                        impotEntreprise = impotEntreprise,
-                        logoEntreprise = logoEntreprise,
-                        lieuEntreprise = lieuEntreprise,
-                        nomGerant = nomGerant,
-                        fonctionGerant = fonctionGerant
-                    )
-
-                    imprimerRapport(context, fichier)
-                },
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text("Imprimer le rapport du stock")
-            }
-                                }
+        // Sélection de période.
         item {
-            Text(
-                "Choisir une période",
-                style = MaterialTheme.typography.titleMedium
-            )
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = Color.White
+                )
+            ) {
+                Column(
+                    modifier = Modifier.padding(14.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Text(
+                        "Période d'analyse",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    )
 
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(5.dp)
+                    ) {
+                        listOf("Aujourd'hui", "Cette semaine").forEach { choix ->
+                            FilterChip(
+                                selected = periode == choix,
+                                onClick = { periode = choix },
+                                label = {
+                                    Text(
+                                        choix,
+                                        maxLines = 1
+                                    )
+                                }
+                            )
+                        }
+                    }
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(5.dp)
+                    ) {
+                        listOf("Ce mois", "Tout").forEach { choix ->
+                            FilterChip(
+                                selected = periode == choix,
+                                onClick = { periode = choix },
+                                label = {
+                                    Text(
+                                        choix,
+                                        maxLines = 1
+                                    )
+                                }
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+        // Résumé des ventes.
+        item {
+            TitreSection(
+                "01",
+                "Vue d'ensemble des ventes",
+                "Les principaux indicateurs de votre activité."
+            )
+        }
+
+        item {
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                horizontalArrangement = Arrangement.spacedBy(9.dp)
             ) {
-                listOf(
-                    "Aujourd'hui",
-                    "Cette semaine",
-                    "Ce mois",
-                    "Tout"
-                ).forEach { choix ->
-                    FilterChip(
-                        selected = periode == choix,
-                        onClick = { periode = choix },
-                        label = { Text(choix) }
+                CarteStatistique(
+                    "Chiffre d'affaires",
+                    argent(caPeriode, devise)
+                )
+
+                CarteStatistique(
+                    "Ventes",
+                    ventesFiltrees.size.toString()
+                )
+            }
+        }
+
+        item {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(9.dp)
+            ) {
+                CarteStatistique(
+                    "Montant encaissé",
+                    argent(encaissePeriode, devise),
+                    Color(0xFF16834A)
+                )
+
+                CarteStatistique(
+                    "Dettes clients",
+                    argent(dettesPeriode, devise),
+                    Color(0xFFD97706)
+                )
+            }
+        }
+
+        item {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = Color.White
+                )
+            ) {
+                Column(
+                    modifier = Modifier.padding(14.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Text(
+                        "Rapport des ventes",
+                        fontWeight = FontWeight.Bold,
+                        style = MaterialTheme.typography.titleMedium
+                    )
+
+                    Text(
+                        "Exporter ou imprimer les ventes de la période sélectionnée.",
+                        color = Color.Gray,
+                        style = MaterialTheme.typography.bodySmall
+                    )
+
+                    ActionsRapport(
+                        "RAPPORT DES VENTES",
+                        contenuRapportVentes,
+                        "Rapport-Ventes.pdf"
                     )
                 }
             }
         }
 
+        // Bénéfices.
         item {
-            Text(
-                "1. Rapport des ventes",
-                style = MaterialTheme.typography.titleLarge
+            TitreSection(
+                "02",
+                "Analyse des bénéfices",
+                "Évaluation de la rentabilité du commerce."
             )
-            DashboardCard("Chiffre d'affaires", argent(caPeriode, devise))
-DashboardCard("Montant encaissé", argent(encaissePeriode, devise))
-DashboardCard("Dettes clients", argent(dettesPeriode, devise))
-            Text("Nombre de ventes : ${ventesFiltrees.size}")
         }
 
         item {
-            HorizontalDivider()
-            Text(
-                "2. Rapport des bénéfices",
-                style = MaterialTheme.typography.titleLarge
-            )
-            DashboardCard(
-    "Coût des marchandises vendues",
-    argent(coutPeriode, devise)
-)
-DashboardCard("Bénéfice brut", argent(beneficeBrut, devise))
-DashboardCard("Dépenses déduites", argent(depensesPeriode, devise))
-DashboardCard("Bénéfice net estimé", argent(beneficeNet, devise))
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = Color.White
+                )
+            ) {
+                Column(
+                    modifier = Modifier.padding(14.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    CarteStatistique(
+                        "Coût des marchandises",
+                        argent(coutPeriode, devise),
+                        Color(0xFF64748B)
+                    )
+
+                    CarteStatistique(
+                        "Bénéfice brut",
+                        argent(beneficeBrut, devise),
+                        Color(0xFF16834A)
+                    )
+
+                    CarteStatistique(
+                        "Dépenses déduites",
+                        argent(depensesPeriode, devise),
+                        Color(0xFFD97706)
+                    )
+
+                    HorizontalDivider()
+
+                    Text(
+                        "Bénéfice net estimé",
+                        color = Color.Gray,
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+
+                    Text(
+                        argent(beneficeNet, devise),
+                        color = if (beneficeNet >= 0)
+                            Color(0xFF16834A)
+                        else
+                            Color(0xFFD32F2F),
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.Bold
+                    )
+
+                    ActionsRapport(
+                        "RAPPORT DES BÉNÉFICES",
+                        contenuRapportBenefices,
+                        "Rapport-Benefices.pdf"
+                    )
+                }
+            }
         }
 
+        // Produits vendus.
         item {
-            HorizontalDivider()
-            Text(
-                "3. Historique des ventes",
-                style = MaterialTheme.typography.titleLarge
+            TitreSection(
+                "03",
+                "Produits vendus",
+                "Classement par quantité vendue."
             )
         }
+
+        if (rapportProduits.isEmpty()) {
+            item {
+                Text(
+                    "Aucun produit vendu pour cette période.",
+                    color = Color.Gray
+                )
+            }
+        }
+
+        items(
+            rapportProduits,
+            key = { it.first }
+        ) { produit ->
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(14.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = Color.White
+                )
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(14.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(
+                        modifier = Modifier.weight(1f),
+                        verticalArrangement = Arrangement.spacedBy(5.dp)
+                    ) {
+                        Text(
+                            produit.first,
+                            fontWeight = FontWeight.Bold,
+                            style = MaterialTheme.typography.titleMedium
+                        )
+
+                        Text(
+                            "Quantité vendue : ${produit.second}",
+                            color = Color.Gray,
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    }
+
+                    Text(
+                        argent(produit.third, devise),
+                        color = Color(0xFF6C3CE9),
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+        }
+
+        // Historique des ventes.
         item {
-    HorizontalDivider()
-
-    Text(
-        "3. Rapport des produits vendus",
-        style = MaterialTheme.typography.titleLarge
-    )
-
-    if (rapportProduits.isEmpty()) {
-        Text("Aucun produit vendu pour cette période.")
-    }
-}
-
-items(
-    rapportProduits,
-    key = { it.first }
-) { produit ->
-    Card {
-        Column(
-            modifier = Modifier.padding(12.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp)
-        ) {
-            Text(
-                produit.first,
-                style = MaterialTheme.typography.titleMedium
-            )
-
-            Text("Quantité vendue : ${produit.second}")
-
-            Text(
-                "Chiffre d'affaires : " +
-                    argent(produit.third, devise)
+            TitreSection(
+                "04",
+                "Historique des ventes",
+                "Détail des transactions réalisées."
             )
         }
-    }
-}
 
         if (ventesFiltrees.isEmpty()) {
             item {
-                Text("Aucune vente pour cette période.")
+                Text(
+                    "Aucune vente pour cette période.",
+                    color = Color.Gray
+                )
             }
         }
 
@@ -3123,47 +3254,111 @@ items(
             ventesFiltrees.sortedByDescending { it.date },
             key = { it.id }
         ) { v ->
-            Card {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(14.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = Color.White
+                )
+            ) {
                 Column(
-                    Modifier.padding(12.dp),
-                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                    modifier = Modifier.padding(14.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
                     Text(
                         "Facture n° ${v.id}",
-                        style = MaterialTheme.typography.titleMedium
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFF6C3CE9)
                     )
+
                     Text("Client : ${v.client}")
+
                     Text(
-                        "Date : " +
-                            java.text.SimpleDateFormat(
+                        "Date : ${
+                            SimpleDateFormat(
                                 "dd/MM/yyyy HH:mm",
                                 Locale.getDefault()
-                            ).format(java.util.Date(v.date))
+                            ).format(Date(v.date))
+                        }",
+                        color = Color.Gray,
+                        style = MaterialTheme.typography.bodySmall
                     )
+
+                    HorizontalDivider()
+
                     Text("Total : ${argent(v.total, devise)}")
-Text("Payé : ${argent(v.paye, devise)}")
-Text("Reste : ${argent(v.reste, devise)}")
-Text(
-    "Bénéfice sur cette vente : " +
-        argent(v.total - v.cout, devise)
-)
+                    Text(
+                        "Payé : ${argent(v.paye, devise)}",
+                        color = Color(0xFF16834A)
+                    )
+                    Text(
+                        "Reste : ${argent(v.reste, devise)}",
+                        color = Color(0xFFD97706)
+                    )
+
+                    Text(
+                        "Bénéfice sur cette vente : ${
+                            argent(v.total - v.cout, devise)
+                        }",
+                        fontWeight = FontWeight.SemiBold
+                    )
                 }
             }
         }
 
+        // Dépenses.
         item {
-            HorizontalDivider()
-            Text(
-                "4. Rapport des dépenses",
-                style = MaterialTheme.typography.titleLarge
+            TitreSection(
+                "05",
+                "Dépenses",
+                "Suivi des sorties d'argent."
             )
-            DashboardCard("Total des dépenses", argent(depensesPeriode, devise))
-            Text("Nombre de dépenses : ${depensesFiltrees.size}")
+        }
+
+        item {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(14.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = Color.White
+                )
+            ) {
+                Column(
+                    modifier = Modifier.padding(14.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text(
+                        "Total des dépenses",
+                        color = Color.Gray
+                    )
+
+                    Text(
+                        argent(depensesPeriode, devise),
+                        color = Color(0xFFD97706),
+                        fontWeight = FontWeight.Bold,
+                        style = MaterialTheme.typography.headlineSmall
+                    )
+
+                    Text(
+                        "Nombre de dépenses : ${depensesFiltrees.size}"
+                    )
+
+                    ActionsRapport(
+                        "RAPPORT DES DÉPENSES",
+                        contenuRapportDepenses,
+                        "Rapport-Depenses.pdf"
+                    )
+                }
+            }
         }
 
         if (depensesFiltrees.isEmpty()) {
             item {
-                Text("Aucune dépense pour cette période.")
+                Text(
+                    "Aucune dépense pour cette période.",
+                    color = Color.Gray
+                )
             }
         }
 
@@ -3171,57 +3366,185 @@ Text(
             depensesFiltrees.sortedByDescending { it.date },
             key = { it.id }
         ) { d ->
-            Card {
-                Column(Modifier.padding(12.dp)) {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(14.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = Color.White
+                )
+            ) {
+                Column(
+                    modifier = Modifier.padding(14.dp),
+                    verticalArrangement = Arrangement.spacedBy(5.dp)
+                ) {
                     Text(
                         d.description,
-                        style = MaterialTheme.typography.titleMedium
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
                     )
-                    Text(argent(d.montant, devise))
+
                     Text(
-                        java.text.SimpleDateFormat(
+                        argent(d.montant, devise),
+                        color = Color(0xFFD97706),
+                        fontWeight = FontWeight.SemiBold
+                    )
+
+                    Text(
+                        SimpleDateFormat(
                             "dd/MM/yyyy HH:mm",
                             Locale.getDefault()
-                        ).format(java.util.Date(d.date))
+                        ).format(Date(d.date)),
+                        color = Color.Gray,
+                        style = MaterialTheme.typography.bodySmall
                     )
                 }
             }
         }
 
+        // État du stock.
         item {
-            HorizontalDivider()
-            Text(
-                "5. État du stock",
-                style = MaterialTheme.typography.titleLarge
+            TitreSection(
+                "06",
+                "État du stock",
+                "Produits disponibles et produits à surveiller."
             )
-            DashboardCard(
-                "Produits disponibles",
-                produits.count { it.quantite > 5 }.toString()
-            )
-            DashboardCard(
-                "Stocks faibles (5 ou moins)",
-                produitsFaibles.size.toString()
-            )
-            DashboardCard(
-                "Produits épuisés",
-                produitsEpuises.size.toString()
-            )
-            Text("Produits à surveiller")
+        }
+
+        item {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(9.dp)
+            ) {
+                CarteStatistique(
+                    "Disponibles",
+                    produits.count { it.quantite > 5 }.toString(),
+                    Color(0xFF16834A)
+                )
+
+                CarteStatistique(
+                    "Stock faible",
+                    produitsFaibles.size.toString(),
+                    Color(0xFFD97706)
+                )
+            }
+        }
+
+        item {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(14.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = Color.White
+                )
+            ) {
+                Column(
+                    modifier = Modifier.padding(14.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text(
+                        "Produits épuisés",
+                        color = Color.Gray
+                    )
+
+                    Text(
+                        produitsEpuises.size.toString(),
+                        color = Color(0xFFD32F2F),
+                        fontWeight = FontWeight.Bold,
+                        style = MaterialTheme.typography.headlineMedium
+                    )
+                }
+            }
+        }
+
+        if (produitsFaibles.isEmpty() && produitsEpuises.isEmpty()) {
+            item {
+                Text(
+                    "Tous les produits ont un stock supérieur à 5 unités.",
+                    color = Color(0xFF16834A)
+                )
+            }
         }
 
         items(
             produitsFaibles + produitsEpuises,
             key = { it.id }
         ) { p ->
-            Card {
-                Column(Modifier.padding(12.dp)) {
-                    Text(p.nom)
-                    Text("Stock restant : ${p.quantite}")
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(14.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = Color.White
+                )
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(14.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text(
+                            p.nom,
+                            fontWeight = FontWeight.Bold
+                        )
+
+                        Text(
+                            "Stock restant : ${p.quantite}",
+                            color = Color.Gray
+                        )
+                    }
+
+                    Text(
+                        if (p.quantite <= 0) "ÉPUISÉ" else "FAIBLE",
+                        color = if (p.quantite <= 0)
+                            Color(0xFFD32F2F)
+                        else
+                            Color(0xFFD97706),
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+        }
+
+        // Export du rapport de stock.
+        item {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(14.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = Color.White
+                )
+            ) {
+                Column(
+                    modifier = Modifier.padding(14.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text(
+                        "Rapport complet du stock",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+
+                    Text(
+                        "Situation actuelle de tous les produits enregistrés.",
+                        color = Color.Gray,
+                        style = MaterialTheme.typography.bodySmall
+                    )
+
+                    ActionsRapport(
+                        "RAPPORT DU STOCK",
+                        contenuRapportStock,
+                        "Rapport-Stock.pdf",
+                        "Situation actuelle du stock"
+                    )
                 }
             }
         }
     }
 }
+ 
 
                         "Plus" -> {
 
