@@ -97,6 +97,7 @@ import androidx.compose.material.icons.filled.Email
 import androidx.compose.ui.res.painterResource
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.ui.text.input.VisualTransformation
 
 
 data class Produit(
