@@ -5210,10 +5210,14 @@ fun EcranConnexion(
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Text(
-            "MelmaTech",
-            style = MaterialTheme.typography.headlineLarge
-        )
+        Image(
+    painter = painterResource(id = R.drawable.melmatech_logo),
+    contentDescription = "Logo MelmaTech",
+    modifier = Modifier
+        .fillMaxWidth()
+        .height(150.dp),
+    contentScale = ContentScale.Fit
+)
 
         Spacer(Modifier.height(12.dp))
 
