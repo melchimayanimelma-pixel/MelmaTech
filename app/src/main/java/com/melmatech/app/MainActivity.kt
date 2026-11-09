@@ -4354,14 +4354,10 @@ Slider(
                     },
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(14.dp),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedTextColor = Color.White, unfocusedTextColor = Color.White,
-                        focusedContainerColor = Color(0xFF101014), unfocusedContainerColor = Color(0xFF101014),
-                        focusedBorderColor = Color(0xFF9B72F2), unfocusedBorderColor = Color(0xFF514B5B),
-                        focusedLabelColor = Color(0xFFB99AFF), unfocusedLabelColor = Color(0xFFB8B2C2),
-                        cursorColor = Color(0xFFB99AFF)
-                    ),
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF7541D8), contentColor = Color.White)
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color(0xFF7541D8),
+                        contentColor = Color.White
+                    )
                 ) {
                     Text("✓  Enregistrer les informations")
                 }
