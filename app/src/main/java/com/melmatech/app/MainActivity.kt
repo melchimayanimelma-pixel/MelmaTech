@@ -30,6 +30,13 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardActions
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.layout.ContentScale
@@ -5843,24 +5850,23 @@ fun EcranConnexion(
     onChangerMode: () -> Unit,
     onValider: () -> Unit
 ) {
-    val noir = Color(0xFF030805)
-    val fondChamp = Color(0xFF101B14)
-    val vert = Color(0xFF00E51B)
-    val vertCitron = Color(0xFFA8FF00)
+    val fond = Color(0xFF0D0B14)
+    val fondChamp = Color(0xFF191522)
+    val violet = Color(0xFF8B5CF6)
+    val violetClair = Color(0xFFC4A7FF)
     val blanc = Color.White
-    val gris = Color(0xFFB0BDB3)
+    val gris = Color(0xFFB8B2C5)
 
-    var afficherMotDePasse by remember {
-        mutableStateOf(false)
-    }
+    var afficherMotDePasse by remember { mutableStateOf(false) }
+    val focusMotDePasse = remember { FocusRequester() }
 
     MaterialTheme(
         colorScheme = darkColorScheme(
-            primary = vert,
-            secondary = vertCitron,
-            background = noir,
+            primary = violet,
+            secondary = violetClair,
+            background = fond,
             surface = fondChamp,
-            onPrimary = noir,
+            onPrimary = blanc,
             onBackground = blanc,
             onSurface = blanc
         )
@@ -5868,38 +5874,35 @@ fun EcranConnexion(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(noir)
+                .background(
+                    Brush.verticalGradient(
+                        colors = listOf(Color(0xFF21143A), fond, fond)
+                    )
+                )
         ) {
             Column(
                 modifier = Modifier
                     .fillMaxSize()
                     .verticalScroll(rememberScrollState())
-                    .padding(horizontal = 24.dp, vertical = 24.dp),
+                    .padding(horizontal = 24.dp, vertical = 28.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center
             ) {
+                Spacer(Modifier.height(12.dp))
 
-                Spacer(Modifier.height(16.dp))
-
-                // LOGO OFFICIEL
                 Image(
-                    painter = painterResource(
-                        id = R.drawable.melmatech_logo
-                    ),
+                    painter = painterResource(id = R.drawable.melmatech_logo),
                     contentDescription = "Logo MelmaTech",
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(175.dp),
+                        .height(155.dp),
                     contentScale = ContentScale.Fit
                 )
 
-                Spacer(Modifier.height(20.dp))
+                Spacer(Modifier.height(18.dp))
 
                 Text(
-                    text = if (modeCreationCompte)
-                        "Créer votre compte"
-                    else
-                        "Bienvenue",
+                    text = if (modeCreationCompte) "Créer votre compte" else "Bienvenue",
                     style = MaterialTheme.typography.headlineMedium,
                     fontWeight = FontWeight.Bold,
                     color = blanc
@@ -5916,43 +5919,74 @@ fun EcranConnexion(
                     style = MaterialTheme.typography.bodyMedium
                 )
 
-                Spacer(Modifier.height(32.dp))
+                Spacer(Modifier.height(30.dp))
 
-                // ADRESSE E-MAIL
                 OutlinedTextField(
                     value = email,
                     onValueChange = onEmailChange,
-                    label = {
-                        Text("Adresse e-mail")
-                    },
-                    placeholder = {
-                        Text(
-                            "Entrez votre adresse e-mail",
-                            color = gris
+                    label = { Text("Adresse e-mail") },
+                    placeholder = { Text("Entrez votre adresse e-mail", color = gris) },
+                    leadingIcon = {
+                        Icon(
+                            imageVector = Icons.Filled.Email,
+                            contentDescription = "Adresse e-mail",
+                            tint = violetClair
                         )
                     },
                     singleLine = true,
                     enabled = !chargement,
                     keyboardOptions = KeyboardOptions(
-                        keyboardType = KeyboardType.Email
+                        keyboardType = KeyboardType.Email,
+                        imeAction = ImeAction.Next
+                    ),
+                    keyboardActions = KeyboardActions(
+                        onNext = { focusMotDePasse.requestFocus() }
+                    ),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = violet,
+                        unfocusedBorderColor = Color(0xFF51465F),
+                        focusedLabelColor = violetClair,
+                        cursorColor = violetClair,
+                        focusedTextColor = blanc,
+                        unfocusedTextColor = blanc,
+                        focusedContainerColor = fondChamp,
+                        unfocusedContainerColor = fondChamp
                     ),
                     modifier = Modifier.fillMaxWidth()
                 )
 
                 Spacer(Modifier.height(16.dp))
 
-                // MOT DE PASSE
                 OutlinedTextField(
                     value = motDePasse,
                     onValueChange = onMotDePasseChange,
-                    label = {
-                        Text("Mot de passe")
-                    },
-                    placeholder = {
-                        Text(
-                            "Entrez votre mot de passe",
-                            color = gris
+                    label = { Text("Mot de passe") },
+                    placeholder = { Text("Entrez votre mot de passe", color = gris) },
+                    leadingIcon = {
+                        Icon(
+                            imageVector = Icons.Filled.Lock,
+                            contentDescription = "Mot de passe",
+                            tint = violetClair
                         )
+                    },
+                    trailingIcon = {
+                        IconButton(
+                            onClick = { afficherMotDePasse = !afficherMotDePasse },
+                            enabled = !chargement
+                        ) {
+                            Icon(
+                                imageVector = if (afficherMotDePasse)
+                                    Icons.Filled.VisibilityOff
+                                else
+                                    Icons.Filled.Visibility,
+                                contentDescription = if (afficherMotDePasse)
+                                    "Masquer le mot de passe"
+                                else
+                                    "Afficher le mot de passe",
+                                tint = violetClair
+                            )
+                        }
                     },
                     singleLine = true,
                     enabled = !chargement,
@@ -5960,29 +5994,26 @@ fun EcranConnexion(
                         VisualTransformation.None
                     else
                         PasswordVisualTransformation(),
-                    trailingIcon = {
-                        TextButton(
-                            onClick = {
-                                afficherMotDePasse =
-                                    !afficherMotDePasse
-                            },
-                            enabled = !chargement
-                        ) {
-                            Text(
-                                if (afficherMotDePasse)
-                                    "Masquer"
-                                else
-                                    "Afficher",
-                                color = vertCitron
-                            )
-                        }
-                    },
-                    modifier = Modifier.fillMaxWidth()
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                    keyboardActions = KeyboardActions(onDone = { onValider() }),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = violet,
+                        unfocusedBorderColor = Color(0xFF51465F),
+                        focusedLabelColor = violetClair,
+                        cursorColor = violetClair,
+                        focusedTextColor = blanc,
+                        unfocusedTextColor = blanc,
+                        focusedContainerColor = fondChamp,
+                        unfocusedContainerColor = fondChamp
+                    ),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .focusRequester(focusMotDePasse)
                 )
 
-                Spacer(Modifier.height(24.dp))
+                Spacer(Modifier.height(26.dp))
 
-                // BOUTON PRINCIPAL
                 Button(
                     onClick = onValider,
                     enabled = !chargement,
@@ -5991,15 +6022,15 @@ fun EcranConnexion(
                         .height(56.dp),
                     shape = RoundedCornerShape(16.dp),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = vert,
-                        contentColor = noir,
-                        disabledContainerColor = Color(0xFF285C32),
+                        containerColor = violet,
+                        contentColor = blanc,
+                        disabledContainerColor = Color(0xFF49356D),
                         disabledContentColor = gris
                     )
                 ) {
                     if (chargement) {
                         CircularProgressIndicator(
-                            modifier = Modifier.size(24.dp),
+                            modifier = Modifier.size(22.dp),
                             color = blanc,
                             strokeWidth = 2.dp
                         )
@@ -6017,9 +6048,8 @@ fun EcranConnexion(
                     }
                 }
 
-                Spacer(Modifier.height(18.dp))
+                Spacer(Modifier.height(14.dp))
 
-                // CHANGEMENT DE MODE
                 TextButton(
                     onClick = onChangerMode,
                     enabled = !chargement
@@ -6029,114 +6059,27 @@ fun EcranConnexion(
                             "J'ai déjà un compte ? Se connecter"
                         else
                             "Créer un nouveau compte",
-                        color = vertCitron,
+                        color = violetClair,
                         fontWeight = FontWeight.SemiBold
                     )
                 }
 
-                // MESSAGE DE RETOUR
                 if (message.isNotBlank()) {
                     Spacer(Modifier.height(16.dp))
-
                     Text(
                         text = message,
-                        color = if (
-                            message.contains(
-                                "erreur",
-                                ignoreCase = true
-                            )
-                        ) Color(0xFFFF7777)
-                        else vertCitron,
+                        color = if (message.contains("erreur", ignoreCase = true))
+                            Color(0xFFFF7777)
+                        else
+                            violetClair,
                         style = MaterialTheme.typography.bodyMedium
                     )
                 }
-
                 Spacer(Modifier.height(24.dp))
-
-                Text(
-                    text = "MelmaTech • Gestion commerciale",
-                    color = Color(0xFF718477),
-                    style = MaterialTheme.typography.labelSmall
-                )
             }
         }
-    }
- }
-
-private fun genererCodesBarresPdf(
-    context: Context,
-    produits: List<Produit>,
-    format: String
-): File {
-    require(produits.isNotEmpty()) { "Aucun produit à imprimer." }
-    val document = PdfDocument()
-    val largeur = if (format == "ETIQUETTE") 360 else 595
-    val hauteur = if (format == "ETIQUETTE") 180 else 842
-    val titre = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = android.graphics.Color.BLACK
-        textSize = if (format == "ETIQUETTE") 18f else 10f
-        typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
-    }
-    val texte = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = android.graphics.Color.BLACK
-        textSize = 10f
-    }
-    try {
-        if (format == "ETIQUETTE") {
-            produits.forEachIndexed { index, produit ->
-                val page = document.startPage(PdfDocument.PageInfo.Builder(largeur, hauteur, index + 1).create())
-                val canvas = page.canvas
-                canvas.drawText(produit.nom.take(32), 18f, 28f, titre)
-                val code = com.google.zxing.MultiFormatWriter().encode(
-                    produit.codeBarres, com.google.zxing.BarcodeFormat.CODE_128, 320, 90
-                )
-                val bitmap = Bitmap.createBitmap(code.width, code.height, Bitmap.Config.ARGB_8888)
-                for (x in 0 until code.width) for (y in 0 until code.height) {
-                    bitmap.setPixel(x, y, if (code.get(x, y)) android.graphics.Color.BLACK else android.graphics.Color.WHITE)
-                }
-                canvas.drawBitmap(bitmap, null, RectF(18f, 42f, 342f, 132f), null)
-                canvas.drawText(produit.codeBarres, 18f, 151f, texte)
-                canvas.drawText("Prix : ${String.format(Locale.US, "%.2f", produit.vente)}", 18f, 168f, texte)
-                document.finishPage(page)
-                bitmap.recycle()
-            }
-        } else {
-            val parPage = 24
-            produits.chunked(parPage).forEachIndexed { pageIndex, groupe ->
-                val page = document.startPage(PdfDocument.PageInfo.Builder(largeur, hauteur, pageIndex + 1).create())
-                val canvas = page.canvas
-                val celluleW = largeur / 3f
-                val celluleH = hauteur / 8f
-                groupe.forEachIndexed { index, produit ->
-                    val colonne = index % 3
-                    val ligne = index / 3
-                    val gauche = colonne * celluleW + 8f
-                    val haut = ligne * celluleH + 8f
-                    canvas.drawText(produit.nom.take(24), gauche, haut + 12f, titre)
-                    val code = com.google.zxing.MultiFormatWriter().encode(
-                        produit.codeBarres, com.google.zxing.BarcodeFormat.CODE_128, 170, 55
-                    )
-                    val bitmap = Bitmap.createBitmap(code.width, code.height, Bitmap.Config.ARGB_8888)
-                    for (x in 0 until code.width) for (y in 0 until code.height) {
-                        bitmap.setPixel(x, y, if (code.get(x, y)) android.graphics.Color.BLACK else android.graphics.Color.WHITE)
-                    }
-                    canvas.drawBitmap(bitmap, null, RectF(gauche, haut + 17f, gauche + celluleW - 16f, haut + 67f), null)
-                    canvas.drawText(produit.codeBarres, gauche, haut + 82f, texte)
-                    bitmap.recycle()
-                }
-                document.finishPage(page)
-            }
-        }
-        val dossier = File(context.getExternalFilesDir(null), "CodesBarres")
-        if (!dossier.exists()) dossier.mkdirs()
-        val fichier = File(dossier, "Codes-barres-${System.currentTimeMillis()}.pdf")
-        FileOutputStream(fichier).use { document.writeTo(it) }
-        return fichier
-    } finally {
-        document.close()
     }
 }
-
 @Composable
 private fun OptionsImpressionCodeBarres(
     produit: Produit?,
