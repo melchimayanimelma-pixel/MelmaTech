@@ -54,6 +54,7 @@ object SupabaseService {
     prixAchat: Double,
     prixVente: Double,
     quantite: Int,
+    codeBarres: String,
     callback: (Boolean, String, String?) -> Unit
 ) {
     val url = "${SupabaseConfig.url}/rest/v1/produits"
@@ -64,6 +65,7 @@ object SupabaseService {
         put("prix_achat", prixAchat)
         put("prix_vente", prixVente)
         put("quantite_stock", quantite)
+        put("code_barres", codeBarres)
     }
 
     val request = Request.Builder()
@@ -133,7 +135,7 @@ object SupabaseService {
         val url =
             "${SupabaseConfig.url}/rest/v1/produits" +
             "?entreprise_id=eq.$entrepriseId" +
-            "&select=id,entreprise_id,nom,prix_achat,prix_vente,quantite_stock"
+            "&select=id,entreprise_id,nom,prix_achat,prix_vente,quantite_stock,code_barres"
 
         val request = Request.Builder()
             .url(url)
