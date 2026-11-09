@@ -1345,28 +1345,25 @@ val enregistrerFactureLauncher =
                             )
                         }
 
-                        Row {
-                            TextButton(
-                                onClick = {
-                                    editionId = p.id
-                                    nomProduit = p.nom
-                                    achatProduit = p.achat.toString()
-                                    venteProduit = p.vente.toString()
-                                    stockProduit = p.quantite.toString()
-                                }
-                            ) {
-                                Text("Modifier")
-                            }
+                        ActionsProduit(
+    onModifier = {
+        editionId = p.id
+        nomProduit = p.nom
+        achatProduit = p.achat.toString()
+        venteProduit = p.vente.toString()
+        stockProduit = p.quantite.toString()
+    },
 
-                            TextButton(
-                                onClick = {
-                                    produits.removeAll { it.id == p.id }
-                                    sauvegarderProduits()
-                                }
-                            ) {
-                                Text("Supprimer")
-                            }
-                        }
+    onCodeBarres = {
+        // Nous connecterons ici l'impression PDF
+        // des étiquettes du produit.
+    },
+
+    onSupprimer = {
+        produits.removeAll { it.id == p.id }
+        sauvegarderProduits()
+    }
+)
                     }
                 }
             }
