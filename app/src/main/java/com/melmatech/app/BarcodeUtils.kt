@@ -1,11 +1,22 @@
 package com.melmatech.app
 
-import java.util.UUID
+import android.graphics.Bitmap
+import android.graphics.Color
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.unit.dp
+import com.google.zxing.BarcodeFormat
+import com.google.zxing.MultiFormatWriter
+import java.util.UUID
 
 /**
- * Codes internes MelmaTech. Le préfixe MT identifie les références internes ;
+ * Codes internes MelmaTech.
+ * Le préfixe MT identifie les références internes ;
  * ces codes ne sont pas des codes commerciaux GS1/EAN.
  */
 object BarcodeUtils {
@@ -16,29 +27,30 @@ object BarcodeUtils {
             .take(12)
 }
 
-
-@androidx.compose.runtime.Composable
+@Composable
 fun BarcodeCode128(value: String) {
     if (value.isBlank()) return
-    val bitmap = androidx.compose.runtime.remember(value) {
+
+    val bitmap = remember(value) {
         try {
-            val matrix = com.google.zxing.MultiFormatWriter().encode(
+            val matrix = MultiFormatWriter().encode(
                 value,
-                com.google.zxing.BarcodeFormat.CODE_128,
+                BarcodeFormat.CODE_128,
                 640,
                 160
             )
-            android.graphics.Bitmap.createBitmap(
+
+            Bitmap.createBitmap(
                 matrix.width,
                 matrix.height,
-                android.graphics.Bitmap.Config.ARGB_8888
+                Bitmap.Config.ARGB_8888
             ).also { image ->
                 for (x in 0 until matrix.width) {
                     for (y in 0 until matrix.height) {
                         image.setPixel(
-                            x, y,
-                            if (matrix.get(x, y)) android.graphics.Color.BLACK
-                            else android.graphics.Color.WHITE
+                            x,
+                            y,
+                            if (matrix.get(x, y)) Color.BLACK else Color.WHITE
                         )
                     }
                 }
@@ -47,11 +59,12 @@ fun BarcodeCode128(value: String) {
             null
         }
     }
+
     if (bitmap != null) {
-        androidx.compose.foundation.Image(
+        Image(
             bitmap = bitmap.asImageBitmap(),
             contentDescription = "Code-barres $value",
-            modifier = androidx.compose.ui.Modifier
+            modifier = Modifier
                 .fillMaxWidth()
                 .height(80.dp)
         )
