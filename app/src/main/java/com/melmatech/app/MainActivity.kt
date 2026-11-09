@@ -1457,22 +1457,31 @@ val enregistrerFactureLauncher =
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         item {
-            Text(
-                "Gestion des dépenses",
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Bold
-            )
-
-            Text("Enregistre et suis les dépenses de ton commerce.")
+            Column(
+                modifier = Modifier.fillMaxWidth()
+                    .background(Color(0xFF5426A8), RoundedCornerShape(22.dp))
+                    .padding(20.dp),
+                verticalArrangement = Arrangement.spacedBy(7.dp)
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text("💳", style = MaterialTheme.typography.headlineMedium)
+                    Spacer(Modifier.width(10.dp))
+                    Text("GESTION FINANCIÈRE", color = Color.White.copy(alpha = 0.78f), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
+                }
+                Text("Gestion des dépenses", color = Color.White, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+                Text("Suivez les sorties d'argent de votre commerce.", color = Color.White.copy(alpha = 0.82f))
+            }
         }
 
         item {
             Card(
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(16.dp)
+                shape = RoundedCornerShape(20.dp),
+                colors = CardDefaults.cardColors(containerColor = Color(0xFF101014)),
+                border = BorderStroke(1.dp, Color(0xFF29252F))
             ) {
                 Column(
-                    modifier = Modifier.padding(16.dp),
+                    modifier = Modifier.padding(18.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     Text(
@@ -1480,7 +1489,9 @@ val enregistrerFactureLauncher =
                             "Modifier une dépense"
                         else
                             "Nouvelle dépense",
-                        style = MaterialTheme.typography.titleLarge
+                        style = MaterialTheme.typography.titleLarge,
+                        color = Color.White,
+                        fontWeight = FontWeight.Bold
                     )
 
                     OutlinedTextField(
@@ -1488,9 +1499,15 @@ val enregistrerFactureLauncher =
                         onValueChange = {
                             descriptionDepense = it
                         },
-                        label = {
-                            Text("Description de la dépense")
-                        },
+                        label = { Text("Description de la dépense") },
+                        leadingIcon = { Text("📝") },
+                        shape = RoundedCornerShape(14.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedTextColor = Color.White, unfocusedTextColor = Color.White,
+                            focusedBorderColor = Color(0xFF9B72F2), unfocusedBorderColor = Color(0xFF514B5B),
+                            focusedLabelColor = Color(0xFFB99AFF), unfocusedLabelColor = Color(0xFFB8B2C2),
+                            cursorColor = Color(0xFFB99AFF)
+                        ),
                         modifier = Modifier.fillMaxWidth()
                     )
 
@@ -1499,9 +1516,15 @@ val enregistrerFactureLauncher =
                         onValueChange = {
                             montantDepense = it
                         },
-                        label = {
-                            Text("Montant ($devise)")
-                        },
+                        label = { Text("Montant ($devise)") },
+                        leadingIcon = { Text("💰") },
+                        shape = RoundedCornerShape(14.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedTextColor = Color.White, unfocusedTextColor = Color.White,
+                            focusedBorderColor = Color(0xFF9B72F2), unfocusedBorderColor = Color(0xFF514B5B),
+                            focusedLabelColor = Color(0xFFB99AFF), unfocusedLabelColor = Color(0xFFB8B2C2),
+                            cursorColor = Color(0xFFB99AFF)
+                        ),
                         keyboardOptions = KeyboardOptions(
                             keyboardType = KeyboardType.Decimal
                         ),
@@ -1566,7 +1589,9 @@ val enregistrerFactureLauncher =
                                 montantDepense = ""
                             }
                         },
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(14.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF7541D8), contentColor = Color.White)
                     ) {
                         Text(
                             if (depenseAModifier != null)
@@ -1598,15 +1623,17 @@ val enregistrerFactureLauncher =
         }
 
         item {
-            Text(
-                "Historique des dépenses",
-                style = MaterialTheme.typography.titleLarge
-            )
-
-            Text(
-                "Total : ${argent(totalDepenses, devise)}",
-                fontWeight = FontWeight.Bold
-            )
+            Text("HISTORIQUE", color = Color(0xFF8B5CF6), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
+            Text("Dépenses récentes", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+            Card(colors = CardDefaults.cardColors(containerColor = Color(0xFFF0E9FF)), shape = RoundedCornerShape(16.dp)) {
+                Row(Modifier.fillMaxWidth().padding(15.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
+                    Column {
+                        Text("TOTAL DES DÉPENSES", color = Color(0xFF675783), style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
+                        Text(argent(totalDepenses, devise), color = Color(0xFF5426A8), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+                    }
+                    Text("📉", style = MaterialTheme.typography.headlineMedium)
+                }
+            }
         }
 
         if (depenses.isEmpty()) {
@@ -1621,20 +1648,24 @@ val enregistrerFactureLauncher =
         ) { depense ->
 
             Card(
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(18.dp),
+                colors = CardDefaults.cardColors(containerColor = Color(0xFF101014)),
+                border = BorderStroke(1.dp, Color(0xFF29252F))
             ) {
                 Column(
-                    modifier = Modifier.padding(14.dp),
+                    modifier = Modifier.padding(16.dp),
                     verticalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
                     Text(
                         depense.description,
+                        color = Color.White,
                         fontWeight = FontWeight.Bold
                     )
 
-                    Text(argent(depense.montant, devise))
+                    Text(argent(depense.montant, devise), color = Color(0xFFB99AFF), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
 
-                    Text(formaterDate(depense.date))
+                    Text("📅  ${formaterDate(depense.date)}", color = Color(0xFFAAA3B5))
 
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -3714,7 +3745,7 @@ val enregistrerFactureLauncher =
                     "Plus",
                     style = MaterialTheme.typography.headlineLarge,
                     fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.primary
+                    color = Color(0xFF5426A8)
                 )
 
                 Text(
@@ -3728,9 +3759,8 @@ val enregistrerFactureLauncher =
         item {
             Card(
                 modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.primary
-                )
+                shape = RoundedCornerShape(22.dp),
+                colors = CardDefaults.cardColors(containerColor = Color(0xFF5426A8))
             ) {
                 Row(
                     modifier = Modifier
@@ -3778,7 +3808,10 @@ val enregistrerFactureLauncher =
         item {
             Card(
                 onClick = { page = "Depenses" },
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(18.dp),
+                colors = CardDefaults.cardColors(containerColor = Color(0xFF101014)),
+                border = BorderStroke(1.dp, Color(0xFF29252F))
             ) {
                 Row(
                     modifier = Modifier
@@ -3786,7 +3819,7 @@ val enregistrerFactureLauncher =
                         .padding(16.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("💸", style = MaterialTheme.typography.headlineMedium)
+                    Text("💸", modifier = Modifier.background(Color(0xFF2A1B42), RoundedCornerShape(12.dp)).padding(10.dp), style = MaterialTheme.typography.headlineMedium)
 
                     Spacer(Modifier.width(14.dp))
 
@@ -3794,16 +3827,17 @@ val enregistrerFactureLauncher =
                         Text(
                             "Dépenses et rapports",
                             style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.SemiBold
+                            fontWeight = FontWeight.SemiBold,
+                            color = Color.White
                         )
                         Text(
                             "Suivre les dépenses et les résultats.",
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            color = Color(0xFFAAA3B5)
                         )
                     }
 
-                    Text("›", style = MaterialTheme.typography.headlineMedium)
+                    Text("›", color = Color(0xFFB99AFF), style = MaterialTheme.typography.headlineMedium)
                 }
             }
         }
@@ -3811,7 +3845,10 @@ val enregistrerFactureLauncher =
         item {
             Card(
                 onClick = { page = "Ventes" },
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(18.dp),
+                colors = CardDefaults.cardColors(containerColor = Color(0xFF101014)),
+                border = BorderStroke(1.dp, Color(0xFF29252F))
             ) {
                 Row(
                     modifier = Modifier
@@ -3819,7 +3856,7 @@ val enregistrerFactureLauncher =
                         .padding(16.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("🧾", style = MaterialTheme.typography.headlineMedium)
+                    Text("🧾", modifier = Modifier.background(Color(0xFF2A1B42), RoundedCornerShape(12.dp)).padding(10.dp), style = MaterialTheme.typography.headlineMedium)
 
                     Spacer(Modifier.width(14.dp))
 
@@ -3827,16 +3864,17 @@ val enregistrerFactureLauncher =
                         Text(
                             "Factures et ventes",
                             style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.SemiBold
+                            fontWeight = FontWeight.SemiBold,
+                            color = Color.White
                         )
                         Text(
                             "Consulter les ventes et les paiements.",
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            color = Color(0xFFAAA3B5)
                         )
                     }
 
-                    Text("›", style = MaterialTheme.typography.headlineMedium)
+                    Text("›", color = Color(0xFFB99AFF), style = MaterialTheme.typography.headlineMedium)
                 }
             }
         }
@@ -3862,7 +3900,7 @@ val enregistrerFactureLauncher =
                             .padding(16.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text("👥", style = MaterialTheme.typography.headlineMedium)
+                        Text("👥", modifier = Modifier.background(Color(0xFF2A1B42), RoundedCornerShape(12.dp)).padding(10.dp), style = MaterialTheme.typography.headlineMedium)
 
                         Spacer(Modifier.width(14.dp))
 
@@ -3879,7 +3917,7 @@ val enregistrerFactureLauncher =
                             )
                         }
 
-                        Text("›", style = MaterialTheme.typography.headlineMedium)
+                        Text("›", color = Color(0xFFB99AFF), style = MaterialTheme.typography.headlineMedium)
                     }
                 }
             }
@@ -3897,7 +3935,10 @@ val enregistrerFactureLauncher =
         item {
             Card(
                 onClick = { page = "Entreprise" },
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(18.dp),
+                colors = CardDefaults.cardColors(containerColor = Color(0xFF101014)),
+                border = BorderStroke(1.dp, Color(0xFF29252F))
             ) {
                 Row(
                     modifier = Modifier
@@ -3905,7 +3946,7 @@ val enregistrerFactureLauncher =
                         .padding(16.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("🏢", style = MaterialTheme.typography.headlineMedium)
+                    Text("🏢", modifier = Modifier.background(Color(0xFF2A1B42), RoundedCornerShape(12.dp)).padding(10.dp), style = MaterialTheme.typography.headlineMedium)
 
                     Spacer(Modifier.width(14.dp))
 
@@ -3913,16 +3954,17 @@ val enregistrerFactureLauncher =
                         Text(
                             "Informations de l'entreprise",
                             style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.SemiBold
+                            fontWeight = FontWeight.SemiBold,
+                            color = Color.White
                         )
                         Text(
                             "Logo, adresse, contacts, RCCM et ID NAT.",
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            color = Color(0xFFAAA3B5)
                         )
                     }
 
-                    Text("›", style = MaterialTheme.typography.headlineMedium)
+                    Text("›", color = Color(0xFFB99AFF), style = MaterialTheme.typography.headlineMedium)
                 }
             }
         }
@@ -3930,7 +3972,10 @@ val enregistrerFactureLauncher =
         item {
             Card(
                 onClick = { page = "Paramètres" },
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(18.dp),
+                colors = CardDefaults.cardColors(containerColor = Color(0xFF101014)),
+                border = BorderStroke(1.dp, Color(0xFF29252F))
             ) {
                 Row(
                     modifier = Modifier
@@ -3938,7 +3983,7 @@ val enregistrerFactureLauncher =
                         .padding(16.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("⚙️", style = MaterialTheme.typography.headlineMedium)
+                    Text("⚙️", modifier = Modifier.background(Color(0xFF2A1B42), RoundedCornerShape(12.dp)).padding(10.dp), style = MaterialTheme.typography.headlineMedium)
 
                     Spacer(Modifier.width(14.dp))
 
@@ -3946,16 +3991,17 @@ val enregistrerFactureLauncher =
                         Text(
                             "Paramètres",
                             style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.SemiBold
+                            fontWeight = FontWeight.SemiBold,
+                            color = Color.White
                         )
                         Text(
                             "Devise et préférences de l'application.",
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            color = Color(0xFFAAA3B5)
                         )
                     }
 
-                    Text("›", style = MaterialTheme.typography.headlineMedium)
+                    Text("›", color = Color(0xFFB99AFF), style = MaterialTheme.typography.headlineMedium)
                 }
             }
         }
@@ -4049,11 +4095,17 @@ val enregistrerFactureLauncher =
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             item {
-                Text(
-                    "Informations de l'entreprise",
-                    style = MaterialTheme.typography.headlineSmall
-                )
-                Text("Ces informations apparaîtront sur les documents officiels.")
+                Column(
+                    Modifier.fillMaxWidth().background(Color(0xFF5426A8), RoundedCornerShape(22.dp)).padding(20.dp),
+                    verticalArrangement = Arrangement.spacedBy(7.dp)
+                ) {
+                    Text("🏢  PROFIL DE L'ENTREPRISE", color = Color.White.copy(alpha = 0.8f), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
+                    Text("Informations de l'entreprise", color = Color.White, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+                    Text("Ces informations apparaîtront sur vos factures et documents officiels.", color = Color.White.copy(alpha = 0.82f))
+                }
+            }
+            item {
+                Text("IDENTITÉ ET COORDONNÉES", color = Color(0xFF8B5CF6), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
             }
 
             item {
@@ -4061,6 +4113,15 @@ val enregistrerFactureLauncher =
                     value = nomEntreprise,
                     onValueChange = { nomEntreprise = it },
                     label = { Text("Nom de l'entreprise") },
+                    leadingIcon = { Text("🏢") },
+                    shape = RoundedCornerShape(14.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedTextColor = Color.White, unfocusedTextColor = Color.White,
+                        focusedContainerColor = Color(0xFF101014), unfocusedContainerColor = Color(0xFF101014),
+                        focusedBorderColor = Color(0xFF9B72F2), unfocusedBorderColor = Color(0xFF514B5B),
+                        focusedLabelColor = Color(0xFFB99AFF), unfocusedLabelColor = Color(0xFFB8B2C2),
+                        cursorColor = Color(0xFFB99AFF)
+                    ),
                     modifier = Modifier.fillMaxWidth()
                 )
             }
@@ -4070,6 +4131,15 @@ val enregistrerFactureLauncher =
                     value = adresseEntreprise,
                     onValueChange = { adresseEntreprise = it },
                     label = { Text("Adresse physique") },
+                    leadingIcon = { Text("📍") },
+                    shape = RoundedCornerShape(14.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedTextColor = Color.White, unfocusedTextColor = Color.White,
+                        focusedContainerColor = Color(0xFF101014), unfocusedContainerColor = Color(0xFF101014),
+                        focusedBorderColor = Color(0xFF9B72F2), unfocusedBorderColor = Color(0xFF514B5B),
+                        focusedLabelColor = Color(0xFFB99AFF), unfocusedLabelColor = Color(0xFFB8B2C2),
+                        cursorColor = Color(0xFFB99AFF)
+                    ),
                     modifier = Modifier.fillMaxWidth()
                 )
             }
@@ -4078,6 +4148,15 @@ val enregistrerFactureLauncher =
         value = lieuEntreprise,
         onValueChange = { lieuEntreprise = it },
         label = { Text("Lieu d'établissement des documents") },
+                    leadingIcon = { Text("🗺️") },
+                    shape = RoundedCornerShape(14.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedTextColor = Color.White, unfocusedTextColor = Color.White,
+                        focusedContainerColor = Color(0xFF101014), unfocusedContainerColor = Color(0xFF101014),
+                        focusedBorderColor = Color(0xFF9B72F2), unfocusedBorderColor = Color(0xFF514B5B),
+                        focusedLabelColor = Color(0xFFB99AFF), unfocusedLabelColor = Color(0xFFB8B2C2),
+                        cursorColor = Color(0xFFB99AFF)
+                    ),
         modifier = Modifier.fillMaxWidth()
     )
 }
@@ -4087,6 +4166,15 @@ item {
         value = nomGerant,
         onValueChange = { nomGerant = it },
         label = { Text("Nom du gérant") },
+                    leadingIcon = { Text("👤") },
+                    shape = RoundedCornerShape(14.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedTextColor = Color.White, unfocusedTextColor = Color.White,
+                        focusedContainerColor = Color(0xFF101014), unfocusedContainerColor = Color(0xFF101014),
+                        focusedBorderColor = Color(0xFF9B72F2), unfocusedBorderColor = Color(0xFF514B5B),
+                        focusedLabelColor = Color(0xFFB99AFF), unfocusedLabelColor = Color(0xFFB8B2C2),
+                        cursorColor = Color(0xFFB99AFF)
+                    ),
         modifier = Modifier.fillMaxWidth()
     )
 }
@@ -4096,6 +4184,15 @@ item {
         value = fonctionGerant,
         onValueChange = { fonctionGerant = it },
         label = { Text("Fonction du gérant") },
+                    leadingIcon = { Text("💼") },
+                    shape = RoundedCornerShape(14.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedTextColor = Color.White, unfocusedTextColor = Color.White,
+                        focusedContainerColor = Color(0xFF101014), unfocusedContainerColor = Color(0xFF101014),
+                        focusedBorderColor = Color(0xFF9B72F2), unfocusedBorderColor = Color(0xFF514B5B),
+                        focusedLabelColor = Color(0xFFB99AFF), unfocusedLabelColor = Color(0xFFB8B2C2),
+                        cursorColor = Color(0xFFB99AFF)
+                    ),
         modifier = Modifier.fillMaxWidth()
     )
 }
@@ -4105,6 +4202,15 @@ item {
                     value = telephoneEntreprise,
                     onValueChange = { telephoneEntreprise = it },
                     label = { Text("Numéros de téléphone") },
+                    leadingIcon = { Text("📞") },
+                    shape = RoundedCornerShape(14.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedTextColor = Color.White, unfocusedTextColor = Color.White,
+                        focusedContainerColor = Color(0xFF101014), unfocusedContainerColor = Color(0xFF101014),
+                        focusedBorderColor = Color(0xFF9B72F2), unfocusedBorderColor = Color(0xFF514B5B),
+                        focusedLabelColor = Color(0xFFB99AFF), unfocusedLabelColor = Color(0xFFB8B2C2),
+                        cursorColor = Color(0xFFB99AFF)
+                    ),
                     modifier = Modifier.fillMaxWidth()
                 )
             }
@@ -4114,15 +4220,34 @@ item {
                     value = emailEntreprise,
                     onValueChange = { emailEntreprise = it },
                     label = { Text("Adresse e-mail") },
+                    leadingIcon = { Text("✉️") },
+                    shape = RoundedCornerShape(14.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedTextColor = Color.White, unfocusedTextColor = Color.White,
+                        focusedContainerColor = Color(0xFF101014), unfocusedContainerColor = Color(0xFF101014),
+                        focusedBorderColor = Color(0xFF9B72F2), unfocusedBorderColor = Color(0xFF514B5B),
+                        focusedLabelColor = Color(0xFFB99AFF), unfocusedLabelColor = Color(0xFFB8B2C2),
+                        cursorColor = Color(0xFFB99AFF)
+                    ),
                     modifier = Modifier.fillMaxWidth()
                 )
             }
 
+            item { Text("IDENTIFIANTS OFFICIELS", color = Color(0xFF8B5CF6), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold) }
             item {
                 OutlinedTextField(
                     value = rccmEntreprise,
                     onValueChange = { rccmEntreprise = it },
                     label = { Text("Numéro RCCM") },
+                    leadingIcon = { Text("📄") },
+                    shape = RoundedCornerShape(14.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedTextColor = Color.White, unfocusedTextColor = Color.White,
+                        focusedContainerColor = Color(0xFF101014), unfocusedContainerColor = Color(0xFF101014),
+                        focusedBorderColor = Color(0xFF9B72F2), unfocusedBorderColor = Color(0xFF514B5B),
+                        focusedLabelColor = Color(0xFFB99AFF), unfocusedLabelColor = Color(0xFFB8B2C2),
+                        cursorColor = Color(0xFFB99AFF)
+                    ),
                     modifier = Modifier.fillMaxWidth()
                 )
             }
@@ -4132,6 +4257,15 @@ item {
                     value = idNatEntreprise,
                     onValueChange = { idNatEntreprise = it },
                     label = { Text("Numéro ID NAT") },
+                    leadingIcon = { Text("🪪") },
+                    shape = RoundedCornerShape(14.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedTextColor = Color.White, unfocusedTextColor = Color.White,
+                        focusedContainerColor = Color(0xFF101014), unfocusedContainerColor = Color(0xFF101014),
+                        focusedBorderColor = Color(0xFF9B72F2), unfocusedBorderColor = Color(0xFF514B5B),
+                        focusedLabelColor = Color(0xFFB99AFF), unfocusedLabelColor = Color(0xFFB8B2C2),
+                        cursorColor = Color(0xFFB99AFF)
+                    ),
                     modifier = Modifier.fillMaxWidth()
                 )
             }
@@ -4141,15 +4275,22 @@ item {
                     value = impotEntreprise,
                     onValueChange = { impotEntreprise = it },
                     label = { Text("Numéro d'impôt") },
+                    leadingIcon = { Text("🧾") },
+                    shape = RoundedCornerShape(14.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedTextColor = Color.White, unfocusedTextColor = Color.White,
+                        focusedContainerColor = Color(0xFF101014), unfocusedContainerColor = Color(0xFF101014),
+                        focusedBorderColor = Color(0xFF9B72F2), unfocusedBorderColor = Color(0xFF514B5B),
+                        focusedLabelColor = Color(0xFFB99AFF), unfocusedLabelColor = Color(0xFFB8B2C2),
+                        cursorColor = Color(0xFFB99AFF)
+                    ),
                     modifier = Modifier.fillMaxWidth()
                 )
             }
 
             item {
-                Text(
-                    "Logo de l'entreprise",
-                    style = MaterialTheme.typography.titleMedium
-                )
+                Text("IDENTITÉ VISUELLE", color = Color(0xFF8B5CF6), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
+                Text("Logo de l'entreprise", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
 
                 Button(
                     onClick = {
@@ -4211,9 +4352,18 @@ Slider(
 .apply()
                         messageEntreprise = "Informations enregistrées avec succès."
                     },
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(14.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedTextColor = Color.White, unfocusedTextColor = Color.White,
+                        focusedContainerColor = Color(0xFF101014), unfocusedContainerColor = Color(0xFF101014),
+                        focusedBorderColor = Color(0xFF9B72F2), unfocusedBorderColor = Color(0xFF514B5B),
+                        focusedLabelColor = Color(0xFFB99AFF), unfocusedLabelColor = Color(0xFFB8B2C2),
+                        cursorColor = Color(0xFFB99AFF)
+                    ),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF7541D8), contentColor = Color.White)
                 ) {
-                    Text("Enregistrer les informations")
+                    Text("✓  Enregistrer les informations")
                 }
 
                 Text(
