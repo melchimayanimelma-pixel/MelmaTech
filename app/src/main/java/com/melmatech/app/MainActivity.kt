@@ -5563,6 +5563,29 @@ Card(
             }
         }
     }
+
+    if (afficherOptionsCodeBarres && produitPourCodeBarres != null) {
+        OptionsImpressionCodeBarres(
+            produit = produitPourCodeBarres,
+            onDismiss = { afficherOptionsCodeBarres = false },
+            onAction = { format, enregistrer, tous ->
+                val selection = if (tous) produits.toList() else listOfNotNull(produitPourCodeBarres)
+                try {
+                    val pdf = genererCodesBarresPdf(context, selection, format)
+                    if (enregistrer) {
+                        fichierCodeBarresEnAttente = pdf
+                        enregistrerCodeBarresLauncher.launch("Codes-barres-MelmaTech.pdf")
+                    } else {
+                        imprimerFacture(context, pdf)
+                        messageProduit = "Document envoyé au service d'impression Android."
+                    }
+                } catch (e: Exception) {
+                    messageProduit = "Impossible de générer les codes-barres : ${e.message}"
+                }
+                afficherOptionsCodeBarres = false
+            }
+        )
+    }
 }
 
 @Composable
@@ -5858,29 +5881,6 @@ fun EcranConnexion(
                 )
             }
         }
-    }
-
-    if (afficherOptionsCodeBarres && produitPourCodeBarres != null) {
-        OptionsImpressionCodeBarres(
-            produit = produitPourCodeBarres,
-            onDismiss = { afficherOptionsCodeBarres = false },
-            onAction = { format, enregistrer, tous ->
-                val selection = if (tous) produits.toList() else listOfNotNull(produitPourCodeBarres)
-                try {
-                    val pdf = genererCodesBarresPdf(context, selection, format)
-                    if (enregistrer) {
-                        fichierCodeBarresEnAttente = pdf
-                        enregistrerCodeBarresLauncher.launch("Codes-barres-MelmaTech.pdf")
-                    } else {
-                        imprimerFacture(context, pdf)
-                        messageProduit = "Document envoyé au service d'impression Android."
-                    }
-                } catch (e: Exception) {
-                    messageProduit = "Impossible de générer les codes-barres : ${e.message}"
-                }
-                afficherOptionsCodeBarres = false
-            }
-        )
     }
  }
 
