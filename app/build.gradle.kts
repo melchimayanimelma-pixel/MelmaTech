@@ -50,3 +50,10 @@ debugImplementation("androidx.compose.ui:ui-tooling")
 implementation("com.squareup.okhttp3:okhttp:4.12.0")
 
 }
+// Scanner de codes-barres avec CameraX
+implementation("androidx.camera:camera-camera2:1.4.1")
+implementation("androidx.camera:camera-lifecycle:1.4.1")
+implementation("androidx.camera:camera-view:1.4.1")
+
+// Reconnaissance des codes-barres avec ML Kit
+implementation("com.google.mlkit:barcode-scanning:17.3.0")
