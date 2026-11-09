@@ -6474,5 +6474,70 @@ fun EditeurPhotoProfil(
         }
     }
 }
+@Composable
+fun ActionsProduit(
+    onModifier: () -> Unit,
+    onCodeBarres: () -> Unit,
+    onSupprimer: () -> Unit
+) {
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        // Modifier
+        IconButton(
+            onClick = onModifier,
+            modifier = Modifier
+                .size(40.dp)
+                .background(
+                    Color(0xFFEEE8FA),
+                    RoundedCornerShape(12.dp)
+                )
+        ) {
+            Icon(
+                imageVector = Icons.Filled.Edit,
+                contentDescription = "Modifier",
+                tint = Color(0xFF5426A8),
+                modifier = Modifier.size(19.dp)
+            )
+        }
+
+        // Imprimer le code-barres
+        IconButton(
+            onClick = onCodeBarres,
+            modifier = Modifier
+                .size(40.dp)
+                .background(
+                    Color(0xFFE7F2FF),
+                    RoundedCornerShape(12.dp)
+                )
+        ) {
+            Icon(
+                imageVector = Icons.Filled.Print,
+                contentDescription = "Imprimer le code-barres",
+                tint = Color(0xFF2474C6),
+                modifier = Modifier.size(19.dp)
+            )
+        }
+
+        // Supprimer
+        IconButton(
+            onClick = onSupprimer,
+            modifier = Modifier
+                .size(40.dp)
+                .background(
+                    Color(0xFFFCE9E9),
+                    RoundedCornerShape(12.dp)
+                )
+        ) {
+            Icon(
+                imageVector = Icons.Filled.Delete,
+                contentDescription = "Supprimer",
+                tint = Color(0xFFD64545),
+                modifier = Modifier.size(19.dp)
+            )
+        }
+    }
+}
 
 
