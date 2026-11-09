@@ -57,3 +57,8 @@ implementation("androidx.camera:camera-view:1.4.1")
 
 // Reconnaissance des codes-barres avec ML Kit
 implementation("com.google.mlkit:barcode-scanning:17.3.0")
+// Génération des codes-barres Code 128
+implementation("com.google.zxing:core:3.5.3")
+
+// Gestion du cycle de vie dans Jetpack Compose
+implementation("androidx.lifecycle:lifecycle-runtime-compose:2.8.7")
