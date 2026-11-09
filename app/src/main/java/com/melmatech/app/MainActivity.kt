@@ -1298,72 +1298,133 @@ val enregistrerFactureLauncher =
 
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(16.dp)
+                    shape = RoundedCornerShape(18.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = Color(0xFF101014)
+                    ),
+                    border = BorderStroke(1.dp, Color(0xFF292929))
                 ) {
                     Column(
-                        Modifier
+                        modifier = Modifier
                             .fillMaxWidth()
                             .padding(14.dp),
-                        verticalArrangement = Arrangement.spacedBy(7.dp)
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
-                        Text(
-                            p.nom,
-                            style = MaterialTheme.typography.titleMedium
-                        )
-                        Text(
-                            "Code-barres : ${p.codeBarres}",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = Color.Gray
-                        )
-                        BarcodeCode128(p.codeBarres)
-
+                        // Nom du produit et statut du stock
                         Row(
                             modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Text("Achat : ${argent(p.achat, devise)}")
-                            Text("Vente : ${argent(p.vente, devise)}")
+                            Text(
+                                text = p.nom,
+                                modifier = Modifier.weight(1f),
+                                color = Color.White,
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+
+                            Spacer(modifier = Modifier.width(8.dp))
+
+                            val statut = when {
+                                p.quantite <= 0 -> "Épuisé"
+                                p.quantite <= 5 -> "Stock faible"
+                                else -> "En stock"
+                            }
+
+                            val couleurStatut = when {
+                                p.quantite <= 0 -> Color(0xFFD64545)
+                                p.quantite <= 5 -> Color(0xFFD97706)
+                                else -> Color(0xFF16834A)
+                            }
+
+                            Box(
+                                modifier = Modifier
+                                    .background(
+                                        couleurStatut.copy(alpha = 0.16f),
+                                        RoundedCornerShape(50.dp)
+                                    )
+                                    .padding(horizontal = 10.dp, vertical = 5.dp)
+                            ) {
+                                Text(
+                                    text = statut,
+                                    color = couleurStatut,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                            }
                         }
 
+                        // Code du produit, sans grand aperçu graphique du code-barres
+                        Text(
+                            text = "Code : ${p.codeBarres}",
+                            color = Color(0xFFAAAAAA),
+                            style = MaterialTheme.typography.bodySmall,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+
+                        // Prix, quantité et boutons sur une même ligne
                         Row(
                             modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Text("Quantité : ${p.quantite}")
+                            Column(
+                                modifier = Modifier.weight(1f),
+                                verticalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                Text(
+                                    text = "Prix de vente",
+                                    color = Color(0xFFAAAAAA),
+                                    style = MaterialTheme.typography.labelSmall
+                                )
+                                Text(
+                                    text = argent(p.vente, devise),
+                                    color = Color.White,
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
 
-                            Text(
-                                when {
-                                    p.quantite <= 0 -> "Épuisé"
-                                    p.quantite <= 5 -> "Stock faible"
-                                    else -> "Disponible"
+                            Column(
+                                modifier = Modifier.weight(1f),
+                                verticalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                Text(
+                                    text = "Quantité",
+                                    color = Color(0xFFAAAAAA),
+                                    style = MaterialTheme.typography.labelSmall
+                                )
+                                Text(
+                                    text = "${p.quantite} unités",
+                                    color = Color.White,
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
+
+                            ActionsProduit(
+                                onModifier = {
+                                    editionId = p.id
+                                    nomProduit = p.nom
+                                    achatProduit = p.achat.toString()
+                                    venteProduit = p.vente.toString()
+                                    stockProduit = p.quantite.toString()
                                 },
-                                color = when {
-                                    p.quantite <= 0 -> Color.Red
-                                    p.quantite <= 5 -> Color(0xFFD97706)
-                                    else -> Color(0xFF16834A)
+                                onCodeBarres = {
+                                    // L'impression PDF sera connectée dans une prochaine étape.
+                                },
+                                onSupprimer = {
+                                    produits.removeAll { it.id == p.id }
+                                    sauvegarderProduits()
                                 }
                             )
                         }
-
-                        ActionsProduit(
-    onModifier = {
-        editionId = p.id
-        nomProduit = p.nom
-        achatProduit = p.achat.toString()
-        venteProduit = p.vente.toString()
-        stockProduit = p.quantite.toString()
-    },
-
-    onCodeBarres = {
-        // Nous connecterons ici l'impression PDF
-        // des étiquettes du produit.
-    },
-
-    onSupprimer = {
-        produits.removeAll { it.id == p.id }
-        sauvegarderProduits()
-    }
-)
                     }
                 }
             }
@@ -6509,12 +6570,20 @@ fun ActionsProduit(
                     RoundedCornerShape(12.dp)
                 )
         ) {
-            Icon(
-                imageVector = Icons.Filled.Print,
-                contentDescription = "Imprimer le code-barres",
-                tint = Color(0xFF2474C6),
-                modifier = Modifier.size(19.dp)
-            )
+            Canvas(modifier = Modifier.size(19.dp)) {
+                val barres = listOf(0.08f, 0.16f, 0.07f, 0.12f, 0.18f, 0.07f, 0.14f, 0.08f, 0.17f)
+                var position = 0f
+                barres.forEachIndexed { index, largeur ->
+                    val x = size.width * (position + largeur / 2f)
+                    drawLine(
+                        color = Color(0xFF2474C6),
+                        start = Offset(x, 1f),
+                        end = Offset(x, size.height - 1f),
+                        strokeWidth = size.width * largeur
+                    )
+                    position += largeur + 0.035f
+                }
+            }
         }
 
         // Supprimer
