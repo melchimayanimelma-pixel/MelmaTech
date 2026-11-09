@@ -33,7 +33,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.ui.text.input.KeyboardActions
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
@@ -6080,6 +6080,82 @@ fun EcranConnexion(
         }
     }
 }
+
+private fun genererCodesBarresPdf(
+    context: Context,
+    produits: List<Produit>,
+    format: String
+): File {
+    require(produits.isNotEmpty()) { "Aucun produit à imprimer." }
+    val document = PdfDocument()
+    val largeur = if (format == "ETIQUETTE") 360 else 595
+    val hauteur = if (format == "ETIQUETTE") 180 else 842
+    val titre = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = android.graphics.Color.BLACK
+        textSize = if (format == "ETIQUETTE") 18f else 10f
+        typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+    }
+    val texte = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = android.graphics.Color.BLACK
+        textSize = 10f
+    }
+    try {
+        if (format == "ETIQUETTE") {
+            produits.forEachIndexed { index, produit ->
+                val page = document.startPage(PdfDocument.PageInfo.Builder(largeur, hauteur, index + 1).create())
+                val canvas = page.canvas
+                canvas.drawText(produit.nom.take(32), 18f, 28f, titre)
+                val code = com.google.zxing.MultiFormatWriter().encode(
+                    produit.codeBarres, com.google.zxing.BarcodeFormat.CODE_128, 320, 90
+                )
+                val bitmap = Bitmap.createBitmap(code.width, code.height, Bitmap.Config.ARGB_8888)
+                for (x in 0 until code.width) for (y in 0 until code.height) {
+                    bitmap.setPixel(x, y, if (code.get(x, y)) android.graphics.Color.BLACK else android.graphics.Color.WHITE)
+                }
+                canvas.drawBitmap(bitmap, null, RectF(18f, 42f, 342f, 132f), null)
+                canvas.drawText(produit.codeBarres, 18f, 151f, texte)
+                canvas.drawText("Prix : ${String.format(Locale.US, "%.2f", produit.vente)}", 18f, 168f, texte)
+                document.finishPage(page)
+                bitmap.recycle()
+            }
+        } else {
+            val parPage = 24
+            produits.chunked(parPage).forEachIndexed { pageIndex, groupe ->
+                val page = document.startPage(PdfDocument.PageInfo.Builder(largeur, hauteur, pageIndex + 1).create())
+                val canvas = page.canvas
+                val celluleW = largeur / 3f
+                val celluleH = hauteur / 8f
+                groupe.forEachIndexed { index, produit ->
+                    val colonne = index % 3
+                    val ligne = index / 3
+                    val gauche = colonne * celluleW + 8f
+                    val haut = ligne * celluleH + 8f
+                    canvas.drawText(produit.nom.take(24), gauche, haut + 12f, titre)
+                    val code = com.google.zxing.MultiFormatWriter().encode(
+                        produit.codeBarres, com.google.zxing.BarcodeFormat.CODE_128, 170, 55
+                    )
+                    val bitmap = Bitmap.createBitmap(code.width, code.height, Bitmap.Config.ARGB_8888)
+                    for (x in 0 until code.width) for (y in 0 until code.height) {
+                        bitmap.setPixel(x, y, if (code.get(x, y)) android.graphics.Color.BLACK else android.graphics.Color.WHITE)
+                    }
+                    canvas.drawBitmap(bitmap, null, RectF(gauche, haut + 17f, gauche + celluleW - 16f, haut + 67f), null)
+                    canvas.drawText(produit.codeBarres, gauche, haut + 82f, texte)
+                    bitmap.recycle()
+                }
+                document.finishPage(page)
+            }
+        }
+        val dossier = File(context.getExternalFilesDir(null), "CodesBarres")
+        if (!dossier.exists()) dossier.mkdirs()
+        val fichier = File(dossier, "Codes-barres-${System.currentTimeMillis()}.pdf")
+        FileOutputStream(fichier).use { document.writeTo(it) }
+        return fichier
+    } finally {
+        document.close()
+    }
+}
+
+
 @Composable
 private fun OptionsImpressionCodeBarres(
     produit: Produit?,
