@@ -6,6 +6,7 @@ import android.graphics.Paint
 import android.graphics.Typeface
 import android.graphics.BitmapFactory
 import android.graphics.pdf.PdfDocument
+import android.graphics.pdf.PdfRenderer
 import android.print.PrintAttributes
 import android.print.PrintManager
 import android.os.ParcelFileDescriptor
@@ -19,6 +20,8 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
+import kotlinx.coroutines.launch
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.Image
@@ -605,6 +608,27 @@ val enregistrerFactureLauncher =
     var stockProduit by remember { mutableStateOf("") }
     var editionId by remember { mutableStateOf<Long?>(null) }
     var rechercheProduit by remember { mutableStateOf("") }
+    val produitsListState = rememberLazyListState()
+    val produitsScope = rememberCoroutineScope()
+    var produitPourCodeBarres by remember { mutableStateOf<Produit?>(null) }
+    var afficherOptionsCodeBarres by remember { mutableStateOf(false) }
+    var fichierCodeBarresEnAttente by remember { mutableStateOf<File?>(null) }
+    val enregistrerCodeBarresLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.CreateDocument("application/pdf")
+    ) { uri ->
+        val fichier = fichierCodeBarresEnAttente
+        if (uri != null && fichier != null) {
+            try {
+                context.contentResolver.openOutputStream(uri)?.use { sortie ->
+                    fichier.inputStream().use { entree -> entree.copyTo(sortie) }
+                }
+                messageProduit = "PDF des codes-barres enregistré avec succès."
+            } catch (e: Exception) {
+                messageProduit = "Erreur d'enregistrement du PDF : ${e.message}"
+            }
+        }
+        fichierCodeBarresEnAttente = null
+    }
     var filtreProduit by remember { mutableStateOf("Tous") }
     var afficherScanner by remember { mutableStateOf(false) }
     var cibleScanner by remember { mutableStateOf("produit") }
@@ -972,6 +996,7 @@ val enregistrerFactureLauncher =
     } else {
 
         LazyColumn(
+            state = produitsListState,
             verticalArrangement = Arrangement.spacedBy(14.dp),
             contentPadding = PaddingValues(bottom = 20.dp)
         ) {
@@ -1117,171 +1142,177 @@ val enregistrerFactureLauncher =
             }
 
             item {
-                Text(
-                    if (editionId == null) "Ajouter un produit"
-                    else "Modifier un produit",
-                    style = MaterialTheme.typography.titleLarge
-                )
-
-                OutlinedTextField(
-                    value = nomProduit,
-                    onValueChange = { nomProduit = it },
-                    label = { Text("Nom du produit") },
-                    modifier = Modifier.fillMaxWidth()
-                )
-
-                OutlinedTextField(
-                    value = achatProduit,
-                    onValueChange = { achatProduit = it },
-                    label = { Text("Prix d'achat ($devise)") },
-                    keyboardOptions = KeyboardOptions(
-                        keyboardType = KeyboardType.Decimal
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(22.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = Color(0xFF101014)
                     ),
-                    modifier = Modifier.fillMaxWidth()
-                )
-
-                OutlinedTextField(
-                    value = venteProduit,
-                    onValueChange = { venteProduit = it },
-                    label = { Text("Prix de vente ($devise)") },
-                    keyboardOptions = KeyboardOptions(
-                        keyboardType = KeyboardType.Decimal
-                    ),
-                    modifier = Modifier.fillMaxWidth()
-                )
-
-                Text(
-                    if (editionId == null)
-                        "Un code-barres interne sera généré automatiquement à l'enregistrement."
-                    else
-                        "Le code-barres du produit est conservé lors de la modification.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = Color.Gray
-                )
-
-                OutlinedTextField(
-                    value = stockProduit,
-                    onValueChange = { stockProduit = it },
-                    label = { Text("Quantité en stock") },
-                    keyboardOptions = KeyboardOptions(
-                        keyboardType = KeyboardType.Number
-                    ),
-                    modifier = Modifier.fillMaxWidth()
-                )
-
-                Button(
-                    onClick = {
-                        val a = achatProduit.replace(",", ".").toDoubleOrNull()
-                        val v = venteProduit.replace(",", ".").toDoubleOrNull()
-                        val q = stockProduit.toIntOrNull()
-
-                        if (
-                            nomProduit.isBlank() ||
-                            a == null || a < 0 ||
-                            v == null || v < 0 ||
-                            q == null || q < 0
-                        ) {
-                            messageProduit =
-                                "Vérifie les informations du produit."
-                        } else {
-                            val id = editionId
-
-                            if (id == null) {
-                                val nouvelId = System.currentTimeMillis()
-
-                                val codeInterne = BarcodeUtils.genererCodeInterne()
-                                produits.add(
-                                    Produit(
-                                        nouvelId,
-                                        nomProduit.trim(),
-                                        a,
-                                        v,
-                                        q,
-                                        codeBarres = codeInterne
-                                    )
-                                )
-
-                                sauvegarderProduits()
-                                messageProduit =
-                                    "Produit enregistré localement."
-
-                                val token =
-                                    AuthService.obtenirAccessToken(context)
-
-                                if (!token.isNullOrBlank()) {
-                                    AuthService.obtenirEntrepriseId(context) {
-                                            ok, message, entrepriseId ->
-
-                                        if (ok && entrepriseId != null) {
-                                            SupabaseService.ajouterProduit(
-                                                token,
-                                                entrepriseId,
-                                                nomProduit.trim(),
-                                                a,
-                                                v,
-                                                q,
-                                                codeInterne
-                                            ) { enregistre, resultat, uuid ->
-
-                                                if (enregistre && uuid != null) {
-                                                    val index =
-                                                        produits.indexOfFirst {
-                                                            it.id == nouvelId
-                                                        }
-
-                                                    if (index >= 0) {
-                                                        produits[index] =
-                                                            produits[index].copy(
-                                                                supabaseId = uuid
-                                                            )
-                                                        sauvegarderProduits()
-                                                    }
-                                                }
-
-                                                messageProduit = resultat
-                                            }
-                                        } else {
-                                            messageProduit = message
-                                        }
-                                    }
-                                }
-
-                            } else {
-                                val index = produits.indexOfFirst {
-                                    it.id == id
-                                }
-
-                                if (index >= 0) {
-                                    produits[index] =
-                                        produits[index].copy(
-                                            nom = nomProduit.trim(),
-                                            achat = a,
-                                            vente = v,
-                                            quantite = q
-                                        )
-                                }
-
-                                sauvegarderProduits()
-                                messageProduit =
-                                    "Modification enregistrée localement. Synchronisation des modifications non activée."
-                            }
-
-                            nomProduit = ""
-                            achatProduit = ""
-                            venteProduit = ""
-                            stockProduit = ""
-                            editionId = null
-                        }
-                    },
-                    modifier = Modifier.fillMaxWidth()
+                    border = BorderStroke(1.dp, Color(0xFF29242F))
                 ) {
-                    Text(
-                        if (editionId == null) "Ajouter le produit"
-                        else "Enregistrer les modifications"
-                    )
-                }
+                    Column(
+                        modifier = Modifier.padding(18.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                                Text(
+                                    if (editionId == null) "NOUVEAU PRODUIT" else "MODIFICATION",
+                                    color = Color(0xFFB99AFB),
+                                    style = MaterialTheme.typography.labelMedium,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Text(
+                                    if (editionId == null) "Ajouter un produit" else "Modifier un produit",
+                                    color = Color.White,
+                                    style = MaterialTheme.typography.titleLarge,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                            Icon(
+                                imageVector = if (editionId == null) Icons.Filled.Add else Icons.Filled.Edit,
+                                contentDescription = null,
+                                tint = Color(0xFFB99AFB),
+                                modifier = Modifier.size(28.dp)
+                            )
+                        }
 
-                Text(messageProduit)
+                        OutlinedTextField(
+                            value = nomProduit,
+                            onValueChange = { nomProduit = it },
+                            label = { Text("Nom du produit") },
+                            leadingIcon = { Icon(Icons.Filled.Inventory2, contentDescription = null) },
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(14.dp),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = Color(0xFF9B70F5),
+                                unfocusedBorderColor = Color(0xFF45404D),
+                                focusedLabelColor = Color(0xFFB99AFB),
+                                unfocusedLabelColor = Color(0xFFAAA4B4),
+                                focusedTextColor = Color.White,
+                                unfocusedTextColor = Color.White,
+                                cursorColor = Color(0xFFB99AFB)
+                            )
+                        )
+
+                        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                            OutlinedTextField(
+                                value = achatProduit,
+                                onValueChange = { achatProduit = it },
+                                label = { Text("Prix d'achat ($devise)") },
+                                leadingIcon = { Icon(Icons.Filled.Payments, contentDescription = null) },
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                                singleLine = true,
+                                modifier = Modifier.weight(1f),
+                                shape = RoundedCornerShape(14.dp),
+                                colors = OutlinedTextFieldDefaults.colors(
+                                    focusedBorderColor = Color(0xFF9B70F5), unfocusedBorderColor = Color(0xFF45404D),
+                                    focusedLabelColor = Color(0xFFB99AFB), unfocusedLabelColor = Color(0xFFAAA4B4),
+                                    focusedTextColor = Color.White, unfocusedTextColor = Color.White, cursorColor = Color(0xFFB99AFB)
+                                )
+                            )
+                            OutlinedTextField(
+                                value = venteProduit,
+                                onValueChange = { venteProduit = it },
+                                label = { Text("Prix de vente ($devise)") },
+                                leadingIcon = { Icon(Icons.Filled.TrendingUp, contentDescription = null) },
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                                singleLine = true,
+                                modifier = Modifier.weight(1f),
+                                shape = RoundedCornerShape(14.dp),
+                                colors = OutlinedTextFieldDefaults.colors(
+                                    focusedBorderColor = Color(0xFF9B70F5), unfocusedBorderColor = Color(0xFF45404D),
+                                    focusedLabelColor = Color(0xFFB99AFB), unfocusedLabelColor = Color(0xFFAAA4B4),
+                                    focusedTextColor = Color.White, unfocusedTextColor = Color.White, cursorColor = Color(0xFFB99AFB)
+                                )
+                            )
+                        }
+
+                        OutlinedTextField(
+                            value = stockProduit,
+                            onValueChange = { stockProduit = it },
+                            label = { Text("Quantité en stock") },
+                            leadingIcon = { Icon(Icons.Filled.Inventory2, contentDescription = null) },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(14.dp),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = Color(0xFF9B70F5), unfocusedBorderColor = Color(0xFF45404D),
+                                focusedLabelColor = Color(0xFFB99AFB), unfocusedLabelColor = Color(0xFFAAA4B4),
+                                focusedTextColor = Color.White, unfocusedTextColor = Color.White, cursorColor = Color(0xFFB99AFB)
+                            )
+                        )
+
+                        Text(
+                            if (editionId == null) "Un code-barres interne sera généré automatiquement." else "Le code-barres existant sera conservé.",
+                            color = Color(0xFFAAA4B4),
+                            style = MaterialTheme.typography.bodySmall
+                        )
+
+                        Button(
+                            onClick = {
+                                val a = achatProduit.replace(",", ".").toDoubleOrNull()
+                                val v = venteProduit.replace(",", ".").toDoubleOrNull()
+                                val q = stockProduit.toIntOrNull()
+                                if (nomProduit.isBlank() || a == null || a < 0 || v == null || v < 0 || q == null || q < 0) {
+                                    messageProduit = "Vérifie les informations du produit."
+                                } else {
+                                    val id = editionId
+                                    if (id == null) {
+                                        val nouvelId = System.currentTimeMillis()
+                                        val codeInterne = BarcodeUtils.genererCodeInterne()
+                                        produits.add(Produit(nouvelId, nomProduit.trim(), a, v, q, codeBarres = codeInterne))
+                                        sauvegarderProduits()
+                                        messageProduit = "Produit enregistré localement."
+                                        val token = AuthService.obtenirAccessToken(context)
+                                        if (!token.isNullOrBlank()) {
+                                            AuthService.obtenirEntrepriseId(context) { ok, message, entrepriseId ->
+                                                if (ok && entrepriseId != null) {
+                                                    SupabaseService.ajouterProduit(token, entrepriseId, nomProduit.trim(), a, v, q, codeInterne) { enregistre, resultat, uuid ->
+                                                        if (enregistre && uuid != null) {
+                                                            val index = produits.indexOfFirst { it.id == nouvelId }
+                                                            if (index >= 0) {
+                                                                produits[index] = produits[index].copy(supabaseId = uuid)
+                                                                sauvegarderProduits()
+                                                            }
+                                                        }
+                                                        messageProduit = resultat
+                                                    }
+                                                } else messageProduit = message
+                                            }
+                                        }
+                                    } else {
+                                        val index = produits.indexOfFirst { it.id == id }
+                                        if (index >= 0) produits[index] = produits[index].copy(nom = nomProduit.trim(), achat = a, vente = v, quantite = q)
+                                        sauvegarderProduits()
+                                        messageProduit = "Modification enregistrée localement. Synchronisation des modifications non activée."
+                                    }
+                                    nomProduit = ""
+                                    achatProduit = ""
+                                    venteProduit = ""
+                                    stockProduit = ""
+                                    editionId = null
+                                }
+                            },
+                            modifier = Modifier.fillMaxWidth().height(52.dp),
+                            shape = RoundedCornerShape(16.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF7041C8))
+                        ) {
+                            Icon(Icons.Filled.Check, contentDescription = null)
+                            Spacer(Modifier.width(8.dp))
+                            Text(if (editionId == null) "Ajouter le produit" else "Enregistrer les modifications", fontWeight = FontWeight.Bold)
+                        }
+                        if (messageProduit.isNotBlank()) {
+                            Text(messageProduit, color = Color(0xFFB99AFB), style = MaterialTheme.typography.bodySmall)
+                        }
+                    }
+                }
             }
 
             item {
@@ -1298,133 +1329,75 @@ val enregistrerFactureLauncher =
 
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(18.dp),
-                    colors = CardDefaults.cardColors(
-                        containerColor = Color(0xFF101014)
-                    ),
-                    border = BorderStroke(1.dp, Color(0xFF292929))
+                    shape = RoundedCornerShape(16.dp)
                 ) {
                     Column(
-                        modifier = Modifier
+                        Modifier
                             .fillMaxWidth()
                             .padding(14.dp),
-                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                        verticalArrangement = Arrangement.spacedBy(7.dp)
                     ) {
-                        // Nom du produit et statut du stock
+                        Text(
+                            p.nom,
+                            style = MaterialTheme.typography.titleMedium
+                        )
+                        Text(
+                            "Code-barres : ${p.codeBarres}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Color.Gray
+                        )
+                        BarcodeCode128(p.codeBarres)
+
                         Row(
                             modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically
+                            horizontalArrangement = Arrangement.SpaceBetween
                         ) {
-                            Text(
-                                text = p.nom,
-                                modifier = Modifier.weight(1f),
-                                color = Color.White,
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
-
-                            Spacer(modifier = Modifier.width(8.dp))
-
-                            val statut = when {
-                                p.quantite <= 0 -> "Épuisé"
-                                p.quantite <= 5 -> "Stock faible"
-                                else -> "En stock"
-                            }
-
-                            val couleurStatut = when {
-                                p.quantite <= 0 -> Color(0xFFD64545)
-                                p.quantite <= 5 -> Color(0xFFD97706)
-                                else -> Color(0xFF16834A)
-                            }
-
-                            Box(
-                                modifier = Modifier
-                                    .background(
-                                        couleurStatut.copy(alpha = 0.16f),
-                                        RoundedCornerShape(50.dp)
-                                    )
-                                    .padding(horizontal = 10.dp, vertical = 5.dp)
-                            ) {
-                                Text(
-                                    text = statut,
-                                    color = couleurStatut,
-                                    style = MaterialTheme.typography.labelSmall,
-                                    fontWeight = FontWeight.SemiBold
-                                )
-                            }
+                            Text("Achat : ${argent(p.achat, devise)}")
+                            Text("Vente : ${argent(p.vente, devise)}")
                         }
 
-                        // Code du produit, sans grand aperçu graphique du code-barres
-                        Text(
-                            text = "Code : ${p.codeBarres}",
-                            color = Color(0xFFAAAAAA),
-                            style = MaterialTheme.typography.bodySmall,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-
-                        // Prix, quantité et boutons sur une même ligne
                         Row(
                             modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically
+                            horizontalArrangement = Arrangement.SpaceBetween
                         ) {
-                            Column(
-                                modifier = Modifier.weight(1f),
-                                verticalArrangement = Arrangement.spacedBy(4.dp)
-                            ) {
-                                Text(
-                                    text = "Prix de vente",
-                                    color = Color(0xFFAAAAAA),
-                                    style = MaterialTheme.typography.labelSmall
-                                )
-                                Text(
-                                    text = argent(p.vente, devise),
-                                    color = Color.White,
-                                    style = MaterialTheme.typography.titleMedium,
-                                    fontWeight = FontWeight.Bold,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
-                                )
-                            }
+                            Text("Quantité : ${p.quantite}")
 
-                            Column(
-                                modifier = Modifier.weight(1f),
-                                verticalArrangement = Arrangement.spacedBy(4.dp)
-                            ) {
-                                Text(
-                                    text = "Quantité",
-                                    color = Color(0xFFAAAAAA),
-                                    style = MaterialTheme.typography.labelSmall
-                                )
-                                Text(
-                                    text = "${p.quantite} unités",
-                                    color = Color.White,
-                                    style = MaterialTheme.typography.titleMedium,
-                                    fontWeight = FontWeight.Bold,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
-                                )
-                            }
-
-                            ActionsProduit(
-                                onModifier = {
-                                    editionId = p.id
-                                    nomProduit = p.nom
-                                    achatProduit = p.achat.toString()
-                                    venteProduit = p.vente.toString()
-                                    stockProduit = p.quantite.toString()
+                            Text(
+                                when {
+                                    p.quantite <= 0 -> "Épuisé"
+                                    p.quantite <= 5 -> "Stock faible"
+                                    else -> "Disponible"
                                 },
-                                onCodeBarres = {
-                                    // L'impression PDF sera connectée dans une prochaine étape.
-                                },
-                                onSupprimer = {
-                                    produits.removeAll { it.id == p.id }
-                                    sauvegarderProduits()
+                                color = when {
+                                    p.quantite <= 0 -> Color.Red
+                                    p.quantite <= 5 -> Color(0xFFD97706)
+                                    else -> Color(0xFF16834A)
                                 }
                             )
                         }
+
+                        ActionsProduit(
+    onModifier = {
+        editionId = p.id
+        nomProduit = p.nom
+        achatProduit = p.achat.toString()
+        venteProduit = p.vente.toString()
+        stockProduit = p.quantite.toString()
+        produitsScope.launch {
+            produitsListState.animateScrollToItem(3)
+        }
+    },
+
+    onCodeBarres = {
+        produitPourCodeBarres = p
+        afficherOptionsCodeBarres = true
+    },
+
+    onSupprimer = {
+        produits.removeAll { it.id == p.id }
+        sauvegarderProduits()
+    }
+)
                     }
                 }
             }
@@ -5886,6 +5859,127 @@ fun EcranConnexion(
             }
         }
     }
+
+    if (afficherOptionsCodeBarres && produitPourCodeBarres != null) {
+        OptionsImpressionCodeBarres(
+            produit = produitPourCodeBarres,
+            onDismiss = { afficherOptionsCodeBarres = false },
+            onAction = { format, enregistrer, tous ->
+                val selection = if (tous) produits.toList() else listOfNotNull(produitPourCodeBarres)
+                try {
+                    val pdf = genererCodesBarresPdf(context, selection, format)
+                    if (enregistrer) {
+                        fichierCodeBarresEnAttente = pdf
+                        enregistrerCodeBarresLauncher.launch("Codes-barres-MelmaTech.pdf")
+                    } else {
+                        imprimerFacture(context, pdf)
+                        messageProduit = "Document envoyé au service d'impression Android."
+                    }
+                } catch (e: Exception) {
+                    messageProduit = "Impossible de générer les codes-barres : ${e.message}"
+                }
+                afficherOptionsCodeBarres = false
+            }
+        )
+    }
+ }
+
+private fun genererCodesBarresPdf(
+    context: Context,
+    produits: List<Produit>,
+    format: String
+): File {
+    require(produits.isNotEmpty()) { "Aucun produit à imprimer." }
+    val document = PdfDocument()
+    val largeur = if (format == "ETIQUETTE") 360 else 595
+    val hauteur = if (format == "ETIQUETTE") 180 else 842
+    val titre = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = android.graphics.Color.BLACK
+        textSize = if (format == "ETIQUETTE") 18f else 10f
+        typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+    }
+    val texte = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = android.graphics.Color.BLACK
+        textSize = 10f
+    }
+    try {
+        if (format == "ETIQUETTE") {
+            produits.forEachIndexed { index, produit ->
+                val page = document.startPage(PdfDocument.PageInfo.Builder(largeur, hauteur, index + 1).create())
+                val canvas = page.canvas
+                canvas.drawText(produit.nom.take(32), 18f, 28f, titre)
+                val code = com.google.zxing.MultiFormatWriter().encode(
+                    produit.codeBarres, com.google.zxing.BarcodeFormat.CODE_128, 320, 90
+                )
+                val bitmap = Bitmap.createBitmap(code.width, code.height, Bitmap.Config.ARGB_8888)
+                for (x in 0 until code.width) for (y in 0 until code.height) {
+                    bitmap.setPixel(x, y, if (code.get(x, y)) android.graphics.Color.BLACK else android.graphics.Color.WHITE)
+                }
+                canvas.drawBitmap(bitmap, null, RectF(18f, 42f, 342f, 132f), null)
+                canvas.drawText(produit.codeBarres, 18f, 151f, texte)
+                canvas.drawText("Prix : ${String.format(Locale.US, "%.2f", produit.vente)}", 18f, 168f, texte)
+                document.finishPage(page)
+                bitmap.recycle()
+            }
+        } else {
+            val parPage = 24
+            produits.chunked(parPage).forEachIndexed { pageIndex, groupe ->
+                val page = document.startPage(PdfDocument.PageInfo.Builder(largeur, hauteur, pageIndex + 1).create())
+                val canvas = page.canvas
+                val celluleW = largeur / 3f
+                val celluleH = hauteur / 8f
+                groupe.forEachIndexed { index, produit ->
+                    val colonne = index % 3
+                    val ligne = index / 3
+                    val gauche = colonne * celluleW + 8f
+                    val haut = ligne * celluleH + 8f
+                    canvas.drawText(produit.nom.take(24), gauche, haut + 12f, titre)
+                    val code = com.google.zxing.MultiFormatWriter().encode(
+                        produit.codeBarres, com.google.zxing.BarcodeFormat.CODE_128, 170, 55
+                    )
+                    val bitmap = Bitmap.createBitmap(code.width, code.height, Bitmap.Config.ARGB_8888)
+                    for (x in 0 until code.width) for (y in 0 until code.height) {
+                        bitmap.setPixel(x, y, if (code.get(x, y)) android.graphics.Color.BLACK else android.graphics.Color.WHITE)
+                    }
+                    canvas.drawBitmap(bitmap, null, RectF(gauche, haut + 17f, gauche + celluleW - 16f, haut + 67f), null)
+                    canvas.drawText(produit.codeBarres, gauche, haut + 82f, texte)
+                    bitmap.recycle()
+                }
+                document.finishPage(page)
+            }
+        }
+        val dossier = File(context.getExternalFilesDir(null), "CodesBarres")
+        if (!dossier.exists()) dossier.mkdirs()
+        val fichier = File(dossier, "Codes-barres-${System.currentTimeMillis()}.pdf")
+        FileOutputStream(fichier).use { document.writeTo(it) }
+        return fichier
+    } finally {
+        document.close()
+    }
+}
+
+@Composable
+private fun OptionsImpressionCodeBarres(
+    produit: Produit?,
+    onDismiss: () -> Unit,
+    onAction: (format: String, enregistrer: Boolean, tous: Boolean) -> Unit
+) {
+    if (produit == null) return
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Imprimer les codes-barres") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Text("Produit : ${produit.nom}")
+                Text("Choisis le format et l'action souhaitée.", style = MaterialTheme.typography.bodySmall)
+                Button(onClick = { onAction("ETIQUETTE", false, false) }, modifier = Modifier.fillMaxWidth()) { Text("Étiquette individuelle · Imprimer") }
+                OutlinedButton(onClick = { onAction("ETIQUETTE", true, false) }, modifier = Modifier.fillMaxWidth()) { Text("Étiquette individuelle · PDF") }
+                Button(onClick = { onAction("A4", false, true) }, modifier = Modifier.fillMaxWidth()) { Text("Planche A4 · Tous les produits") }
+                OutlinedButton(onClick = { onAction("A4", true, true) }, modifier = Modifier.fillMaxWidth()) { Text("Planche A4 · Enregistrer PDF") }
+            }
+        },
+        confirmButton = { TextButton(onClick = onDismiss) { Text("Fermer") } }
+    )
 }
 
 class MainActivity : ComponentActivity() {
@@ -6087,9 +6181,19 @@ private fun imprimerFacture(
         ) {
             if (cancellationSignal?.isCanceled == true) return
 
+            val nombrePages = try {
+                ParcelFileDescriptor.open(
+                    fichier,
+                    ParcelFileDescriptor.MODE_READ_ONLY
+                ).use { descripteur ->
+                    PdfRenderer(descripteur).use { renderer -> renderer.pageCount }
+                }
+            } catch (_: Exception) {
+                1
+            }
             val info = PrintDocumentInfo.Builder(fichier.name)
                 .setContentType(PrintDocumentInfo.CONTENT_TYPE_DOCUMENT)
-                .setPageCount(1)
+                .setPageCount(nombrePages)
                 .build()
 
             callback.onLayoutFinished(info, true)
@@ -6570,20 +6674,12 @@ fun ActionsProduit(
                     RoundedCornerShape(12.dp)
                 )
         ) {
-            Canvas(modifier = Modifier.size(19.dp)) {
-                val barres = listOf(0.08f, 0.16f, 0.07f, 0.12f, 0.18f, 0.07f, 0.14f, 0.08f, 0.17f)
-                var position = 0f
-                barres.forEachIndexed { index, largeur ->
-                    val x = size.width * (position + largeur / 2f)
-                    drawLine(
-                        color = Color(0xFF2474C6),
-                        start = Offset(x, 1f),
-                        end = Offset(x, size.height - 1f),
-                        strokeWidth = size.width * largeur
-                    )
-                    position += largeur + 0.035f
-                }
-            }
+            Icon(
+                imageVector = Icons.Filled.Print,
+                contentDescription = "Imprimer le code-barres",
+                tint = Color(0xFF2474C6),
+                modifier = Modifier.size(19.dp)
+            )
         }
 
         // Supprimer
