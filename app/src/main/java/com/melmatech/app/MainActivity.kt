@@ -1005,138 +1005,171 @@ val enregistrerFactureLauncher =
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .background(
-                            Color(0xFF5426A8),
-                            RoundedCornerShape(20.dp)
-                        )
-                        .padding(18.dp),
-                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                        .background(Color(0xFF5426A8), RoundedCornerShape(24.dp))
+                        .padding(20.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Text(
-                        "MelmaTech",
-                        color = Color.White
+                        "MELMATECH  /  INVENTAIRE",
+                        color = Color.White.copy(alpha = 0.72f),
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.Bold
                     )
-
                     Text(
                         "Gestion des produits",
                         color = Color.White,
-                        style = MaterialTheme.typography.headlineSmall
+                        style = MaterialTheme.typography.headlineMedium,
+                        fontWeight = FontWeight.Bold
                     )
-
                     Text(
-                        "Gérez votre catalogue et votre stock",
-                        color = Color.White.copy(alpha = 0.8f)
+                        "Suivez vos articles, vos quantités et la valeur de votre stock.",
+                        color = Color.White.copy(alpha = 0.82f),
+                        style = MaterialTheme.typography.bodyMedium
                     )
                 }
             }
 
             item {
-                Text(
-                    "Vue d'ensemble",
-                    style = MaterialTheme.typography.titleLarge
-                )
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Card(modifier = Modifier.weight(1f)) {
-                        Column(Modifier.padding(12.dp)) {
-                            Text("Produits")
-                            Text(
-                                "$totalProduits",
-                                style = MaterialTheme.typography.headlineSmall,
-                                color = Color(0xFF5426A8)
-                            )
-                        }
-                    }
-
-                    Card(modifier = Modifier.weight(1f)) {
-                        Column(Modifier.padding(12.dp)) {
-                            Text("Unités en stock")
-                            Text(
-                                "$stockTotal",
-                                style = MaterialTheme.typography.headlineSmall
-                            )
-                        }
-                    }
-                }
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Card(modifier = Modifier.weight(1f)) {
-                        Column(Modifier.padding(12.dp)) {
-                            Text("Stock faible")
-                            Text(
-                                "$produitsEnAlerte",
-                                color = Color(0xFFD97706),
-                                style = MaterialTheme.typography.headlineSmall
-                            )
-                        }
-                    }
-
-                    Card(modifier = Modifier.weight(1f)) {
-                        Column(Modifier.padding(12.dp)) {
-                            Text("Épuisés")
-                            Text(
-                                "$produitsEpuises",
-                                color = Color.Red,
-                                style = MaterialTheme.typography.headlineSmall
-                            )
-                        }
-                    }
-                }
-
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(
-                        containerColor = Color(0xFFF1EBFC)
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text(
+                        "Vue d'ensemble",
+                        color = Color(0xFF17151C),
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold
                     )
-                ) {
-                    Column(Modifier.padding(14.dp)) {
-                        Text("Valeur du stock")
-                        Text(
-                            argent(valeurStock, devise),
-                            style = MaterialTheme.typography.titleLarge,
-                            color = Color(0xFF5426A8)
-                        )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        Card(
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(18.dp),
+                            colors = CardDefaults.cardColors(containerColor = Color(0xFF17151D)),
+                            border = BorderStroke(1.dp, Color(0xFF302A3A))
+                        ) {
+                            Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
+                                Text("PRODUITS", color = Color(0xFFAAA4B5), style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
+                                Text("$totalProduits", color = Color(0xFFB99AFB), style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+                            }
+                        }
+                        Card(
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(18.dp),
+                            colors = CardDefaults.cardColors(containerColor = Color(0xFF17171D)),
+                            border = BorderStroke(1.dp, Color(0xFF302A3A))
+                        ) {
+                            Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
+                                Text("UNITÉS EN STOCK", color = Color(0xFFAAA4B5), style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
+                                Text("$stockTotal", color = Color.White, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+                            }
+                        }
+                    }
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        Card(
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(18.dp),
+                            colors = CardDefaults.cardColors(containerColor = Color(0xFF17171D)),
+                            border = BorderStroke(1.dp, Color(0xFF302A3A))
+                        ) {
+                            Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
+                                Text("STOCK FAIBLE", color = Color(0xFFAAA4B5), style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
+                                Text("$produitsEnAlerte", color = Color(0xFFFFB454), style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+                            }
+                        }
+                        Card(
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(18.dp),
+                            colors = CardDefaults.cardColors(containerColor = Color(0xFF17171D)),
+                            border = BorderStroke(1.dp, Color(0xFF302A3A))
+                        ) {
+                            Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
+                                Text("ÉPUISÉS", color = Color(0xFFAAA4B5), style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
+                                Text("$produitsEpuises", color = Color(0xFFFF7777), style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+                            }
+                        }
+                    }
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(18.dp),
+                        colors = CardDefaults.cardColors(containerColor = Color(0xFFF0E9FF)),
+                        border = BorderStroke(1.dp, Color(0xFFE1D3FF))
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth().padding(16.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                Text("VALEUR DU STOCK", color = Color(0xFF675783), style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
+                                Text(argent(valeurStock, devise), color = Color(0xFF5426A8), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+                            }
+                            Icon(Icons.Filled.Inventory2, contentDescription = null, tint = Color(0xFF5426A8), modifier = Modifier.size(30.dp))
+                        }
                     }
                 }
             }
 
             item {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    OutlinedTextField(
-                        value = rechercheProduit,
-                        onValueChange = { rechercheProduit = it },
-                        modifier = Modifier.weight(1f),
-                        label = { Text("Nom ou code-barres") },
-                        singleLine = true
-                    )
-                    IconButton(onClick = {
-                        cibleScanner = "produit"
-                        afficherScanner = true
-                    }) {
-                        Icon(Icons.Filled.PhotoCamera, contentDescription = "Scanner un produit")
-                    }
-                }
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
-                ) {
-                    listOf("Tous", "Stock faible", "Épuisés").forEach { filtre ->
-                        FilterChip(
-                            selected = filtreProduit == filtre,
-                            onClick = { filtreProduit = filtre },
-                            label = { Text(filtre) }
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        OutlinedTextField(
+                            value = rechercheProduit,
+                            onValueChange = { rechercheProduit = it },
+                            modifier = Modifier.weight(1f),
+                            placeholder = { Text("Rechercher un produit ou un code…") },
+                            leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
+                            singleLine = true,
+                            shape = RoundedCornerShape(16.dp),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = Color(0xFF8B5CF6),
+                                unfocusedBorderColor = Color(0xFFD7D1E0),
+                                focusedContainerColor = Color.White,
+                                unfocusedContainerColor = Color.White,
+                                focusedLeadingIconColor = Color(0xFF5426A8),
+                                unfocusedLeadingIconColor = Color(0xFF77717F)
+                            )
                         )
+                        IconButton(
+                            onClick = {
+                                cibleScanner = "produit"
+                                afficherScanner = true
+                            },
+                            modifier = Modifier
+                                .size(54.dp)
+                                .background(Color(0xFF5426A8), RoundedCornerShape(16.dp))
+                        ) {
+                            Icon(Icons.Filled.PhotoCamera, contentDescription = "Scanner un produit", tint = Color.White)
+                        }
+                    }
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        listOf("Tous", "Stock faible", "Épuisés").forEach { filtre ->
+                            FilterChip(
+                                selected = filtreProduit == filtre,
+                                onClick = { filtreProduit = filtre },
+                                label = { Text(filtre, fontWeight = FontWeight.SemiBold) },
+                                shape = RoundedCornerShape(12.dp),
+                                colors = FilterChipDefaults.filterChipColors(
+                                    selectedContainerColor = Color(0xFFE9DEFF),
+                                    selectedLabelColor = Color(0xFF5426A8)
+                                ),
+                                border = FilterChipDefaults.filterChipBorder(
+                                    enabled = true,
+                                    selected = filtreProduit == filtre,
+                                    borderColor = Color(0xFFD5CCDF),
+                                    selectedBorderColor = Color(0xFFB99AFB)
+                                )
+                            )
+                        }
                     }
                 }
             }
