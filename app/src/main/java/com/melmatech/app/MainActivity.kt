@@ -98,6 +98,14 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.text.input.VisualTransformation
+import android.graphics.Canvas as AndroidCanvas
+import android.graphics.RectF
+import androidx.compose.material.icons.filled.Print
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.QrCode
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.selection.selectable
 
 
 data class Produit(
