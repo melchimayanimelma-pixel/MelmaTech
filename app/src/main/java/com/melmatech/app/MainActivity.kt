@@ -6228,166 +6228,169 @@ private fun genererFacturePdf(
     emailEntreprise: String,
     rccmEntreprise: String,
     idNatEntreprise: String,
-        impotEntreprise: String,
+    impotEntreprise: String,
     logoEntreprise: String
 ): File {
-
     val document = PdfDocument()
-    val largeur = 595
-    val hauteur = 842
+    val pageWidth = 595
+    val pageHeight = 842
+    val violet = android.graphics.Color.rgb(84, 38, 168)
+    val violetPale = android.graphics.Color.rgb(243, 238, 252)
+    val gris = android.graphics.Color.rgb(105, 105, 115)
+    val noir = android.graphics.Color.rgb(30, 30, 30)
 
-    val pageInfo = PdfDocument.PageInfo.Builder(
-        largeur, hauteur, 1
-    ).create()
+    fun paint(color: Int, size: Float, bold: Boolean = false): Paint =
+        Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            this.color = color
+            textSize = size
+            typeface = Typeface.create(
+                Typeface.DEFAULT,
+                if (bold) Typeface.BOLD else Typeface.NORMAL
+            )
+        }
 
-    val page = document.startPage(pageInfo)
-    val canvas = page.canvas
-
-    val titre = Paint().apply {
-        textSize = 24f
-        typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+    val titlePaint = paint(android.graphics.Color.WHITE, 24f, true)
+    val headingPaint = paint(violet, 13f, true)
+    val bodyPaint = paint(noir, 10f)
+    val smallPaint = paint(gris, 8.5f)
+    val boldPaint = paint(noir, 10f, true)
+    val whitePaint = paint(android.graphics.Color.WHITE, 10f, true)
+    val linePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = android.graphics.Color.rgb(225, 222, 232)
+        strokeWidth = 1f
+    }
+    val fillPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = violetPale
+        style = Paint.Style.FILL
+    }
+    val headerPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = violet
+        style = Paint.Style.FILL
     }
 
-    val texte = Paint().apply {
-        textSize = 12f
-    }
+    val companyLines = listOf(
+        adresseEntreprise, telephoneEntreprise, emailEntreprise,
+        if (rccmEntreprise.isNotBlank()) "RCCM : $rccmEntreprise" else "",
+        if (idNatEntreprise.isNotBlank()) "ID NAT : $idNatEntreprise" else "",
+        if (impotEntreprise.isNotBlank()) "N° Impôt : $impotEntreprise" else ""
+    ).filter { it.isNotBlank() }
 
-    val gras = Paint().apply {
-        textSize = 12f
-        typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
-    }
-
-    var y = 50f
+    var logoBitmap: Bitmap? = null
     if (logoEntreprise.isNotBlank()) {
-    try {
-        val uri = Uri.parse(logoEntreprise)
-        context.contentResolver.openInputStream(uri)?.use { input ->
-            val bitmap = BitmapFactory.decodeStream(input)
-
-            if (bitmap != null) {
-                val logo = Bitmap.createScaledBitmap(
-                    bitmap, 90, 90, true
-                )
-                canvas.drawBitmap(logo, 455f, 25f, null)
+        try {
+            context.contentResolver.openInputStream(Uri.parse(logoEntreprise))?.use {
+                logoBitmap = BitmapFactory.decodeStream(it)
             }
-        }
-    } catch (_: Exception) {
-    }
+        } catch (_: Exception) {}
     }
 
-    canvas.drawText(
-        nomEntreprise.ifBlank { "Mon entreprise" },
-        40f, y, titre
-    )
-    y += 30f
-        listOf(
-        adresseEntreprise,
-        telephoneEntreprise,
-        emailEntreprise,
-        "RCCM : $rccmEntreprise",
-        "ID NAT : $idNatEntreprise",
-        "N° Impôt : $impotEntreprise"
-    ).filter { it.isNotBlank() && !it.endsWith(": ") }
-        .forEach {
-            canvas.drawText(it, 40f, y, Paint().apply {
-                textSize = 12f
-            })
-            y += 17f
-        }
-
-    y += 25f
-
-    canvas.drawText("FACTURE", 40f, y, titre)
-    y += 30f
-
-    canvas.drawText("N° facture : ${vente.id}", 40f, y, texte)
-    y += 20f
-
-    val date = SimpleDateFormat(
-        "dd/MM/yyyy HH:mm",
-        Locale.getDefault()
-    ).format(Date(vente.date))
-
-    canvas.drawText("Date : $date", 40f, y, texte)
-    y += 20f
-
-    canvas.drawText(
-        "Client : ${vente.client.ifBlank { "Client comptant" }}",
-        40f, y, texte
-    )
-    y += 35f
-        canvas.drawText("Article", 40f, y, gras)
-    canvas.drawText("Qté", 300f, y, gras)
-    canvas.drawText("Prix", 370f, y, gras)
-    canvas.drawText("Total", 470f, y, gras)
-
-    y += 10f
-    canvas.drawLine(40f, y, 555f, y, texte)
-    y += 22f
-
-    vente.lignes.forEach { ligne ->
-        canvas.drawText(ligne.nom.take(32), 40f, y, texte)
-        canvas.drawText("${ligne.quantite}", 300f, y, texte)
-
-        canvas.drawText(
-            String.format(Locale.US, "%.2f", ligne.prixUnitaire),
-            370f, y, texte
-        )
-
-        canvas.drawText(
-            String.format(Locale.US, "%.2f", ligne.total),
-            470f, y, texte
-        )
-
-        y += 22f
+    val rowsPerPage = 12
+    val pages = vente.lignes.chunked(rowsPerPage).ifEmpty { listOf(emptyList()) }
+    val date = SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault()).format(Date(vente.date))
+    val status = when {
+        vente.reste <= 0.0 -> "PAYÉE"
+        vente.paye > 0.0 -> "PARTIELLEMENT PAYÉE"
+        else -> "EN ATTENTE"
     }
-        y += 15f
-    canvas.drawLine(40f, y, 555f, y, texte)
-    y += 30f
-
-    canvas.drawText(
-        "TOTAL : ${argent(vente.total, devise)}",
-        350f, y, gras
-    )
-    y += 22f
-
-    canvas.drawText(
-        "Payé : ${argent(vente.paye, devise)}",
-        350f, y, texte
-    )
-    y += 22f
-
-    canvas.drawText(
-        "Reste à payer : ${argent(vente.reste, devise)}",
-        350f, y, gras
-    )
-
-    y += 55f
-    canvas.drawText(
-        "Merci pour votre confiance !",
-        40f, y, texte
-    )
-
-    document.finishPage(page)
-
-    val dossier = File(
-        context.getExternalFilesDir(null),
-        "Factures"
-    )
-    if (!dossier.exists()) dossier.mkdirs()
-
-    val fichier = File(dossier, "Facture-${vente.id}.pdf")
+    val statusColor = if (vente.reste <= 0.0) android.graphics.Color.rgb(28, 145, 91)
+        else android.graphics.Color.rgb(205, 125, 30)
 
     try {
-        FileOutputStream(fichier).use {
-            document.writeTo(it)
+        pages.forEachIndexed { pageIndex, lignes ->
+            val page = document.startPage(
+                PdfDocument.PageInfo.Builder(pageWidth, pageHeight, pageIndex + 1).create()
+            )
+            val canvas = page.canvas
+
+            // En-tête violet et identité de l'entreprise.
+            canvas.drawRect(0f, 0f, pageWidth.toFloat(), 150f, headerPaint)
+            canvas.drawText(nomEntreprise.ifBlank { "MelmaTech • Votre entreprise" }, 38f, 43f, titlePaint)
+            var companyY = 66f
+            companyLines.take(4).forEach {
+                canvas.drawText(it.take(70), 38f, companyY, paint(android.graphics.Color.WHITE, 8.5f))
+                companyY += 13f
+            }
+            logoBitmap?.let { bitmap ->
+                val ratio = minOf(76f / bitmap.width, 76f / bitmap.height)
+                val w = (bitmap.width * ratio).toInt().coerceAtLeast(1)
+                val h = (bitmap.height * ratio).toInt().coerceAtLeast(1)
+                val scaled = Bitmap.createScaledBitmap(bitmap, w, h, true)
+                canvas.drawBitmap(scaled, 480f, 28f, null)
+                if (scaled !== bitmap) scaled.recycle()
+            }
+
+            // Titre, numéro et statut.
+            canvas.drawText("FACTURE", 38f, 190f, paint(noir, 25f, true))
+            canvas.drawText("N° ${vente.id}", 38f, 211f, smallPaint)
+            val statusBox = android.graphics.RectF(390f, 166f, 557f, 198f)
+            val statusBg = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                color = android.graphics.Color.argb(24, statusColor shr 16 and 255, statusColor shr 8 and 255, statusColor and 255)
+            }
+            canvas.drawRoundRect(statusBox, 14f, 14f, statusBg)
+            canvas.drawText(status, 402f, 186f, paint(statusColor, 8.5f, true))
+
+            // Bloc client / date.
+            canvas.drawRoundRect(android.graphics.RectF(38f, 230f, 557f, 306f), 12f, 12f, fillPaint)
+            canvas.drawText("FACTURER À", 52f, 253f, headingPaint)
+            canvas.drawText(vente.client.ifBlank { "Client comptant" }.take(42), 52f, 274f, boldPaint)
+            canvas.drawText("Date d'émission", 365f, 253f, smallPaint)
+            canvas.drawText(date, 365f, 274f, boldPaint)
+
+            // Tableau des articles.
+            var y = 342f
+            canvas.drawRoundRect(android.graphics.RectF(38f, y - 22f, 557f, y + 8f), 7f, 7f, headerPaint)
+            canvas.drawText("DÉSIGNATION", 50f, y - 2f, whitePaint)
+            canvas.drawText("QTÉ", 330f, y - 2f, whitePaint)
+            canvas.drawText("PRIX UNIT.", 390f, y - 2f, whitePaint)
+            canvas.drawText("TOTAL", 490f, y - 2f, whitePaint)
+            y += 28f
+
+            lignes.forEachIndexed { rowIndex, ligne ->
+                if (rowIndex % 2 == 0) {
+                    val rowBg = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                        color = android.graphics.Color.rgb(249, 248, 252)
+                    }
+                    canvas.drawRect(38f, y - 16f, 557f, y + 9f, rowBg)
+                }
+                canvas.drawText(ligne.nom.take(34), 50f, y, bodyPaint)
+                canvas.drawText(ligne.quantite.toString(), 330f, y, bodyPaint)
+                canvas.drawText(String.format(Locale.US, "%.2f", ligne.prixUnitaire), 390f, y, bodyPaint)
+                canvas.drawText(String.format(Locale.US, "%.2f", ligne.total), 490f, y, bodyPaint)
+                y += 25f
+            }
+
+            if (pageIndex == pages.lastIndex) {
+                y = maxOf(y + 25f, 690f)
+                canvas.drawLine(320f, y - 10f, 557f, y - 10f, linePaint)
+                canvas.drawText("TOTAL", 350f, y + 12f, boldPaint)
+                canvas.drawText(argent(vente.total, devise), 465f, y + 12f, paint(violet, 12f, true))
+                canvas.drawText("Montant payé", 350f, y + 38f, bodyPaint)
+                canvas.drawText(argent(vente.paye, devise), 465f, y + 38f, bodyPaint)
+                canvas.drawText("Solde restant", 350f, y + 64f, boldPaint)
+                canvas.drawText(argent(vente.reste, devise), 465f, y + 64f, paint(statusColor, 11f, true))
+
+                canvas.drawRoundRect(android.graphics.RectF(38f, 755f, 557f, 790f), 9f, 9f, fillPaint)
+                val thanks = paint(violet, 10f, true).apply { textAlign = Paint.Align.CENTER }
+                canvas.drawText("Merci pour votre confiance !", 297.5f, 777f, thanks)
+                canvas.drawText("Document généré par MelmaTech", 297.5f, 822f, smallPaint.apply { textAlign = Paint.Align.CENTER })
+            } else {
+                canvas.drawText("Suite de la facture…", 38f, 805f, smallPaint)
+                canvas.drawText("Page ${pageIndex + 1}/${pages.size}", 500f, 805f, smallPaint)
+            }
+            document.finishPage(page)
         }
+
+        val folder = File(context.getExternalFilesDir(null), "Factures")
+        if (!folder.exists()) folder.mkdirs()
+        val file = File(folder, "Facture-${vente.id}.pdf")
+        FileOutputStream(file).use { document.writeTo(it) }
+        return file
     } finally {
+        logoBitmap?.recycle()
         document.close()
     }
-
-    return fichier
 }
+
 private fun imprimerFacture(
     context: Context,
     fichier: File
@@ -6520,170 +6523,132 @@ private fun genererRapportDocumentPdf(
     nomGerant: String,
     fonctionGerant: String
 ): File {
-
-    val lignesParPage = 30
-    val groupes = contenu.chunked(lignesParPage)
-        .ifEmpty { listOf(emptyList()) }
-
     val document = PdfDocument()
-    val largeur = 595
-    val hauteur = 842
+    val pageWidth = 595
+    val pageHeight = 842
+    val violet = android.graphics.Color.rgb(84, 38, 168)
+    val violetPale = android.graphics.Color.rgb(243, 238, 252)
+    val ink = android.graphics.Color.rgb(35, 35, 42)
+    val muted = android.graphics.Color.rgb(110, 110, 120)
 
-    val titre = Paint().apply {
-        textSize = 19f
-        typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
-        textAlign = Paint.Align.CENTER
+    fun makePaint(color: Int, size: Float, bold: Boolean = false): Paint =
+        Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            this.color = color
+            textSize = size
+            typeface = Typeface.create(
+                Typeface.DEFAULT,
+                if (bold) Typeface.BOLD else Typeface.NORMAL
+            )
+        }
+
+    val titlePaint = makePaint(ink, 20f, true)
+    val bodyPaint = makePaint(ink, 9.5f)
+    val smallPaint = makePaint(muted, 8f)
+    val boldPaint = makePaint(ink, 9.5f, true)
+    val purplePaint = makePaint(violet, 10f, true)
+    val whitePaint = makePaint(android.graphics.Color.WHITE, 10f, true)
+    val headerPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = violet }
+    val palePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = violetPale }
+    val rulePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = android.graphics.Color.rgb(226, 222, 234)
+        strokeWidth = 1f
     }
 
-    val gras = Paint().apply {
-        textSize = 11f
-        typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+    var logo: Bitmap? = null
+    if (logoEntreprise.isNotBlank()) {
+        try {
+            context.contentResolver.openInputStream(Uri.parse(logoEntreprise))?.use {
+                logo = BitmapFactory.decodeStream(it)
+            }
+        } catch (_: Exception) {}
     }
 
-    val texte = Paint().apply {
-        textSize = 10f
-    }
+    val linesPerPage = 22
+    val groups = contenu.chunked(linesPerPage).ifEmpty { listOf(emptyList()) }
+    val companyDetails = listOf(
+        adresseEntreprise, telephoneEntreprise, emailEntreprise,
+        if (rccmEntreprise.isNotBlank()) "RCCM : $rccmEntreprise" else "",
+        if (idNatEntreprise.isNotBlank()) "ID NAT : $idNatEntreprise" else "",
+        if (impotEntreprise.isNotBlank()) "N° Impôt : $impotEntreprise" else ""
+    ).filter { it.isNotBlank() }
 
     try {
-        groupes.forEachIndexed { index, lignes ->
-
-            val pageInfo = PdfDocument.PageInfo.Builder(
-                largeur, hauteur, index + 1
-            ).create()
-
-            val page = document.startPage(pageInfo)
+        groups.forEachIndexed { pageIndex, lines ->
+            val page = document.startPage(
+                PdfDocument.PageInfo.Builder(pageWidth, pageHeight, pageIndex + 1).create()
+            )
             val canvas = page.canvas
 
-            var y = 35f
-
-            if (index == 0 && logoEntreprise.isNotBlank()) {
-                try {
-                    val uri = Uri.parse(logoEntreprise)
-                    context.contentResolver
-                        .openInputStream(uri)?.use { input ->
-                            BitmapFactory.decodeStream(input)?.let { bitmap ->
-                                val ratio = minOf(
-                                    90f / bitmap.width,
-                                    65f / bitmap.height
-                                )
-                                val logo = Bitmap.createScaledBitmap(
-                                    bitmap,
-                                    (bitmap.width * ratio).toInt().coerceAtLeast(1),
-                                    (bitmap.height * ratio).toInt().coerceAtLeast(1),
-                                    true
-                                )
-                                canvas.drawBitmap(logo, 40f, 25f, null)
-                            }
-                        }
-                } catch (_: Exception) {
-                }
+            // Bandeau de marque répété sur chaque page.
+            canvas.drawRect(0f, 0f, pageWidth.toFloat(), 126f, headerPaint)
+            canvas.drawText(nomEntreprise.ifBlank { "MelmaTech • Votre entreprise" }, 38f, 39f, whitePaint.apply { textSize = 17f })
+            var detailY = 61f
+            companyDetails.take(4).forEach {
+                canvas.drawText(it.take(75), 38f, detailY, makePaint(android.graphics.Color.WHITE, 8f))
+                detailY += 13f
+            }
+            logo?.let { bitmap ->
+                val ratio = minOf(70f / bitmap.width, 70f / bitmap.height)
+                val w = (bitmap.width * ratio).toInt().coerceAtLeast(1)
+                val h = (bitmap.height * ratio).toInt().coerceAtLeast(1)
+                val scaled = Bitmap.createScaledBitmap(bitmap, w, h, true)
+                canvas.drawBitmap(scaled, 490f, 25f, null)
+                if (scaled !== bitmap) scaled.recycle()
             }
 
-            val entreprise = Paint().apply {
-                textSize = 13f
-                typeface = Typeface.create(
-                    Typeface.DEFAULT, Typeface.BOLD
-                )
-            }
+            canvas.drawText(titreRapport.take(55), 38f, 169f, titlePaint)
+            canvas.drawText("Période : $periode", 38f, 190f, purplePaint)
+            canvas.drawText("Émis le : " + SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(Date()), 390f, 190f, smallPaint)
+            canvas.drawLine(38f, 207f, 557f, 207f, rulePaint)
 
-            canvas.drawText(
-                nomEntreprise.ifBlank { "Mon entreprise" },
-                150f, y, entreprise
-            )
-            y += 17f
-
-            listOf(
-                adresseEntreprise,
-                telephoneEntreprise,
-                emailEntreprise,
-                "RCCM : $rccmEntreprise",
-                "ID NAT : $idNatEntreprise",
-                "N° Impôt : $impotEntreprise"
-            ).filter { it.isNotBlank() && !it.endsWith(": ") }
-                .forEach {
-                    canvas.drawText(it, 150f, y, texte)
-                    y += 14f
-                }
-
-            y = maxOf(y + 12f, 110f)
-
-            canvas.drawLine(40f, y, 555f, y, texte)
-            y += 30f
-
-            canvas.drawText(titreRapport, largeur / 2f, y, titre)
-            y += 24f
-
-            val paintCentre = Paint(texte).apply {
-                textAlign = Paint.Align.CENTER
-            }
-
-            canvas.drawText(
-                periode,
-                largeur / 2f,
-                y,
-                paintCentre
-            )
-            y += 28f
-
-            canvas.drawLine(40f, y, 555f, y, texte)
+            // Tableau de lignes, avec alternance de fond.
+            var y = 235f
+            canvas.drawRoundRect(android.graphics.RectF(38f, y - 20f, 557f, y + 5f), 6f, 6f, palePaint)
+            canvas.drawText("DÉTAILS DU RAPPORT", 50f, y - 3f, purplePaint)
             y += 25f
 
-            lignes.forEach { ligne ->
-                canvas.drawText(ligne.take(85), 40f, y, texte)
-                y += 20f
+            lines.forEachIndexed { rowIndex, line ->
+                val rowTop = y - 14f
+                if (rowIndex % 2 == 0) {
+                    val rowPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                        color = android.graphics.Color.rgb(249, 248, 252)
+                    }
+                    canvas.drawRect(38f, rowTop, 557f, y + 8f, rowPaint)
+                }
+                // Les lignes longues sont tronquées proprement dans la largeur imprimable.
+                canvas.drawText(line.take(96), 50f, y, bodyPaint)
+                y += 19f
             }
 
-            if (index == groupes.lastIndex) {
-                y = maxOf(y + 25f, 730f)
-
+            if (pageIndex == groups.lastIndex) {
+                val signatureY = maxOf(y + 28f, 730f).coerceAtMost(755f)
+                canvas.drawLine(38f, signatureY - 14f, 557f, signatureY - 14f, rulePaint)
                 canvas.drawText(
                     "Fait à ${lieuEntreprise.ifBlank { "________________" }}, le " +
-                        java.text.SimpleDateFormat(
-                            "dd/MM/yyyy",
-                            Locale.getDefault()
-                        ).format(Date()),
-                    40f, y, texte
+                        SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(Date()),
+                    38f, signatureY + 7f, smallPaint
                 )
-                y += 28f
-
-                canvas.drawText("Par : $nomGerant", 40f, y, gras)
-                y += 20f
-
-                canvas.drawText(
-                    "Fonction : $fonctionGerant",
-                    40f, y, texte
-                )
-                y += 45f
-
-                canvas.drawLine(40f, y, 220f, y, texte)
-                canvas.drawText(
-                    "Signature et cachet",
-                    40f, y + 16f, texte
-                )
+                canvas.drawText("Établi par : ${nomGerant.ifBlank { "________________" }}", 38f, signatureY + 28f, boldPaint)
+                canvas.drawText("Fonction : ${fonctionGerant.ifBlank { "________________" }}", 38f, signatureY + 46f, bodyPaint)
+                canvas.drawLine(380f, signatureY + 45f, 550f, signatureY + 45f, rulePaint)
+                canvas.drawText("Signature et cachet", 405f, signatureY + 61f, smallPaint)
             }
+
+            canvas.drawLine(38f, 810f, 557f, 810f, rulePaint)
+            canvas.drawText("MelmaTech • Gestion commerciale", 38f, 827f, smallPaint)
+            val pagePaint = makePaint(muted, 8f).apply { textAlign = Paint.Align.RIGHT }
+            canvas.drawText("Page ${pageIndex + 1}/${groups.size}", 557f, 827f, pagePaint)
 
             document.finishPage(page)
         }
 
-        val dossier = File(
-            context.getExternalFilesDir(null),
-            "Rapports"
-        )
-
-        if (!dossier.exists()) dossier.mkdirs()
-
-        val fichier = File(
-            dossier,
-            "Rapport-${System.currentTimeMillis()}.pdf"
-        )
-
-        FileOutputStream(fichier).use {
-            document.writeTo(it)
-        }
-
-        return fichier
-
+        val folder = File(context.getExternalFilesDir(null), "Rapports")
+        if (!folder.exists()) folder.mkdirs()
+        val file = File(folder, "Rapport-${System.currentTimeMillis()}.pdf")
+        FileOutputStream(file).use { document.writeTo(it) }
+        return file
     } finally {
+        logo?.recycle()
         document.close()
     }
 }
