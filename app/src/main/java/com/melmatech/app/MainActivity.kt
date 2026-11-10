@@ -33,7 +33,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.ui.text.input.KeyboardActions
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
@@ -103,6 +103,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.AccountCircle
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.ui.res.painterResource
 import androidx.compose.foundation.rememberScrollState
@@ -196,6 +198,8 @@ fun MelmaTechApp(context: Context) {
     var roleUtilisateur by remember {
         mutableStateOf<String?>(null)
     }
+    var nomProfilConnecte by remember { mutableStateOf("") }
+    var photoProfilConnecte by remember { mutableStateOf("") }
 
     var page by remember { mutableStateOf("Accueil") }
     var devise by remember {
@@ -534,6 +538,21 @@ val enregistrerFactureLauncher =
         prefs.edit()
             .putString("depenses", json.toString())
             .apply()
+    }
+
+    // Chargement du profil de l'utilisateur connecté pour l'en-tête du menu Plus.
+    LaunchedEffect(utilisateurConnecte) {
+        if (utilisateurConnecte) {
+            AuthService.obtenirProfil(context) { succes, _, profil ->
+                if (succes && profil != null) {
+                    nomProfilConnecte = profil.nomComplet.orEmpty()
+                    photoProfilConnecte = profil.photoUrl.orEmpty()
+                }
+            }
+        } else {
+            nomProfilConnecte = ""
+            photoProfilConnecte = ""
+        }
     }
 
     // Connexion et chargement des données du compte.
@@ -3743,22 +3762,109 @@ val enregistrerFactureLauncher =
     ) {
 
         item {
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 8.dp),
+                shape = RoundedCornerShape(24.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = Color(0xFF17131F)
+                ),
+                border = BorderStroke(1.dp, Color(0xFF342747))
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 15.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(62.dp)
+                            .clip(CircleShape)
+                            .background(Color(0xFF382451))
+                            .padding(2.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        if (photoProfilConnecte.isNotBlank()) {
+                            Image(
+                                painter = rememberAsyncImagePainter(photoProfilConnecte),
+                                contentDescription = "Photo de profil",
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .clip(CircleShape),
+                                contentScale = ContentScale.Crop
+                            )
+                        } else {
+                            Text(
+                                (nomProfilConnecte.ifBlank { email }
+                                    .trim().firstOrNull()?.uppercaseChar()?.toString() ?: "M"),
+                                color = Color.White,
+                                style = MaterialTheme.typography.headlineMedium,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+
+                    Spacer(Modifier.width(14.dp))
+
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            nomProfilConnecte.ifBlank {
+                                email.ifBlank { "Utilisateur MelmaTech" }
+                            },
+                            color = Color.White,
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                        Spacer(Modifier.height(4.dp))
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Box(
+                                modifier = Modifier
+                                    .size(7.dp)
+                                    .clip(CircleShape)
+                                    .background(Color(0xFF55D69E))
+                            )
+                            Spacer(Modifier.width(6.dp))
+                            Text(
+                                when (roleUtilisateur?.lowercase(Locale.ROOT)) {
+                                    "admin", "administrateur", "manager" -> "Administrateur"
+                                    "vendeur" -> "Vendeur"
+                                    else -> if (estAdministrateur) "Administrateur" else "Vendeur"
+                                },
+                                color = Color(0xFFBDA6E8),
+                                style = MaterialTheme.typography.bodySmall,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        }
+                    }
+
+                    Icon(
+                        imageVector = Icons.Default.AccountCircle,
+                        contentDescription = "Compte utilisateur",
+                        tint = Color(0xFFBDA6E8),
+                        modifier = Modifier.size(27.dp)
+                    )
+                }
+            }
+
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(top = 8.dp, bottom = 4.dp)
+                    .padding(top = 6.dp, bottom = 2.dp)
             ) {
                 Text(
                     "Plus",
                     style = MaterialTheme.typography.headlineLarge,
                     fontWeight = FontWeight.Bold,
-                    color = Color(0xFF5426A8)
+                    color = Color(0xFFB99AFF)
                 )
-
                 Text(
                     "Gérez votre compte et configurez MelmaTech.",
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = Color(0xFFAAA3B5)
                 )
             }
         }
@@ -3775,29 +3881,24 @@ val enregistrerFactureLauncher =
                         .padding(18.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Column(
-                        modifier = Modifier.weight(1f)
-                    ) {
+                    Column(modifier = Modifier.weight(1f)) {
                         Text(
                             "MelmaTech",
                             style = MaterialTheme.typography.titleLarge,
                             fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onPrimary
+                            color = Color.White
                         )
-
                         Text(
-                            if (estAdministrateur)
-                                "Espace administrateur"
-                            else
-                                "Espace vendeur",
+                            "Votre espace de gestion commerciale",
                             style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onPrimary
+                            color = Color.White.copy(alpha = 0.85f)
                         )
                     }
-
-                    Text(
-                        "⚙️",
-                        style = MaterialTheme.typography.headlineLarge
+                    Icon(
+                        imageVector = Icons.Default.Settings,
+                        contentDescription = "Paramètres",
+                        tint = Color.White,
+                        modifier = Modifier.size(30.dp)
                     )
                 }
             }
@@ -6080,82 +6181,6 @@ fun EcranConnexion(
         }
     }
 }
-
-private fun genererCodesBarresPdf(
-    context: Context,
-    produits: List<Produit>,
-    format: String
-): File {
-    require(produits.isNotEmpty()) { "Aucun produit à imprimer." }
-    val document = PdfDocument()
-    val largeur = if (format == "ETIQUETTE") 360 else 595
-    val hauteur = if (format == "ETIQUETTE") 180 else 842
-    val titre = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = android.graphics.Color.BLACK
-        textSize = if (format == "ETIQUETTE") 18f else 10f
-        typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
-    }
-    val texte = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = android.graphics.Color.BLACK
-        textSize = 10f
-    }
-    try {
-        if (format == "ETIQUETTE") {
-            produits.forEachIndexed { index, produit ->
-                val page = document.startPage(PdfDocument.PageInfo.Builder(largeur, hauteur, index + 1).create())
-                val canvas = page.canvas
-                canvas.drawText(produit.nom.take(32), 18f, 28f, titre)
-                val code = com.google.zxing.MultiFormatWriter().encode(
-                    produit.codeBarres, com.google.zxing.BarcodeFormat.CODE_128, 320, 90
-                )
-                val bitmap = Bitmap.createBitmap(code.width, code.height, Bitmap.Config.ARGB_8888)
-                for (x in 0 until code.width) for (y in 0 until code.height) {
-                    bitmap.setPixel(x, y, if (code.get(x, y)) android.graphics.Color.BLACK else android.graphics.Color.WHITE)
-                }
-                canvas.drawBitmap(bitmap, null, RectF(18f, 42f, 342f, 132f), null)
-                canvas.drawText(produit.codeBarres, 18f, 151f, texte)
-                canvas.drawText("Prix : ${String.format(Locale.US, "%.2f", produit.vente)}", 18f, 168f, texte)
-                document.finishPage(page)
-                bitmap.recycle()
-            }
-        } else {
-            val parPage = 24
-            produits.chunked(parPage).forEachIndexed { pageIndex, groupe ->
-                val page = document.startPage(PdfDocument.PageInfo.Builder(largeur, hauteur, pageIndex + 1).create())
-                val canvas = page.canvas
-                val celluleW = largeur / 3f
-                val celluleH = hauteur / 8f
-                groupe.forEachIndexed { index, produit ->
-                    val colonne = index % 3
-                    val ligne = index / 3
-                    val gauche = colonne * celluleW + 8f
-                    val haut = ligne * celluleH + 8f
-                    canvas.drawText(produit.nom.take(24), gauche, haut + 12f, titre)
-                    val code = com.google.zxing.MultiFormatWriter().encode(
-                        produit.codeBarres, com.google.zxing.BarcodeFormat.CODE_128, 170, 55
-                    )
-                    val bitmap = Bitmap.createBitmap(code.width, code.height, Bitmap.Config.ARGB_8888)
-                    for (x in 0 until code.width) for (y in 0 until code.height) {
-                        bitmap.setPixel(x, y, if (code.get(x, y)) android.graphics.Color.BLACK else android.graphics.Color.WHITE)
-                    }
-                    canvas.drawBitmap(bitmap, null, RectF(gauche, haut + 17f, gauche + celluleW - 16f, haut + 67f), null)
-                    canvas.drawText(produit.codeBarres, gauche, haut + 82f, texte)
-                    bitmap.recycle()
-                }
-                document.finishPage(page)
-            }
-        }
-        val dossier = File(context.getExternalFilesDir(null), "CodesBarres")
-        if (!dossier.exists()) dossier.mkdirs()
-        val fichier = File(dossier, "Codes-barres-${System.currentTimeMillis()}.pdf")
-        FileOutputStream(fichier).use { document.writeTo(it) }
-        return fichier
-    } finally {
-        document.close()
-    }
-}
-
-
 @Composable
 private fun OptionsImpressionCodeBarres(
     produit: Produit?,
