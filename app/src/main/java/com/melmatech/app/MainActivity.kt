@@ -3841,12 +3841,6 @@ val enregistrerFactureLauncher =
                         }
                     }
 
-                    Icon(
-                        imageVector = Icons.Default.AccountCircle,
-                        contentDescription = "Compte utilisateur",
-                        tint = Color(0xFFBDA6E8),
-                        modifier = Modifier.size(27.dp)
-                    )
                 }
             }
 
@@ -3866,41 +3860,6 @@ val enregistrerFactureLauncher =
                     style = MaterialTheme.typography.bodyMedium,
                     color = Color(0xFFAAA3B5)
                 )
-            }
-        }
-
-        item {
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(22.dp),
-                colors = CardDefaults.cardColors(containerColor = Color(0xFF5426A8))
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(18.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            "MelmaTech",
-                            style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.Bold,
-                            color = Color.White
-                        )
-                        Text(
-                            "Votre espace de gestion commerciale",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = Color.White.copy(alpha = 0.85f)
-                        )
-                    }
-                    Icon(
-                        imageVector = Icons.Default.Settings,
-                        contentDescription = "Paramètres",
-                        tint = Color.White,
-                        modifier = Modifier.size(30.dp)
-                    )
-                }
             }
         }
 
@@ -4155,41 +4114,85 @@ val enregistrerFactureLauncher =
     }
 
     if (confirmerDeconnexion) {
-        AlertDialog(
-            onDismissRequest = {
-                confirmerDeconnexion = false
-            },
-            title = {
-                Text("Confirmer la déconnexion")
-            },
-            text = {
-                Text("Voulez-vous vraiment vous déconnecter de MelmaTech ?")
-            },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        confirmerDeconnexion = false
-                        AuthService.deconnecter(context)
-                        utilisateurConnecte = false
-                        page = "Accueil"
-                        email = ""
-                        motDePasse = ""
-                        messageConnexion = ""
-                    }
+        Dialog(
+            onDismissRequest = { confirmerDeconnexion = false }
+        ) {
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(28.dp),
+                color = Color(0xFF17131F),
+                border = BorderStroke(1.dp, Color(0xFF49345F)),
+                shadowElevation = 18.dp
+            ) {
+                Column(
+                    modifier = Modifier.padding(24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(14.dp)
                 ) {
-                    Text("Se déconnecter")
-                }
-            },
-            dismissButton = {
-                TextButton(
-                    onClick = {
-                        confirmerDeconnexion = false
+                    Box(
+                        modifier = Modifier
+                            .size(68.dp)
+                            .clip(CircleShape)
+                            .background(Color(0xFF3A2030)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text("🚪", style = MaterialTheme.typography.headlineLarge)
                     }
-                ) {
-                    Text("Annuler")
+
+                    Text(
+                        "Se déconnecter ?",
+                        color = Color.White,
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.Bold
+                    )
+
+                    Text(
+                        "Voulez-vous vraiment fermer votre session MelmaTech ? Vous devrez vous reconnecter pour accéder à votre espace.",
+                        color = Color(0xFFBDB5C8),
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 8.dp),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        OutlinedButton(
+                            onClick = { confirmerDeconnexion = false },
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(14.dp),
+                            colors = ButtonDefaults.outlinedButtonColors(
+                                contentColor = Color(0xFFD8C8F2)
+                            ),
+                            border = BorderStroke(1.dp, Color(0xFF665477))
+                        ) {
+                            Text("Annuler", maxLines = 1)
+                        }
+
+                        Button(
+                            onClick = {
+                                confirmerDeconnexion = false
+                                AuthService.deconnecter(context)
+                                utilisateurConnecte = false
+                                page = "Accueil"
+                                email = ""
+                                motDePasse = ""
+                                messageConnexion = ""
+                            },
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(14.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = Color(0xFFB3263E),
+                                contentColor = Color.White
+                            )
+                        ) {
+                            Text("Déconnexion", maxLines = 1)
+                        }
+                    }
                 }
             }
-        )
+        }
     }
                         }
 
