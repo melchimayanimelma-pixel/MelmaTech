@@ -717,7 +717,7 @@ val enregistrerFactureLauncher =
     page = when (page) {
         "Entreprise",
         "Paramètres",
-        "Utilisateurs" -> "Plus"
+        "Utilisateurs", "Personnel" -> "Plus"
 
         else -> "Accueil"
     }
@@ -867,7 +867,7 @@ val enregistrerFactureLauncher =
                     // Empêche l'accès aux pages réservées.
                     if (
                         !estAdministrateur &&
-                        (page == "Produits" || page == "Utilisateurs")
+                        (page == "Produits" || page == "Utilisateurs" || page == "Personnel")
                     ) {
                         page = "Accueil"
                     }
@@ -3830,7 +3830,8 @@ val enregistrerFactureLauncher =
                             Spacer(Modifier.width(6.dp))
                             Text(
                                 when (roleUtilisateur?.lowercase(Locale.ROOT)) {
-                                    "admin", "administrateur", "manager" -> "Administrateur"
+                                    "admin", "administrateur" -> "Administrateur"
+                                    "manager" -> "Manager"
                                     "vendeur" -> "Vendeur"
                                     else -> if (estAdministrateur) "Administrateur" else "Vendeur"
                                 },
@@ -3984,6 +3985,28 @@ val enregistrerFactureLauncher =
                             )
                         }
 
+                        Text("›", color = Color(0xFFB99AFF), style = MaterialTheme.typography.headlineMedium)
+                    }
+                }
+            }
+        }
+
+        if (estAdministrateur) {
+            item {
+                Card(
+                    onClick = { page = "Personnel" },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(18.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFF101014)),
+                    border = BorderStroke(1.dp, Color(0xFF29252F))
+                ) {
+                    Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Text("👤", modifier = Modifier.background(Color(0xFF2A1B42), RoundedCornerShape(12.dp)).padding(10.dp), style = MaterialTheme.typography.headlineMedium)
+                        Spacer(Modifier.width(14.dp))
+                        Column(Modifier.weight(1f)) {
+                            Text("Gestion du personnel", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, color = Color.White)
+                            Text("Employés, matricules et dossiers du personnel.", style = MaterialTheme.typography.bodySmall, color = Color(0xFFAAA3B5))
+                        }
                         Text("›", color = Color(0xFFB99AFF), style = MaterialTheme.typography.headlineMedium)
                     }
                 }
@@ -4547,6 +4570,14 @@ Slider(
 }
 
                         
+"Personnel" -> {
+    if (!estAdministrateur) {
+        Text("Accès réservé à l'administrateur et au manager.")
+    } else {
+        EcranPersonnel(onRetour = { page = "Plus" })
+    }
+}
+
 "Utilisateurs" -> {
 
     if (!estAdministrateur) {
