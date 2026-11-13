@@ -2,7 +2,11 @@
 name: Extract MelmaTech Personnel Project
 
 on:
-  workflow_dispatch:
+  push:
+    branches:
+      - module-gestion-personnel
+    paths:
+      - '.github/workflows/extract-personnel.yml'
 
 permissions:
   contents: write
