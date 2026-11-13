@@ -1,0 +1,42 @@
+
+name: Extract MelmaTech Personnel Project
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  extract:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout personnel branch
+        uses: actions/checkout@v4
+        with:
+          ref: module-gestion-personnel
+
+      - name: Extract project archive
+        run: |
+          mkdir extracted
+          unzip MelmaTech_Module_Personnel_Etape1-1.zip -d extracted
+
+          if [ ! -d "extracted/MelmaTech-main" ]; then
+            echo "Project folder not found in ZIP"
+            find extracted -maxdepth 3 -type d
+            exit 1
+          fi
+
+          cp -a extracted/MelmaTech-main/. .
+
+          rm MelmaTech_Module_Personnel_Etape1-1.zip
+          rm -rf extracted
+
+      - name: Save extracted project
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Add personnel module project files"
+          git push origin module-gestion-personnel
