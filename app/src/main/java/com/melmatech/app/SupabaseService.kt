@@ -192,4 +192,137 @@ object SupabaseService {
                 }
             }
         })
-    }}
+    }
+
+
+    // Envoi générique d'un objet ou d'un tableau JSON vers Supabase.
+    private fun posterJson(
+        table: String,
+        accessToken: String,
+        donnees: String,
+        callback: (Boolean, String, JSONArray?) -> Unit
+    ) {
+        val url = "${SupabaseConfig.url}/rest/v1/$table"
+        val request = Request.Builder()
+            .url(url)
+            .addHeader("apikey", SupabaseConfig.key)
+            .addHeader("Authorization", "Bearer $accessToken")
+            .addHeader("Content-Type", "application/json")
+            .addHeader("Prefer", "return=representation")
+            .post(donnees.toRequestBody(jsonType))
+            .build()
+
+        client.newCall(request).enqueue(object : Callback {
+            override fun onFailure(call: Call, e: IOException) {
+                Handler(Looper.getMainLooper()).post {
+                    callback(false, "Erreur réseau : ${e.message ?: "connexion impossible"}", null)
+                }
+            }
+
+            override fun onResponse(call: Call, response: Response) {
+                response.use {
+                    val corps = it.body?.string().orEmpty()
+                    if (!it.isSuccessful) {
+                        Handler(Looper.getMainLooper()).post {
+                            callback(false, "Erreur Supabase (${it.code}) : $corps", null)
+                        }
+                        return
+                    }
+
+                    val resultat = try {
+                        JSONArray(corps)
+                    } catch (_: Exception) {
+                        JSONArray()
+                    }
+
+                    Handler(Looper.getMainLooper()).post {
+                        callback(true, "Enregistrement réussi.", resultat)
+                    }
+                }
+            }
+        })
+    }
+
+    fun ajouterClient(
+        accessToken: String,
+        entrepriseId: String,
+        nom: String,
+        callback: (Boolean, String, String?) -> Unit
+    ) {
+        val donnees = JSONObject().apply {
+            put("entreprise_id", entrepriseId)
+            put("nom", nom)
+        }
+
+        posterJson("clients", accessToken, donnees.toString()) { ok, message, resultat ->
+            val id = if (ok && resultat != null && resultat.length() > 0) {
+                resultat.optJSONObject(0)?.optString("id")?.takeIf { it.isNotBlank() }
+            } else null
+            callback(ok, message, id)
+        }
+    }
+
+    fun ajouterVente(
+        accessToken: String,
+        entrepriseId: String,
+        clientId: String?,
+        numeroFacture: String,
+        utilisateurId: String,
+        total: Double,
+        callback: (Boolean, String, String?) -> Unit
+    ) {
+        val donnees = JSONObject().apply {
+            put("entreprise_id", entrepriseId)
+            put("client_id", clientId ?: JSONObject.NULL)
+            put("numero_facture", numeroFacture)
+            put("utilisateur_id", utilisateurId)
+            put("total", total)
+            put("statut", "terminee")
+        }
+
+        posterJson("ventes", accessToken, donnees.toString()) { ok, message, resultat ->
+            val id = if (ok && resultat != null && resultat.length() > 0) {
+                resultat.optJSONObject(0)?.optString("id")?.takeIf { it.isNotBlank() }
+            } else null
+            callback(ok, message, id)
+        }
+    }
+
+    fun ajouterDetailsVente(
+        accessToken: String,
+        details: JSONArray,
+        callback: (Boolean, String) -> Unit
+    ) {
+        if (details.length() == 0) {
+            callback(false, "La vente ne contient aucun article à synchroniser.")
+            return
+        }
+
+        posterJson("details_vente", accessToken, details.toString()) { ok, message, _ ->
+            callback(ok, message)
+        }
+    }
+
+    fun ajouterPaiement(
+        accessToken: String,
+        entrepriseId: String,
+        venteId: String,
+        utilisateurId: String,
+        montant: Double,
+        modePaiement: String = "Non précisé",
+        callback: (Boolean, String) -> Unit
+    ) {
+        val donnees = JSONObject().apply {
+            put("entreprise_id", entrepriseId)
+            put("vente_id", venteId)
+            put("utilisateur_id", utilisateurId)
+            put("montant", montant)
+            put("mode_paiement", modePaiement)
+        }
+
+        posterJson("paiements", accessToken, donnees.toString()) { ok, message, _ ->
+            callback(ok, message)
+        }
+    }
+
+}

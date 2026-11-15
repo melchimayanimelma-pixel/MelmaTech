@@ -145,7 +145,8 @@ data class Vente(
     val client: String,
     val lignes: List<LigneVente>,
     val paye: Double,
-    val date: Long
+    val date: Long,
+    val supabaseId: String? = null
 ) {
     val total: Double get() = lignes.sumOf { it.total }
     val reste: Double get() = (total - paye).coerceAtLeast(0.0)
@@ -427,7 +428,8 @@ val enregistrerFactureLauncher =
                             v.getString("client"),
                             lignes,
                             v.getDouble("paye"),
-                            v.getLong("date")
+                            v.getLong("date"),
+                            if (v.isNull("supabaseId")) null else v.optString("supabaseId")
                         )
                     )
                 }
@@ -512,6 +514,7 @@ val enregistrerFactureLauncher =
                     put("lignes", lignes)
                     put("paye", v.paye)
                     put("date", v.date)
+                    put("supabaseId", v.supabaseId)
                 }
             )
         }
@@ -519,6 +522,113 @@ val enregistrerFactureLauncher =
         prefs.edit()
             .putString("ventes_nouvelles", json.toString())
             .apply()
+    }
+
+    // Synchronise une vente déjà sauvegardée localement.
+    // Une erreur distante ne supprime jamais la vente locale.
+    fun synchroniserVenteSupabase(venteLocale: Vente) {
+        val token = AuthService.obtenirAccessToken(context)
+        val utilisateurId = AuthService.obtenirUtilisateurId(context)
+
+        if (token.isNullOrBlank() || utilisateurId.isNullOrBlank()) {
+            messageVente = "Vente conservée localement. Connexion Supabase indisponible."
+            return
+        }
+
+        AuthService.obtenirEntrepriseId(context) { okEntreprise, messageEntrepriseSupabase, entrepriseId ->
+            if (!okEntreprise || entrepriseId.isNullOrBlank()) {
+                messageVente = "Vente conservée localement. $messageEntrepriseSupabase"
+                return@obtenirEntrepriseId
+            }
+
+            SupabaseService.ajouterClient(
+                token,
+                entrepriseId,
+                venteLocale.client
+            ) { okClient, messageClient, clientId ->
+                if (!okClient || clientId.isNullOrBlank()) {
+                    messageVente = "Vente conservée localement, mais client non synchronisé : $messageClient"
+                    return@ajouterClient
+                }
+
+                SupabaseService.ajouterVente(
+                    token,
+                    entrepriseId,
+                    clientId,
+                    venteLocale.id.toString(),
+                    utilisateurId,
+                    venteLocale.total
+                ) { okVente, messageVenteSupabase, venteUuid ->
+                    if (!okVente || venteUuid.isNullOrBlank()) {
+                        messageVente = "Vente conservée localement, mais non synchronisée : $messageVenteSupabase"
+                        return@ajouterVente
+                    }
+
+                    val indexVenteCreee = ventes.indexOfFirst { it.id == venteLocale.id }
+                    if (indexVenteCreee >= 0) {
+                        ventes[indexVenteCreee] = ventes[indexVenteCreee].copy(supabaseId = venteUuid)
+                        sauvegarderVentes()
+                    }
+
+                    val details = JSONArray()
+                    venteLocale.lignes.forEach { ligne ->
+                        val produitUuid = produits.firstOrNull {
+                            it.id == ligne.produitId
+                        }?.supabaseId
+
+                        details.put(JSONObject().apply {
+                            put("vente_id", venteUuid)
+                            put("entreprise_id", entrepriseId)
+                            put("produit_id", produitUuid ?: JSONObject.NULL)
+                            put("nom_produit", ligne.nom)
+                            put("quantite", ligne.quantite)
+                            put("prix_unitaire", ligne.prixUnitaire)
+                            put("sous_total", ligne.total)
+                        })
+                    }
+
+                    SupabaseService.ajouterDetailsVente(token, details) { okDetails, messageDetails ->
+                        if (!okDetails) {
+                            messageVente = "Vente créée, mais articles non synchronisés : $messageDetails"
+                            return@ajouterDetailsVente
+                        }
+
+                        fun terminerSynchronisation() {
+                            val indexVente = ventes.indexOfFirst { it.id == venteLocale.id }
+                            if (indexVente >= 0) {
+                                ventes[indexVente] = ventes[indexVente].copy(supabaseId = venteUuid)
+                                sauvegarderVentes()
+                            }
+                            messageVente = "Vente et articles synchronisés avec Supabase. Facture n° ${venteLocale.id}"
+                        }
+
+                        if (venteLocale.paye > 0) {
+                            SupabaseService.ajouterPaiement(
+                                token,
+                                entrepriseId,
+                                venteUuid,
+                                utilisateurId,
+                                venteLocale.paye,
+                                "Non précisé"
+                            ) { okPaiement, messagePaiement ->
+                                if (okPaiement) {
+                                    terminerSynchronisation()
+                                } else {
+                                    val indexVente = ventes.indexOfFirst { it.id == venteLocale.id }
+                                    if (indexVente >= 0) {
+                                        ventes[indexVente] = ventes[indexVente].copy(supabaseId = venteUuid)
+                                        sauvegarderVentes()
+                                    }
+                                    messageVente = "Vente et articles synchronisés, mais paiement non synchronisé : $messagePaiement"
+                                }
+                            }
+                        } else {
+                            terminerSynchronisation()
+                        }
+                    }
+                }
+            }
+        }
     }
 
     fun sauvegarderDepenses() {
@@ -2408,7 +2518,9 @@ val enregistrerFactureLauncher =
                                         sauvegarderVentes()
 
                                         messageVente =
-                                            "Vente enregistrée. Facture n° $id"
+                                            "Vente enregistrée localement. Synchronisation avec Supabase en cours…"
+
+                                        synchroniserVenteSupabase(nouvelleVente)
 
                                         // Réinitialisation du formulaire
                                         panier = emptyList()
@@ -2662,18 +2774,48 @@ val enregistrerFactureLauncher =
 
                                                 if (index >= 0) {
 
-                                                    ventes[index] = vente.copy(
+                                                    val venteMiseAJour = vente.copy(
                                                         paye = vente.paye + montant
                                                     )
-
+                                                    ventes[index] = venteMiseAJour
                                                     sauvegarderVentes()
+
+                                                    val token = AuthService.obtenirAccessToken(context)
+                                                    val utilisateurId = AuthService.obtenirUtilisateurId(context)
+
+                                                    if (
+                                                        !vente.supabaseId.isNullOrBlank() &&
+                                                        !token.isNullOrBlank() &&
+                                                        !utilisateurId.isNullOrBlank()
+                                                    ) {
+                                                        AuthService.obtenirEntrepriseId(context) { okEntreprise, messageEntrepriseSupabase, entrepriseId ->
+                                                            if (okEntreprise && !entrepriseId.isNullOrBlank()) {
+                                                                SupabaseService.ajouterPaiement(
+                                                                    token,
+                                                                    entrepriseId,
+                                                                    vente.supabaseId!!,
+                                                                    utilisateurId,
+                                                                    montant,
+                                                                    "Non précisé"
+                                                                ) { okPaiement, messagePaiement ->
+                                                                    messageVente = if (okPaiement) {
+                                                                        "Paiement enregistré et synchronisé."
+                                                                    } else {
+                                                                        "Paiement conservé localement, mais non synchronisé : $messagePaiement"
+                                                                    }
+                                                                }
+                                                            } else {
+                                                                messageVente = "Paiement conservé localement. $messageEntrepriseSupabase"
+                                                            }
+                                                        }
+                                                    } else {
+                                                        messageVente =
+                                                            "Paiement enregistré localement. Cette vente n'est pas encore synchronisée avec Supabase."
+                                                    }
                                                 }
 
                                                 paiementId = null
                                                 paiementSupplementaire = ""
-
-                                                messageVente =
-                                                    "Paiement enregistré."
 
                                             } else {
 
