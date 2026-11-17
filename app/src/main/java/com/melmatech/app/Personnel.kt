@@ -73,7 +73,7 @@ object PersonnelService {
                     ) }
                     main.post { callback(true, "", list) }
                 } catch (e: Exception) { main.post { callback(false, "Données employés illisibles : ${e.message}", emptyList()) } }
-            } })
+            } }
         })
     }
 
@@ -93,7 +93,7 @@ object PersonnelService {
                 if (!it.isSuccessful) { main.post { callback(false, "Supabase (${it.code}) : $body", emptyList()) }; return }
                 try { val a = JSONArray(body); val l = (0 until a.length()).map { i -> mapper(a.getJSONObject(i)) }; main.post { callback(true, "", l) } }
                 catch (e: Exception) { main.post { callback(false, "Réponse illisible : ${e.message}", emptyList()) } }
-            } })
+            } }
         })
     }
 
