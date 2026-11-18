@@ -129,267 +129,371 @@ fun EcranGestionAcces(
         }
         .toSet()
 
-    Column(
+    val violet = Color(0xFF6C3CE9)
+    val fond = Color(0xFFF4F2FA)
+    val textePrincipal = Color(0xFF242033)
+    val texteSecondaire = Color(0xFF777386)
+
+    LazyColumn(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFFF5F6FA))
-            .padding(16.dp)
+            .background(fond)
+            .padding(horizontal = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Column {
-                Text(
-                    text = "Gestion des accès",
-                    style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.Bold
-                )
-
-                Text(
-                    text = "Utilisateurs, rôles et permissions",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = Color.Gray
-                )
-            }
-
-            OutlinedButton(onClick = onRetour) {
-                Text("Retour")
+        item {
+            Spacer(modifier = Modifier.height(4.dp))
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(22.dp),
+                colors = CardDefaults.cardColors(containerColor = violet)
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(18.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "ADMINISTRATION",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = Color.White.copy(alpha = 0.78f),
+                                fontWeight = FontWeight.Bold
+                            )
+                            Text(
+                                text = "Gestion des accès",
+                                style = MaterialTheme.typography.headlineSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White
+                            )
+                        }
+                        OutlinedButton(
+                            onClick = onRetour,
+                            shape = RoundedCornerShape(50),
+                            colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(
+                                contentColor = Color.White
+                            )
+                        ) {
+                            Text("Retour")
+                        }
+                    }
+                    Text(
+                        text = "Gérez les utilisateurs, leurs rôles et leurs autorisations.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Color.White.copy(alpha = 0.88f)
+                    )
+                }
             }
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
-
         if (chargement) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(30.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                CircularProgressIndicator()
-                Spacer(modifier = Modifier.height(10.dp))
-                Text("Chargement des accès...")
-            }
-        } else if (utilisateurs.isEmpty() && message.isNotBlank()) {
-            Text(message)
-
-            Button(
-                onClick = { charger() },
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text("Réessayer")
-            }
-        } else {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                CarteStatistique(
-                    titre = "Utilisateurs",
-                    valeur = utilisateurs.size.toString(),
-                    modifier = Modifier.weight(1f)
-                )
-
-                CarteStatistique(
-                    titre = "Rôles",
-                    valeur = roles.size.toString(),
-                    modifier = Modifier.weight(1f)
-                )
-
-                CarteStatistique(
-                    titre = "Permissions",
-                    valeur = permissions.size.toString(),
-                    modifier = Modifier.weight(1f)
-                )
-            }
-
-            Spacer(modifier = Modifier.height(18.dp))
-
-            Text(
-                text = "Sélectionner un utilisateur",
-                fontWeight = FontWeight.Bold
-            )
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(150.dp),
-                verticalArrangement = Arrangement.spacedBy(6.dp)
-            ) {
-                items(utilisateurs, key = { it.id }) { utilisateur ->
-                    val selectionne =
-                        utilisateur.id == utilisateurSelectionne
-
-                    Card(
+            item {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(18.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color.White)
+                ) {
+                    Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clickable {
-                                utilisateurSelectionne = utilisateur.id
-                            },
-                        colors = CardDefaults.cardColors(
-                            containerColor = if (selectionne)
-                                Color(0xFFE8EAF6)
-                            else Color.White
-                        ),
-                        shape = RoundedCornerShape(10.dp)
+                            .padding(28.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(12.dp),
-                            horizontalArrangement =
-                                Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
+                        CircularProgressIndicator(color = violet)
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Text("Chargement des accès...", color = texteSecondaire)
+                    }
+                }
+            }
+        } else if (utilisateurs.isEmpty()) {
+            item {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(18.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color.White)
+                ) {
+                    Column(
+                        modifier = Modifier.padding(18.dp),
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        Text(
+                            text = message.ifBlank { "Aucun utilisateur trouvé." },
+                            color = textePrincipal
+                        )
+                        Button(
+                            onClick = { charger() },
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(12.dp)
                         ) {
-                            Column {
+                            Text("Réessayer")
+                        }
+                    }
+                }
+            }
+        } else {
+            item {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(9.dp)
+                ) {
+                    CarteStatistique(
+                        titre = "Utilisateurs",
+                        valeur = utilisateurs.size.toString(),
+                        modifier = Modifier.weight(1f)
+                    )
+                    CarteStatistique(
+                        titre = "Rôles",
+                        valeur = roles.size.toString(),
+                        modifier = Modifier.weight(1f)
+                    )
+                    CarteStatistique(
+                        titre = "Permissions",
+                        valeur = permissions.size.toString(),
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+            }
+
+            item {
+                Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                    Text(
+                        text = "Membres de l'entreprise",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = textePrincipal
+                    )
+                    Text(
+                        text = "Sélectionnez un utilisateur pour consulter ses accès.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = texteSecondaire
+                    )
+                }
+            }
+
+            items(utilisateurs, key = { "utilisateur_${it.id}" }) { utilisateur ->
+                val selectionne = utilisateur.id == utilisateurSelectionne
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { utilisateurSelectionne = utilisateur.id },
+                    shape = RoundedCornerShape(17.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = if (selectionne) {
+                            Color(0xFFEDE7FF)
+                        } else {
+                            Color.White
+                        }
+                    ),
+                    border = if (selectionne) {
+                        androidx.compose.foundation.BorderStroke(1.dp, violet.copy(alpha = 0.45f))
+                    } else {
+                        null
+                    }
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(14.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Surface(
+                            shape = RoundedCornerShape(14.dp),
+                            color = if (selectionne) violet else Color(0xFFF0EDF7)
+                        ) {
+                            Text(
+                                text = utilisateur.nomComplet.trim()
+                                    .firstOrNull()?.uppercase() ?: "U",
+                                modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+                                color = if (selectionne) Color.White else violet,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = utilisateur.nomComplet,
+                                fontWeight = FontWeight.SemiBold,
+                                color = textePrincipal
+                            )
+                            Text(
+                                text = utilisateur.roleBase,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = texteSecondaire
+                            )
+                        }
+                        Column(horizontalAlignment = Alignment.End) {
+                            Text(
+                                text = if (selectionne) "Sélectionné"
+                                else if (utilisateur.actif) "Actif" else "Inactif",
+                                color = if (utilisateur.actif) Color(0xFF218653) else Color(0xFFC62828),
+                                style = MaterialTheme.typography.labelMedium,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                            if (selectionne) {
                                 Text(
-                                    utilisateur.nomComplet,
-                                    fontWeight = FontWeight.SemiBold
-                                )
-                                Text(
-                                    utilisateur.roleBase,
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = Color.Gray
+                                    text = "ACTUEL",
+                                    color = violet,
+                                    style = MaterialTheme.typography.labelSmall
                                 )
                             }
-
-                            Text(
-                                if (selectionne) "Sélectionné"
-                                else if (utilisateur.actif) "Actif"
-                                else "Inactif",
-                                color = if (utilisateur.actif)
-                                    Color(0xFF2E7D32)
-                                else Color.Red
-                            )
                         }
                     }
                 }
             }
 
-            HorizontalDivider(
-                modifier = Modifier.padding(vertical = 14.dp)
-            )
-
             if (utilisateurActuel != null) {
-                Text(
-                    text = utilisateurActuel.nomComplet,
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold
-                )
-
-                Text(
-                    text = "Rôle de base : ${utilisateurActuel.roleBase}",
-                    color = Color.Gray
-                )
-
-                Spacer(modifier = Modifier.height(12.dp))
-
-                Text(
-                    text = "Rôles personnalisés",
-                    fontWeight = FontWeight.Bold
-                )
-
-                if (rolesDeUtilisateur.isEmpty()) {
-                    Text(
-                        "Aucun rôle personnalisé attribué.",
-                        color = Color.Gray
-                    )
-                } else {
-                    rolesDeUtilisateur.forEach { role ->
-                        Text("• ${role.nom}")
+                item {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(18.dp),
+                        colors = CardDefaults.cardColors(containerColor = Color.White)
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Text(
+                                text = "PROFIL SÉLECTIONNÉ",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = violet,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Text(
+                                text = utilisateurActuel.nomComplet,
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.Bold,
+                                color = textePrincipal
+                            )
+                            Text(
+                                text = "Rôle de base : ${utilisateurActuel.roleBase}",
+                                color = texteSecondaire,
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                            HorizontalDivider(color = Color(0xFFECE9F2))
+                            Text(
+                                text = "Rôles personnalisés",
+                                fontWeight = FontWeight.Bold,
+                                color = textePrincipal
+                            )
+                            if (rolesDeUtilisateur.isEmpty()) {
+                                Text(
+                                    "Aucun rôle personnalisé attribué.",
+                                    color = texteSecondaire,
+                                    style = MaterialTheme.typography.bodyMedium
+                                )
+                            } else {
+                                rolesDeUtilisateur.forEach { role ->
+                                    Surface(
+                                        shape = RoundedCornerShape(10.dp),
+                                        color = Color(0xFFF1EDFF)
+                                    ) {
+                                        Text(
+                                            text = role.nom,
+                                            modifier = Modifier.padding(
+                                                horizontal = 12.dp,
+                                                vertical = 7.dp
+                                            ),
+                                            color = violet,
+                                            fontWeight = FontWeight.SemiBold
+                                        )
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
 
-                Spacer(modifier = Modifier.height(14.dp))
-
-                Text(
-                    text = "Permissions",
-                    fontWeight = FontWeight.Bold
-                )
-
-                Text(
-                    text = "Vue actuelle des autorisations individuelles " +
-                        "et des permissions provenant des rôles.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = Color.Gray
-                )
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                LazyColumn(
-                    modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(7.dp)
-                ) {
-                    items(
-                        permissions.groupBy { it.module }.toList(),
-                        key = { it.first }
-                    ) { groupe ->
+                item {
+                    Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
                         Text(
-                            text = groupe.first.uppercase(),
+                            text = "Permissions",
+                            style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
-                            color = Color(0xFF3949AB),
-                            modifier = Modifier.padding(
-                                top = 8.dp,
-                                bottom = 3.dp
-                            )
+                            color = textePrincipal
                         )
+                        Text(
+                            text = "Origine et état des autorisations de cet utilisateur.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = texteSecondaire
+                        )
+                    }
+                }
 
-                        groupe.second.forEach { permission ->
-                            val directe = permissionsDirectes.firstOrNull {
-                                it.permissionId == permission.id
-                            }
+                permissions.groupBy { it.module }.toList().forEach { groupe ->
+                    item(key = "module_${groupe.first}") {
+                        Text(
+                            text = groupe.first.replaceFirstChar { it.uppercase() },
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = violet,
+                            modifier = Modifier.padding(top = 4.dp, bottom = 1.dp)
+                        )
+                    }
 
-                            val vientDuRole =
-                                permission.id in idsPermissionsRoles
+                    items(
+                        groupe.second,
+                        key = { permission -> "permission_${permission.id}" }
+                    ) { permission ->
+                        val directe = permissionsDirectes.firstOrNull {
+                            it.permissionId == permission.id
+                        }
+                        val vientDuRole = permission.id in idsPermissionsRoles
+                        val statut = when (directe?.effet) {
+                            "refuser" -> "Refus individuel"
+                            "autoriser" -> "Autorisé individuellement"
+                            else -> if (vientDuRole) "Autorisé par un rôle"
+                            else "Aucune attribution"
+                        }
+                        val couleur = when (directe?.effet) {
+                            "refuser" -> Color(0xFFC62828)
+                            "autoriser" -> Color(0xFF218653)
+                            else -> if (vientDuRole) Color(0xFF2366B5) else texteSecondaire
+                        }
+                        val fondStatut = when (directe?.effet) {
+                            "refuser" -> Color(0xFFFFEEEE)
+                            "autoriser" -> Color(0xFFEAF7EF)
+                            else -> if (vientDuRole) Color(0xFFEAF2FF) else Color(0xFFF1F0F4)
+                        }
 
-                            val statut = when (directe?.effet) {
-                                "refuser" -> "REFUS INDIVIDUEL"
-                                "autoriser" -> "AUTORISÉ INDIVIDUELLEMENT"
-                                else -> if (vientDuRole) {
-                                    "AUTORISÉ PAR UN RÔLE"
-                                } else {
-                                    "AUCUNE ATTRIBUTION"
-                                }
-                            }
-
-                            val couleur = when (directe?.effet) {
-                                "refuser" -> Color(0xFFC62828)
-                                "autoriser" -> Color(0xFF2E7D32)
-                                else -> if (vientDuRole) {
-                                    Color(0xFF1565C0)
-                                } else {
-                                    Color.Gray
-                                }
-                            }
-
-                            Card(
-                                modifier = Modifier.fillMaxWidth(),
-                                colors = CardDefaults.cardColors(
-                                    containerColor = Color.White
-                                )
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(15.dp),
+                            colors = CardDefaults.cardColors(containerColor = Color.White)
+                        ) {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(13.dp),
+                                verticalArrangement = Arrangement.spacedBy(5.dp)
                             ) {
-                                Column(
-                                    modifier = Modifier.padding(12.dp)
+                                Text(
+                                    text = permission.description.ifBlank { permission.id },
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = textePrincipal
+                                )
+                                Text(
+                                    text = permission.id,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = texteSecondaire
+                                )
+                                Surface(
+                                    shape = RoundedCornerShape(7.dp),
+                                    color = fondStatut
                                 ) {
                                     Text(
-                                        permission.description.ifBlank {
-                                            permission.id
-                                        },
-                                        fontWeight = FontWeight.Medium
-                                    )
-
-                                    Text(
-                                        permission.id,
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = Color.Gray
-                                    )
-
-                                    Text(
-                                        statut,
+                                        text = statut,
+                                        modifier = Modifier.padding(
+                                            horizontal = 9.dp,
+                                            vertical = 5.dp
+                                        ),
                                         color = couleur,
                                         fontWeight = FontWeight.Bold,
                                         style = MaterialTheme.typography.labelSmall
@@ -400,17 +504,21 @@ fun EcranGestionAcces(
                     }
                 }
             }
+
+            if (message.isNotBlank()) {
+                item {
+                    Text(
+                        text = message,
+                        color = texteSecondaire,
+                        style = MaterialTheme.typography.bodySmall,
+                        modifier = Modifier.padding(vertical = 6.dp)
+                    )
+                }
+            }
         }
 
-        if (message.isNotBlank() && !chargement &&
-            utilisateurs.isNotEmpty()
-        ) {
-            Text(
-                text = message,
-                color = Color.Gray,
-                style = MaterialTheme.typography.bodySmall,
-                modifier = Modifier.padding(top = 6.dp)
-            )
+        item {
+            Spacer(modifier = Modifier.height(20.dp))
         }
     }
 }
