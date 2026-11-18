@@ -827,7 +827,7 @@ val enregistrerFactureLauncher =
     page = when (page) {
         "Entreprise",
         "Paramètres",
-        "Utilisateurs", "Personnel" -> "Plus"
+        "Utilisateurs", "Personnel", "GestionAcces" -> "Plus"
 
         else -> "Accueil"
     }
@@ -977,7 +977,7 @@ val enregistrerFactureLauncher =
                     // Empêche l'accès aux pages réservées.
                     if (
                         !estAdministrateur &&
-                        (page == "Produits" || page == "Utilisateurs" || page == "Personnel")
+                        (page == "Produits" || page == "Utilisateurs" || page == "Personnel" || page == "GestionAcces")
                     ) {
                         page = "Accueil"
                     }
@@ -4131,6 +4131,29 @@ val enregistrerFactureLauncher =
                     }
                 }
             }
+            item {
+                Card(
+                    onClick = { page = "GestionAcces" },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(18.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFF101014)),
+                    border = BorderStroke(1.dp, Color(0xFF29252F))
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text("🔐", modifier = Modifier.background(Color(0xFF2A1B42), RoundedCornerShape(12.dp)).padding(10.dp), style = MaterialTheme.typography.headlineMedium)
+                        Spacer(Modifier.width(14.dp))
+                        Column(Modifier.weight(1f)) {
+                            Text("Gestion des accès", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, color = Color.White)
+                            Text("Rôles personnalisés et permissions des utilisateurs.", style = MaterialTheme.typography.bodySmall, color = Color(0xFFAAA3B5))
+                        }
+                        Text("›", color = Color(0xFFB99AFF), style = MaterialTheme.typography.headlineMedium)
+                    }
+                }
+            }
+
         }
 
         if (estAdministrateur) {
@@ -4712,6 +4735,14 @@ Slider(
 }
 
                         
+"GestionAcces" -> {
+    if (!estAdministrateur) {
+        Text("Accès réservé à l'administrateur.")
+    } else {
+        EcranGestionAcces(onRetour = { page = "Plus" })
+    }
+}
+
 "Personnel" -> {
     if (!estAdministrateur) {
         Text("Accès réservé à l'administrateur et au manager.")
