@@ -253,23 +253,34 @@ fun EcranGestionAcces(
                                     enabled = !operationEnCours,
                                     onClick = {
                                         operationEnCours = true
-                                        val action = if (dejaAttribuee) {
-                                            GestionAccesService.retirerPermissionRole(
-                                                context, role.id, permission.id
-                                            )
-                                        } else {
-                                            GestionAccesService.attribuerPermissionRole(
-                                                context, role.id, permission.id
-                                            )
-                                        }
-                                        action { ok, resultat ->
+                                        val callback: (Boolean, String) -> Unit = { ok, resultat ->
                                             operationEnCours = false
                                             message = resultat
-                                            Toast.makeText(context, resultat, Toast.LENGTH_LONG).show()
+                                            Toast.makeText(
+                                                context,
+                                                resultat,
+                                                Toast.LENGTH_LONG
+                                            ).show()
                                             if (ok) {
                                                 charger()
                                                 rolePourPermissions = null
                                             }
+                                        }
+
+                                        if (dejaAttribuee) {
+                                            GestionAccesService.retirerPermissionRole(
+                                                context,
+                                                role.id,
+                                                permission.id,
+                                                callback
+                                            )
+                                        } else {
+                                            GestionAccesService.attribuerPermissionRole(
+                                                context,
+                                                role.id,
+                                                permission.id,
+                                                callback
+                                            )
                                         }
                                     }
                                 ) {
