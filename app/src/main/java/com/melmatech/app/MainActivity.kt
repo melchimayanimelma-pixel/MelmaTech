@@ -3897,9 +3897,6 @@ val enregistrerFactureLauncher =
     var confirmerDeconnexion by remember {
         mutableStateOf(false)
     }
-    var testSecuriteEnCours by remember { mutableStateOf(false) }
-    var resultatTestSecurite by remember { mutableStateOf("") }
-    var testSecuriteReussi by remember { mutableStateOf(false) }
 
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -4260,71 +4257,6 @@ val enregistrerFactureLauncher =
                     }
 
                     Text("›", color = Color(0xFFB99AFF), style = MaterialTheme.typography.headlineMedium)
-                }
-            }
-        }
-
-        // Bouton temporaire : visible uniquement sur le compte vendeur de test.
-        if (!estAdministrateur) {
-            item {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(18.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color(0xFF101014)),
-                    border = BorderStroke(1.dp, Color(0xFF66508A))
-                ) {
-                    Column(
-                        modifier = Modifier.fillMaxWidth().padding(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        Text(
-                            "TEST DE SÉCURITÉ",
-                            color = Color(0xFFB99AFF),
-                            style = MaterialTheme.typography.labelLarge,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Text(
-                            "Vérifier que Supabase bloque les opérations réservées à l'administrateur.",
-                            color = Color(0xFFAAA3B5),
-                            style = MaterialTheme.typography.bodySmall
-                        )
-                        Button(
-                            onClick = {
-                                testSecuriteEnCours = true
-                                resultatTestSecurite = ""
-                                GestionAccesService.testerProtectionAdmin(context) { confirme, message ->
-                                    testSecuriteEnCours = false
-                                    testSecuriteReussi = confirme
-                                    resultatTestSecurite = message
-                                }
-                            },
-                            enabled = !testSecuriteEnCours,
-                            modifier = Modifier.fillMaxWidth(),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = Color(0xFF7041C8),
-                                contentColor = Color.White
-                            )
-                        ) {
-                            if (testSecuriteEnCours) {
-                                CircularProgressIndicator(
-                                    modifier = Modifier.size(18.dp),
-                                    color = Color.White,
-                                    strokeWidth = 2.dp
-                                )
-                                Spacer(Modifier.width(8.dp))
-                                Text("Test en cours…")
-                            } else {
-                                Text("Tester la sécurité vendeur")
-                            }
-                        }
-                        if (resultatTestSecurite.isNotBlank()) {
-                            Text(
-                                resultatTestSecurite,
-                                color = if (testSecuriteReussi) Color(0xFF55D69E) else Color(0xFFFF8A80),
-                                style = MaterialTheme.typography.bodySmall
-                            )
-                        }
-                    }
                 }
             }
         }
