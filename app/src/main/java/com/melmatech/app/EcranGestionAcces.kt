@@ -1,38 +1,15 @@
 package com.melmatech.app
 
 import android.widget.Toast
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -40,658 +17,415 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 
+private val AccessPurple = Color(0xFF6840D9)
+private val AccessBg = Color(0xFFF6F5FA)
+private val AccessInk = Color(0xFF252238)
+private val AccessMuted = Color(0xFF777386)
+private val AccessGreen = Color(0xFF198754)
+private val AccessRed = Color(0xFFC43D4B)
+private val AccessBlue = Color(0xFF2867B2)
+
 @Composable
-fun EcranGestionAcces(
-    onRetour: () -> Unit
-) {
+fun EcranGestionAcces(onRetour: () -> Unit) {
     val context = LocalContext.current
-
-    var chargement by remember { mutableStateOf(true) }
-    var operationEnCours by remember { mutableStateOf(false) }
+    var loading by remember { mutableStateOf(true) }
+    var busy by remember { mutableStateOf(false) }
     var message by remember { mutableStateOf("") }
-
-    var utilisateurs by remember { mutableStateOf(emptyList<UtilisateurAcces>()) }
+    var users by remember { mutableStateOf(emptyList<UtilisateurAcces>()) }
     var permissions by remember { mutableStateOf(emptyList<PermissionMelma>()) }
     var roles by remember { mutableStateOf(emptyList<RolePersonnalise>()) }
-    var permissionsIndividuelles by remember { mutableStateOf(emptyList<PermissionIndividuelle>()) }
-    var permissionsRoles by remember { mutableStateOf(emptyList<PermissionRole>()) }
-    var rolesUtilisateurs by remember { mutableStateOf(emptyList<RoleUtilisateur>()) }
+    var directPermissions by remember { mutableStateOf(emptyList<PermissionIndividuelle>()) }
+    var rolePermissions by remember { mutableStateOf(emptyList<PermissionRole>()) }
+    var userRoles by remember { mutableStateOf(emptyList<RoleUtilisateur>()) }
+    var search by remember { mutableStateOf("") }
+    var selectedUserId by remember { mutableStateOf<String?>(null) }
+    var showDetails by remember { mutableStateOf(false) }
+    var tab by remember { mutableIntStateOf(0) }
 
-    var utilisateurSelectionne by remember { mutableStateOf<String?>(null) }
-    var afficherCreationRole by remember { mutableStateOf(false) }
-    var nomNouveauRole by remember { mutableStateOf("") }
-    var descriptionNouveauRole by remember { mutableStateOf("") }
-    var roleEnEdition by remember { mutableStateOf<RolePersonnalise?>(null) }
-    var nomRoleEdition by remember { mutableStateOf("") }
-    var descriptionRoleEdition by remember { mutableStateOf("") }
-    var rolePourPermissions by remember { mutableStateOf<RolePersonnalise?>(null) }
+    var showCreateRole by remember { mutableStateOf(false) }
+    var newRoleName by remember { mutableStateOf("") }
+    var newRoleDescription by remember { mutableStateOf("") }
+    var editingRole by remember { mutableStateOf<RolePersonnalise?>(null) }
+    var editRoleName by remember { mutableStateOf("") }
+    var editRoleDescription by remember { mutableStateOf("") }
 
-    val violet = Color(0xFF6C3CE9)
-    val fond = Color(0xFFF4F2FA)
-    val textePrincipal = Color(0xFF242033)
-    val texteSecondaire = Color(0xFF777386)
-
-    fun charger() {
-        chargement = true
-        message = ""
-        GestionAccesService.chargerDonnees(context) { ok, resultat, donnees ->
-            chargement = false
-            message = resultat
-            if (ok && donnees != null) {
-                utilisateurs = donnees.utilisateurs
-                permissions = donnees.permissions
-                roles = donnees.roles
-                permissionsIndividuelles = donnees.permissionsIndividuelles
-                permissionsRoles = donnees.permissionsRoles
-                rolesUtilisateurs = donnees.rolesUtilisateurs
-
-                if (utilisateurSelectionne == null ||
-                    utilisateurs.none { it.id == utilisateurSelectionne }
-                ) {
-                    utilisateurSelectionne = utilisateurs.firstOrNull()?.id
+    fun reload() {
+        loading = true
+        GestionAccesService.chargerDonnees(context) { ok, result, data ->
+            loading = false
+            message = result
+            if (ok && data != null) {
+                users = data.utilisateurs
+                permissions = data.permissions
+                roles = data.roles
+                directPermissions = data.permissionsIndividuelles
+                rolePermissions = data.permissionsRoles
+                userRoles = data.rolesUtilisateurs
+                if (selectedUserId != null && users.none { it.id == selectedUserId }) {
+                    selectedUserId = null
+                    showDetails = false
                 }
             }
         }
     }
 
-    fun terminerOperation(ok: Boolean, resultat: String) {
-        operationEnCours = false
-        message = resultat
-        Toast.makeText(context, resultat, Toast.LENGTH_LONG).show()
-        if (ok) charger()
+    fun finish(ok: Boolean, result: String) {
+        busy = false
+        message = result
+        Toast.makeText(context, result, Toast.LENGTH_LONG).show()
+        if (ok) reload()
     }
 
-    LaunchedEffect(Unit) {
-        charger()
-    }
+    LaunchedEffect(Unit) { reload() }
 
-    val utilisateurActuel = utilisateurs.firstOrNull {
-        it.id == utilisateurSelectionne
-    }
+    val selectedUser = users.firstOrNull { it.id == selectedUserId }
+    val assignedRoles = userRoles.filter { it.utilisateurId == selectedUserId }
+        .mapNotNull { link -> roles.firstOrNull { it.id == link.roleId } }
+    val userOverrides = directPermissions.filter { it.utilisateurId == selectedUserId }
+    val inheritedPermissionIds = userRoles.filter { it.utilisateurId == selectedUserId }
+        .flatMap { link -> rolePermissions.filter { it.roleId == link.roleId }.map { it.permissionId } }
+        .toSet()
 
-    val rolesDeUtilisateur = rolesUtilisateurs
-        .filter { it.utilisateurId == utilisateurSelectionne }
-        .mapNotNull { relation -> roles.firstOrNull { it.id == relation.roleId } }
-
-    val permissionsDirectes = permissionsIndividuelles
-        .filter { it.utilisateurId == utilisateurSelectionne }
-
-    val idsPermissionsRoles = rolesUtilisateurs
-        .filter { it.utilisateurId == utilisateurSelectionne }
-        .flatMap { relation ->
-            permissionsRoles.filter { it.roleId == relation.roleId }
-                .map { it.permissionId }
-        }.toSet()
-
-    if (afficherCreationRole) {
+    if (showCreateRole) {
         AlertDialog(
-            onDismissRequest = { if (!operationEnCours) afficherCreationRole = false },
-            title = { Text("Créer un rôle") },
+            onDismissRequest = { if (!busy) showCreateRole = false },
+            title = { Text("Créer un rôle", fontWeight = FontWeight.Bold) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    OutlinedTextField(
-                        value = nomNouveauRole,
-                        onValueChange = { nomNouveauRole = it },
-                        label = { Text("Nom du rôle") },
-                        singleLine = true
-                    )
-                    OutlinedTextField(
-                        value = descriptionNouveauRole,
-                        onValueChange = { descriptionNouveauRole = it },
-                        label = { Text("Description (facultative)") }
-                    )
+                    OutlinedTextField(newRoleName, { newRoleName = it }, label = { Text("Nom du rôle") }, singleLine = true)
+                    OutlinedTextField(newRoleDescription, { newRoleDescription = it }, label = { Text("Description (facultative)") })
                 }
             },
             confirmButton = {
-                TextButton(
-                    enabled = !operationEnCours && nomNouveauRole.isNotBlank(),
-                    onClick = {
-                        operationEnCours = true
-                        GestionAccesService.creerRole(
-                            context,
-                            nomNouveauRole.trim(),
-                            descriptionNouveauRole.trim().ifBlank { null }
-                        ) { ok, resultat, _ ->
-                            operationEnCours = false
-                            message = resultat
-                            Toast.makeText(context, resultat, Toast.LENGTH_LONG).show()
-                            if (ok) {
-                                afficherCreationRole = false
-                                nomNouveauRole = ""
-                                descriptionNouveauRole = ""
-                                charger()
-                            }
+                TextButton(enabled = !busy && newRoleName.isNotBlank(), onClick = {
+                    busy = true
+                    GestionAccesService.creerRole(context, newRoleName.trim(), newRoleDescription.trim().ifBlank { null }) { ok, result, _ ->
+                        busy = false
+                        message = result
+                        Toast.makeText(context, result, Toast.LENGTH_LONG).show()
+                        if (ok) {
+                            showCreateRole = false
+                            newRoleName = ""
+                            newRoleDescription = ""
+                            reload()
                         }
                     }
-                ) { Text("Créer") }
+                }) { Text("Créer") }
             },
-            dismissButton = {
-                TextButton(
-                    enabled = !operationEnCours,
-                    onClick = { afficherCreationRole = false }
-                ) { Text("Annuler") }
-            }
+            dismissButton = { TextButton(onClick = { showCreateRole = false }) { Text("Annuler") } }
         )
     }
 
-    roleEnEdition?.let { role ->
+    editingRole?.let { role ->
         AlertDialog(
-            onDismissRequest = { if (!operationEnCours) roleEnEdition = null },
-            title = { Text("Modifier le rôle") },
+            onDismissRequest = { if (!busy) editingRole = null },
+            title = { Text("Modifier le rôle", fontWeight = FontWeight.Bold) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    OutlinedTextField(
-                        value = nomRoleEdition,
-                        onValueChange = { nomRoleEdition = it },
-                        label = { Text("Nom du rôle") },
-                        singleLine = true
-                    )
-                    OutlinedTextField(
-                        value = descriptionRoleEdition,
-                        onValueChange = { descriptionRoleEdition = it },
-                        label = { Text("Description") }
-                    )
+                    OutlinedTextField(editRoleName, { editRoleName = it }, label = { Text("Nom") }, singleLine = true)
+                    OutlinedTextField(editRoleDescription, { editRoleDescription = it }, label = { Text("Description") })
                 }
             },
             confirmButton = {
-                TextButton(
-                    enabled = !operationEnCours && nomRoleEdition.isNotBlank(),
-                    onClick = {
-                        operationEnCours = true
-                        GestionAccesService.modifierRole(
-                            context,
-                            role.id,
-                            nomRoleEdition.trim(),
-                            descriptionRoleEdition.trim().ifBlank { null }
-                        ) { ok, resultat ->
-                            operationEnCours = false
-                            message = resultat
-                            Toast.makeText(context, resultat, Toast.LENGTH_LONG).show()
-                            if (ok) {
-                                roleEnEdition = null
-                                charger()
-                            }
-                        }
+                TextButton(enabled = !busy && editRoleName.isNotBlank(), onClick = {
+                    busy = true
+                    GestionAccesService.modifierRole(context, role.id, editRoleName.trim(), editRoleDescription.trim().ifBlank { null }) { ok, result ->
+                        editingRole = null
+                        finish(ok, result)
                     }
-                ) { Text("Enregistrer") }
+                }) { Text("Enregistrer") }
             },
-            dismissButton = {
-                TextButton(
-                    enabled = !operationEnCours,
-                    onClick = { roleEnEdition = null }
-                ) { Text("Annuler") }
-            }
+            dismissButton = { TextButton(onClick = { editingRole = null }) { Text("Annuler") } }
         )
     }
 
-    rolePourPermissions?.let { role ->
-        AlertDialog(
-            onDismissRequest = { rolePourPermissions = null },
-            title = { Text("Permissions : ${role.nom}") },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(
-                        "Cochez les permissions à attribuer en utilisant les boutons ci-dessous.",
-                        style = MaterialTheme.typography.bodySmall
-                    )
-                    LazyColumn(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                        items(permissions, key = { "role_permission_${it.id}" }) { permission ->
-                            val dejaAttribuee = permissionsRoles.any {
-                                it.roleId == role.id && it.permissionId == permission.id
-                            }
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.SpaceBetween
-                            ) {
-                                Text(
-                                    permission.description.ifBlank { permission.id },
-                                    modifier = Modifier.weight(1f),
-                                    style = MaterialTheme.typography.bodySmall
-                                )
-                                TextButton(
-                                    enabled = !operationEnCours,
-                                    onClick = {
-                                        operationEnCours = true
-                                        val callback: (Boolean, String) -> Unit = { ok, resultat ->
-                                            operationEnCours = false
-                                            message = resultat
-                                            Toast.makeText(
-                                                context,
-                                                resultat,
-                                                Toast.LENGTH_LONG
-                                            ).show()
-                                            if (ok) {
-                                                charger()
-                                                rolePourPermissions = null
-                                            }
-                                        }
-
-                                        if (dejaAttribuee) {
-                                            GestionAccesService.retirerPermissionRole(
-                                                context,
-                                                role.id,
-                                                permission.id,
-                                                callback
-                                            )
-                                        } else {
-                                            GestionAccesService.attribuerPermissionRole(
-                                                context,
-                                                role.id,
-                                                permission.id,
-                                                callback
-                                            )
-                                        }
-                                    }
-                                ) {
-                                    Text(if (dejaAttribuee) "Retirer" else "Ajouter")
-                                }
-                            }
-                        }
-                    }
-                }
-            },
-            confirmButton = {
-                TextButton(onClick = { rolePourPermissions = null }) { Text("Fermer") }
-            }
-        )
-    }
-
-    LazyColumn(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(fond)
-            .padding(horizontal = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        item {
-            Spacer(modifier = Modifier.height(4.dp))
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(22.dp),
-                colors = CardDefaults.cardColors(containerColor = violet)
+    Surface(modifier = Modifier.fillMaxSize(), color = AccessBg) {
+        Column(Modifier.fillMaxSize()) {
+            Row(
+                Modifier.fillMaxWidth().background(Color.White).padding(horizontal = 20.dp, vertical = 16.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Column(
-                    modifier = Modifier.fillMaxWidth().padding(18.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                Column {
+                    Text("ADMINISTRATION", color = AccessPurple, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
+                    Text(if (showDetails) "Fiche utilisateur" else "Gestion des accès", color = AccessInk, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                }
+                TextButton(onClick = { if (showDetails) showDetails = false else onRetour() }) {
+                    Text(if (showDetails) "← Membres" else "Retour")
+                }
+            }
+
+            if (loading) {
+                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        CircularProgressIndicator(color = AccessPurple)
+                        Spacer(Modifier.height(12.dp))
+                        Text("Chargement des accès…", color = AccessMuted)
+                    }
+                }
+            } else if (!showDetails) {
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                "ADMINISTRATION",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = Color.White.copy(alpha = 0.78f),
-                                fontWeight = FontWeight.Bold
-                            )
-                            Text(
-                                "Gestion des accès",
-                                style = MaterialTheme.typography.headlineSmall,
-                                fontWeight = FontWeight.Bold,
-                                color = Color.White
-                            )
-                        }
-                        OutlinedButton(
-                            onClick = onRetour,
-                            shape = RoundedCornerShape(50),
-                            colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(
-                                contentColor = Color.White
-                            )
-                        ) { Text("Retour") }
-                    }
-                    Text(
-                        "Gérez les utilisateurs, leurs rôles et leurs autorisations.",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = Color.White.copy(alpha = 0.88f)
-                    )
-                }
-            }
-        }
-
-        if (chargement) {
-            item {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(18.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color.White)
-                ) {
-                    Column(
-                        modifier = Modifier.fillMaxWidth().padding(28.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        CircularProgressIndicator(color = violet)
-                        Spacer(modifier = Modifier.height(12.dp))
-                        Text("Chargement des accès...", color = texteSecondaire)
-                    }
-                }
-            }
-        } else {
-            item {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(9.dp)
-                ) {
-                    CarteStatistique("Utilisateurs", utilisateurs.size.toString(), Modifier.weight(1f))
-                    CarteStatistique("Rôles", roles.size.toString(), Modifier.weight(1f))
-                    CarteStatistique("Permissions", permissions.size.toString(), Modifier.weight(1f))
-                }
-            }
-
-            item {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            "Rôles personnalisés",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = textePrincipal
-                        )
-                        Text(
-                            "Créer et configurer les rôles de l'entreprise.",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = texteSecondaire
-                        )
-                    }
-                    Button(onClick = { afficherCreationRole = true }) {
-                        Text("Créer")
-                    }
-                }
-            }
-
-            if (roles.isEmpty()) {
-                item { Text("Aucun rôle personnalisé.", color = texteSecondaire) }
-            } else {
-                items(roles, key = { "role_${it.id}" }) { role ->
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(15.dp),
-                        colors = CardDefaults.cardColors(containerColor = Color.White)
-                    ) {
-                        Column(
-                            modifier = Modifier.fillMaxWidth().padding(13.dp),
-                            verticalArrangement = Arrangement.spacedBy(7.dp)
-                        ) {
-                            Text(role.nom, fontWeight = FontWeight.Bold, color = textePrincipal)
-                            if (role.description.isNotBlank()) {
-                                Text(role.description, color = texteSecondaire)
-                            }
-                            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                                OutlinedButton(onClick = { rolePourPermissions = role }) {
-                                    Text("Permissions")
-                                }
-                                OutlinedButton(onClick = {
-                                    roleEnEdition = role
-                                    nomRoleEdition = role.nom
-                                    descriptionRoleEdition = role.description
-                                }) { Text("Modifier") }
-                                TextButton(
-                                    enabled = !operationEnCours,
-                                    onClick = {
-                                        operationEnCours = true
-                                        GestionAccesService.supprimerRole(context, role.id) { ok, resultat ->
-                                            terminerOperation(ok, resultat)
-                                        }
-                                    }
-                                ) { Text("Supprimer", color = Color(0xFFC62828)) }
+                    item {
+                        Card(shape = RoundedCornerShape(22.dp), colors = CardDefaults.cardColors(containerColor = AccessPurple)) {
+                            Column(Modifier.fillMaxWidth().padding(20.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
+                                Text("CONTRÔLE DES AUTORISATIONS", color = Color.White.copy(alpha = .8f), style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
+                                Text("Qui peut faire quoi ?", color = Color.White, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+                                Text("Choisissez un membre pour gérer ses rôles et ses permissions.", color = Color.White.copy(alpha = .9f))
                             }
                         }
                     }
-                }
-            }
-
-            item {
-                Text(
-                    "Membres de l'entreprise",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = textePrincipal
-                )
-                Text(
-                    "Sélectionnez un utilisateur pour consulter et modifier ses accès.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = texteSecondaire
-                )
-            }
-
-            if (utilisateurs.isEmpty()) {
-                item { Text(message.ifBlank { "Aucun utilisateur trouvé." }, color = texteSecondaire) }
-            } else {
-                items(utilisateurs, key = { "utilisateur_${it.id}" }) { utilisateur ->
-                    val selectionne = utilisateur.id == utilisateurSelectionne
-                    Card(
-                        modifier = Modifier.fillMaxWidth().clickable {
-                            utilisateurSelectionne = utilisateur.id
-                        },
-                        shape = RoundedCornerShape(17.dp),
-                        colors = CardDefaults.cardColors(
-                            containerColor = if (selectionne) Color(0xFFEDE7FF) else Color.White
-                        ),
-                        border = if (selectionne) BorderStroke(1.dp, violet.copy(alpha = 0.45f)) else null
-                    ) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth().padding(14.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(12.dp)
-                        ) {
-                            Surface(
-                                shape = RoundedCornerShape(14.dp),
-                                color = if (selectionne) violet else Color(0xFFF0EDF7)
-                            ) {
-                                Text(
-                                    utilisateur.nomComplet.trim().firstOrNull()?.uppercase() ?: "U",
-                                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
-                                    color = if (selectionne) Color.White else violet,
-                                    fontWeight = FontWeight.Bold
-                                )
-                            }
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(utilisateur.nomComplet, fontWeight = FontWeight.SemiBold, color = textePrincipal)
-                                Text(utilisateur.roleBase, style = MaterialTheme.typography.bodySmall, color = texteSecondaire)
-                            }
-                            Text(
-                                if (utilisateur.actif) "Actif" else "Inactif",
-                                color = if (utilisateur.actif) Color(0xFF218653) else Color(0xFFC62828),
-                                style = MaterialTheme.typography.labelMedium
-                            )
+                    item {
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            AccessStat("Membres", users.size.toString(), Modifier.weight(1f))
+                            AccessStat("Rôles", roles.size.toString(), Modifier.weight(1f))
+                            AccessStat("Permissions", permissions.size.toString(), Modifier.weight(1f))
                         }
                     }
-                }
-            }
-
-            if (utilisateurActuel != null) {
-                item {
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(18.dp),
-                        colors = CardDefaults.cardColors(containerColor = Color.White)
-                    ) {
-                        Column(
-                            modifier = Modifier.fillMaxWidth().padding(16.dp),
-                            verticalArrangement = Arrangement.spacedBy(9.dp)
-                        ) {
-                            Text("PROFIL SÉLECTIONNÉ", style = MaterialTheme.typography.labelSmall, color = violet, fontWeight = FontWeight.Bold)
-                            Text(utilisateurActuel.nomComplet, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = textePrincipal)
-                            Text("Rôle de base : ${utilisateurActuel.roleBase}", color = texteSecondaire)
-                            HorizontalDivider(color = Color(0xFFECE9F2))
-                            Text("Rôles personnalisés", fontWeight = FontWeight.Bold, color = textePrincipal)
-
-                            if (rolesDeUtilisateur.isEmpty()) {
-                                Text("Aucun rôle personnalisé attribué.", color = texteSecondaire)
-                            } else {
-                                rolesDeUtilisateur.forEach { role ->
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.SpaceBetween
-                                    ) {
-                                        Text(role.nom, color = violet, fontWeight = FontWeight.SemiBold)
-                                        TextButton(
-                                            enabled = !operationEnCours,
-                                            onClick = {
-                                                operationEnCours = true
-                                                GestionAccesService.retirerRoleUtilisateur(
-                                                    context, utilisateurActuel.id
-                                                ) { ok, resultat -> terminerOperation(ok, resultat) }
-                                            }
-                                        ) { Text("Retirer") }
-                                    }
-                                }
-                            }
-
-                            roles.filter { role -> rolesDeUtilisateur.none { it.id == role.id } }
-                                .forEach { role ->
-                                    OutlinedButton(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        enabled = !operationEnCours && utilisateurActuel.actif,
-                                        onClick = {
-                                            operationEnCours = true
-                                            GestionAccesService.attribuerRoleUtilisateur(
-                                                context, utilisateurActuel.id, role.id
-                                            ) { ok, resultat -> terminerOperation(ok, resultat) }
-                                        }
-                                    ) { Text("Attribuer : ${role.nom}") }
-                                }
-
-                            HorizontalDivider(color = Color(0xFFECE9F2))
-                            Text("Permissions individuelles", fontWeight = FontWeight.Bold, color = textePrincipal)
-                            Text(
-                                "Une permission individuelle peut autoriser ou refuser un accès, même si le rôle le permet.",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = texteSecondaire
-                            )
-                        }
-                    }
-                }
-
-                permissions.groupBy { it.module }.toList().forEach { groupe ->
-                    item(key = "module_${groupe.first}") {
-                        Text(
-                            groupe.first.replaceFirstChar { it.uppercase() },
-                            style = MaterialTheme.typography.titleSmall,
-                            fontWeight = FontWeight.Bold,
-                            color = violet,
-                            modifier = Modifier.padding(top = 4.dp, bottom = 1.dp)
-                        )
-                    }
-
-                    items(groupe.second, key = { permission -> "permission_${permission.id}" }) { permission ->
-                        val directe = permissionsDirectes.firstOrNull { it.permissionId == permission.id }
-                        val vientDuRole = permission.id in idsPermissionsRoles
-                        val statut = when (directe?.effet) {
-                            "refuser" -> "Refus individuel"
-                            "autoriser" -> "Autorisé individuellement"
-                            else -> if (vientDuRole) "Autorisé par un rôle" else "Aucune attribution"
-                        }
-                        val couleur = when (directe?.effet) {
-                            "refuser" -> Color(0xFFC62828)
-                            "autoriser" -> Color(0xFF218653)
-                            else -> if (vientDuRole) Color(0xFF2366B5) else texteSecondaire
-                        }
-                        val fondStatut = when (directe?.effet) {
-                            "refuser" -> Color(0xFFFFEEEE)
-                            "autoriser" -> Color(0xFFEAF7EF)
-                            else -> if (vientDuRole) Color(0xFFEAF2FF) else Color(0xFFF1F0F4)
-                        }
-
-                        Card(
-                            modifier = Modifier.fillMaxWidth(),
+                    item {
+                        OutlinedTextField(
+                            value = search, onValueChange = { search = it },
+                            modifier = Modifier.fillMaxWidth(), singleLine = true,
                             shape = RoundedCornerShape(15.dp),
-                            colors = CardDefaults.cardColors(containerColor = Color.White)
-                        ) {
-                            Column(
-                                modifier = Modifier.fillMaxWidth().padding(13.dp),
-                                verticalArrangement = Arrangement.spacedBy(7.dp)
+                            label = { Text("Rechercher un utilisateur") }
+                        )
+                    }
+                    item {
+                        Text("Membres de l'entreprise", color = AccessInk, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                        Text("Touchez un membre pour ouvrir sa fiche.", color = AccessMuted, style = MaterialTheme.typography.bodySmall)
+                    }
+                    val filtered = users.filter {
+                        it.nomComplet.contains(search, true) || it.roleBase.contains(search, true)
+                    }
+                    if (filtered.isEmpty()) {
+                        item { Text("Aucun utilisateur trouvé.", color = AccessMuted) }
+                    } else {
+                        items(filtered, key = { "user_${it.id}" }) { user ->
+                            Card(
+                                modifier = Modifier.fillMaxWidth().clickable {
+                                    selectedUserId = user.id
+                                    tab = 0
+                                    showDetails = true
+                                },
+                                shape = RoundedCornerShape(18.dp),
+                                colors = CardDefaults.cardColors(containerColor = Color.White),
+                                elevation = CardDefaults.cardElevation(1.dp)
                             ) {
-                                Text(permission.description.ifBlank { permission.id }, fontWeight = FontWeight.SemiBold, color = textePrincipal)
-                                Text(permission.id, style = MaterialTheme.typography.bodySmall, color = texteSecondaire)
-                                Surface(shape = RoundedCornerShape(7.dp), color = fondStatut) {
-                                    Text(
-                                        statut,
-                                        modifier = Modifier.padding(horizontal = 9.dp, vertical = 5.dp),
-                                        color = couleur,
-                                        fontWeight = FontWeight.Bold,
-                                        style = MaterialTheme.typography.labelSmall
-                                    )
+                                Row(Modifier.fillMaxWidth().padding(15.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(13.dp)) {
+                                    Surface(Modifier.size(48.dp), shape = CircleShape, color = Color(0xFFEDE8FF)) {
+                                        Box(contentAlignment = Alignment.Center) {
+                                            Text(user.nomComplet.trim().firstOrNull()?.uppercase() ?: "U", color = AccessPurple, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleLarge)
+                                        }
+                                    }
+                                    Column(Modifier.weight(1f)) {
+                                        Text(user.nomComplet, color = AccessInk, fontWeight = FontWeight.SemiBold)
+                                        Text(user.roleBase.replaceFirstChar { it.uppercase() }, color = AccessMuted, style = MaterialTheme.typography.bodySmall)
+                                        Text(if (user.actif) "Compte actif" else "Compte inactif", color = if (user.actif) AccessGreen else AccessRed, style = MaterialTheme.typography.labelSmall)
+                                    }
+                                    Text("›", color = AccessPurple, style = MaterialTheme.typography.headlineMedium)
                                 }
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
-                                ) {
-                                    TextButton(
-                                        enabled = !operationEnCours && utilisateurActuel.actif,
-                                        onClick = {
-                                            operationEnCours = true
-                                            GestionAccesService.definirPermissionIndividuelle(
-                                                context, utilisateurActuel.id, permission.id, "autoriser"
-                                            ) { ok, resultat -> terminerOperation(ok, resultat) }
-                                        }
-                                    ) { Text("Autoriser", color = Color(0xFF218653)) }
+                            }
+                        }
+                    }
+                    item {
+                        HorizontalDivider(color = Color(0xFFE6E2EE))
+                        Row(Modifier.fillMaxWidth().padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
+                            Column(Modifier.weight(1f)) {
+                                Text("Rôles personnalisés", color = AccessInk, fontWeight = FontWeight.Bold)
+                                Text("Créer et gérer les profils d'accès.", color = AccessMuted, style = MaterialTheme.typography.bodySmall)
+                            }
+                            Button(onClick = { showCreateRole = true }, colors = ButtonDefaults.buttonColors(containerColor = AccessPurple), shape = RoundedCornerShape(12.dp)) {
+                                Text("Créer un rôle")
+                            }
+                        }
+                    }
+                    items(roles, key = { "role_${it.id}" }) { role ->
+                        Card(shape = RoundedCornerShape(15.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
+                            Column(Modifier.fillMaxWidth().padding(13.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                                Text(role.nom, color = AccessInk, fontWeight = FontWeight.SemiBold)
+                                if (role.description.isNotBlank()) Text(role.description, color = AccessMuted, style = MaterialTheme.typography.bodySmall)
+                                Row {
+                                    TextButton(onClick = {
+                                        editingRole = role
+                                        editRoleName = role.nom
+                                        editRoleDescription = role.description
+                                    }) { Text("Modifier") }
+                                    TextButton(enabled = !busy, onClick = {
+                                        busy = true
+                                        GestionAccesService.supprimerRole(context, role.id) { ok, result -> finish(ok, result) }
+                                    }) { Text("Supprimer", color = AccessRed) }
+                                }
+                            }
+                        }
+                    }
+                    if (message.isNotBlank()) item { Text(message, color = AccessMuted, style = MaterialTheme.typography.bodySmall) }
+                }
+            } else if (selectedUser != null) {
+                Column(Modifier.fillMaxSize()) {
+                    Card(
+                        modifier = Modifier.fillMaxWidth().padding(14.dp),
+                        shape = RoundedCornerShape(19.dp),
+                        colors = CardDefaults.cardColors(containerColor = Color.White)
+                    ) {
+                        Row(Modifier.fillMaxWidth().padding(15.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                            Surface(Modifier.size(50.dp), shape = CircleShape, color = Color(0xFFEDE8FF)) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Text(selectedUser!!.nomComplet.trim().firstOrNull()?.uppercase() ?: "U", color = AccessPurple, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleLarge)
+                                }
+                            }
+                            Column(Modifier.weight(1f)) {
+                                Text(selectedUser!!.nomComplet, color = AccessInk, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleLarge)
+                                Text(selectedUser!!.roleBase.replaceFirstChar { it.uppercase() }, color = AccessMuted)
+                            }
+                            Surface(shape = RoundedCornerShape(30.dp), color = if (selectedUser!!.actif) Color(0xFFE8F6ED) else Color(0xFFFFEAEC)) {
+                                Text(if (selectedUser!!.actif) "Actif" else "Inactif", modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp), color = if (selectedUser!!.actif) AccessGreen else AccessRed, style = MaterialTheme.typography.labelMedium)
+                            }
+                        }
+                    }
+                    TabRow(selectedTabIndex = tab, containerColor = Color.White, contentColor = AccessPurple) {
+                        listOf("Profil", "Rôles", "Permissions").forEachIndexed { index, title ->
+                            Tab(selected = tab == index, onClick = { tab = index }, text = { Text(title, fontWeight = if (tab == index) FontWeight.Bold else FontWeight.Normal) })
+                        }
+                    }
 
-                                    TextButton(
-                                        enabled = !operationEnCours && utilisateurActuel.actif,
-                                        onClick = {
-                                            operationEnCours = true
-                                            GestionAccesService.definirPermissionIndividuelle(
-                                                context, utilisateurActuel.id, permission.id, "refuser"
-                                            ) { ok, resultat -> terminerOperation(ok, resultat) }
-                                        }
-                                    ) { Text("Refuser", color = Color(0xFFC62828)) }
-
-                                    if (directe != null) {
-                                        TextButton(
-                                            enabled = !operationEnCours && utilisateurActuel.actif,
-                                            onClick = {
-                                                operationEnCours = true
-                                                GestionAccesService.reinitialiserPermissionIndividuelle(
-                                                    context, utilisateurActuel.id, permission.id
-                                                ) { ok, resultat -> terminerOperation(ok, resultat) }
+                    when (tab) {
+                        0 -> LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                            item { AccessSectionTitle("Résumé du compte", "Informations et niveau d'accès") }
+                            item { AccessInfo("Nom complet", selectedUser!!.nomComplet) }
+                            item { AccessInfo("Rôle de base", selectedUser!!.roleBase) }
+                            item { AccessInfo("Statut", if (selectedUser!!.actif) "Actif" else "Inactif") }
+                            item {
+                                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    AccessStat("Rôles", assignedRoles.size.toString(), Modifier.weight(1f))
+                                    AccessStat("Droits directs", userOverrides.size.toString(), Modifier.weight(1f))
+                                    AccessStat("Droits hérités", inheritedPermissionIds.size.toString(), Modifier.weight(1f))
+                                }
+                            }
+                            item {
+                                Button(onClick = { tab = 1 }, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = AccessPurple), shape = RoundedCornerShape(12.dp)) { Text("Gérer ses rôles") }
+                                OutlinedButton(onClick = { tab = 2 }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp)) { Text("Modifier ses permissions") }
+                            }
+                        }
+                        1 -> LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                            item { AccessSectionTitle("Rôles de ${selectedUser!!.nomComplet}", "Attribuez un rôle pour donner un ensemble de permissions.") }
+                            if (assignedRoles.isNotEmpty()) {
+                                item { Text("Rôles attribués", color = AccessInk, fontWeight = FontWeight.Bold) }
+                                items(assignedRoles, key = { "assigned_${it.id}" }) { role ->
+                                    Card(shape = RoundedCornerShape(15.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
+                                        Row(Modifier.fillMaxWidth().padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+                                            Column(Modifier.weight(1f)) {
+                                                Text(role.nom, color = AccessInk, fontWeight = FontWeight.SemiBold)
+                                                Text("Attribué", color = AccessGreen, style = MaterialTheme.typography.bodySmall)
                                             }
-                                        ) { Text("Réinitialiser") }
+                                            TextButton(enabled = !busy && selectedUser!!.actif, onClick = {
+                                                busy = true
+                                                GestionAccesService.retirerRoleUtilisateur(context, selectedUser!!.id) { ok, result -> finish(ok, result) }
+                                            }) { Text("Retirer", color = AccessRed) }
+                                        }
+                                    }
+                                }
+                            }
+                            item { Text("Rôles disponibles", color = AccessInk, fontWeight = FontWeight.Bold) }
+                            val available = roles.filter { role -> assignedRoles.none { it.id == role.id } }
+                            if (available.isEmpty()) item { Text("Aucun autre rôle disponible.", color = AccessMuted) }
+                            items(available, key = { "available_${it.id}" }) { role ->
+                                Card(shape = RoundedCornerShape(15.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
+                                    Row(Modifier.fillMaxWidth().padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+                                        Column(Modifier.weight(1f)) {
+                                            Text(role.nom, color = AccessInk, fontWeight = FontWeight.SemiBold)
+                                            Text(role.description.ifBlank { "Aucune description" }, color = AccessMuted, style = MaterialTheme.typography.bodySmall)
+                                        }
+                                        Button(enabled = !busy && selectedUser!!.actif, onClick = {
+                                            busy = true
+                                            GestionAccesService.attribuerRoleUtilisateur(context, selectedUser!!.id, role.id) { ok, result -> finish(ok, result) }
+                                        }, colors = ButtonDefaults.buttonColors(containerColor = AccessPurple), shape = RoundedCornerShape(11.dp)) { Text("Attribuer") }
+                                    }
+                                }
+                            }
+                        }
+                        else -> LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                            item { AccessSectionTitle("Permissions", "Un refus individuel est prioritaire sur les permissions héritées des rôles.") }
+                            permissions.groupBy { it.module }.toList().forEach { group ->
+                                item(key = "module_${group.first}") {
+                                    Text(group.first.replaceFirstChar { it.uppercase() }, color = AccessPurple, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 8.dp))
+                                }
+                                items(group.second, key = { "permission_${it.id}" }) { permission ->
+                                    val override = userOverrides.firstOrNull { it.permissionId == permission.id }
+                                    val inherited = permission.id in inheritedPermissionIds
+                                    val status = when (override?.effet) {
+                                        "refuser" -> "Refus individuel"
+                                        "autoriser" -> "Autorisé individuellement"
+                                        else -> if (inherited) "Hérité d'un rôle" else "Non attribué"
+                                    }
+                                    val statusColor = when (override?.effet) {
+                                        "refuser" -> AccessRed
+                                        "autoriser" -> AccessGreen
+                                        else -> if (inherited) AccessBlue else AccessMuted
+                                    }
+                                    Card(shape = RoundedCornerShape(15.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
+                                        Column(Modifier.fillMaxWidth().padding(13.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                            Text(permission.description.ifBlank { permission.id }, color = AccessInk, fontWeight = FontWeight.SemiBold)
+                                            Text(permission.id, color = AccessMuted, style = MaterialTheme.typography.bodySmall)
+                                            Text(status, color = statusColor, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
+                                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+                                                TextButton(enabled = !busy && selectedUser!!.actif, onClick = {
+                                                    busy = true
+                                                    GestionAccesService.definirPermissionIndividuelle(context, selectedUser!!.id, permission.id, "autoriser") { ok, result -> finish(ok, result) }
+                                                }) { Text("Autoriser", color = AccessGreen) }
+                                                TextButton(enabled = !busy && selectedUser!!.actif, onClick = {
+                                                    busy = true
+                                                    GestionAccesService.definirPermissionIndividuelle(context, selectedUser!!.id, permission.id, "refuser") { ok, result -> finish(ok, result) }
+                                                }) { Text("Refuser", color = AccessRed) }
+                                                if (override != null) {
+                                                    TextButton(enabled = !busy && selectedUser!!.actif, onClick = {
+                                                        busy = true
+                                                        GestionAccesService.reinitialiserPermissionIndividuelle(context, selectedUser!!.id, permission.id) { ok, result -> finish(ok, result) }
+                                                    }) { Text("Réinitialiser", color = AccessBlue) }
+                                                }
+                                            }
+                                        }
                                     }
                                 }
                             }
                         }
                     }
                 }
+            } else {
+                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text("Utilisateur introuvable.", color = AccessMuted)
+                }
             }
         }
-
-        if (message.isNotBlank()) {
-            item {
-                Text(
-                    message,
-                    color = texteSecondaire,
-                    style = MaterialTheme.typography.bodySmall,
-                    modifier = Modifier.padding(vertical = 6.dp)
-                )
-            }
-        }
-
-        item { Spacer(modifier = Modifier.height(20.dp)) }
     }
 }
 
 @Composable
-private fun CarteStatistique(
-    titre: String,
-    valeur: String,
-    modifier: Modifier = Modifier
-) {
-    Card(
-        modifier = modifier,
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        shape = RoundedCornerShape(12.dp)
-    ) {
-        Column(modifier = Modifier.padding(12.dp)) {
-            Text(valeur, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-            Text(titre, style = MaterialTheme.typography.bodySmall, color = Color.Gray)
+private fun AccessStat(title: String, value: String, modifier: Modifier = Modifier) {
+    Card(modifier, shape = RoundedCornerShape(15.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
+        Column(Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Text(value, color = AccessInk, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+            Text(title, color = AccessMuted, style = MaterialTheme.typography.labelSmall)
+        }
+    }
+}
+
+@Composable
+private fun AccessSectionTitle(title: String, subtitle: String) {
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Text(title, color = AccessInk, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+        Text(subtitle, color = AccessMuted, style = MaterialTheme.typography.bodySmall)
+    }
+}
+
+@Composable
+private fun AccessInfo(title: String, value: String) {
+    Card(shape = RoundedCornerShape(14.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
+        Column(Modifier.fillMaxWidth().padding(13.dp), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+            Text(title, color = AccessMuted, style = MaterialTheme.typography.labelSmall)
+            Text(value, color = AccessInk, fontWeight = FontWeight.SemiBold)
         }
     }
 }
