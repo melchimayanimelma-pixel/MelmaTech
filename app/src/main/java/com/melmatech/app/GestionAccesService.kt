@@ -385,4 +385,52 @@ object GestionAccesService {
         }
         return resultat
     }
+
+    // ------------------------- TEST TEMPORAIRE DE SECURITE ----------------
+    // À appeler uniquement après connexion avec le compte vendeur de test.
+    // L'UUID utilisé est volontairement inexistant : aucun rôle réel ne peut
+    // être modifié par ce test.
+    fun testerProtectionAdmin(
+        context: Context,
+        callback: (Boolean, String) -> Unit
+    ) {
+        val params = JSONObject()
+            .put("p_role_id", "00000000-0000-0000-0000-000000000000")
+            .put("p_nom", "TEST_SECURITE_VENDEUR")
+            .put("p_description", JSONObject.NULL)
+
+        Thread {
+            try {
+                val resultat = rpc(context, "modifier_role_personnalise", params)
+                mainHandler.post {
+                    callback(
+                        false,
+                        "ALERTE : le serveur a accepté l'appel du compte vendeur. " +
+                            "Réponse reçue : $resultat"
+                    )
+                }
+            } catch (e: Exception) {
+                val detail = e.message ?: "Erreur inconnue"
+                val messageAdmin = detail.contains("admin", ignoreCase = true) ||
+                    detail.contains("administrateur", ignoreCase = true) ||
+                    detail.contains("réservé", ignoreCase = true) ||
+                    detail.contains("autorisé", ignoreCase = true) ||
+                    detail.contains("not allowed", ignoreCase = true) ||
+                    detail.contains("permission denied", ignoreCase = true)
+
+                mainHandler.post {
+                    if (messageAdmin) {
+                        callback(true, "PROTECTION ADMIN CONFIRMÉE : $detail")
+                    } else {
+                        callback(
+                            false,
+                            "L'appel a été refusé, mais le motif ne confirme pas " +
+                                "encore le contrôle administrateur. Détail : $detail"
+                        )
+                    }
+                }
+            }
+        }.start()
+    }
+
 }
