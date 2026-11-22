@@ -6895,10 +6895,10 @@ fun EditeurPhotoProfil(
                 Canvas(
                     modifier = Modifier
                         .fillMaxSize()
-                        .onSizeChanged { tailleZone = it }
+                        .onSizeChanged { nouvelleTaille: IntSize -> tailleZone = nouvelleTaille }
                         .pointerInput(bitmap) {
                             detectTransformGestures {
-                                    _, pan, zoomChange, _ ->
+                                    _centroid: Offset, pan: Offset, zoomChange: Float, _rotationChange: Float ->
 
                                 zoom = (zoom * zoomChange)
                                     .coerceIn(1f, 5f)
