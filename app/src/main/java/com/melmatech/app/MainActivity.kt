@@ -3973,7 +3973,10 @@ val enregistrerFactureLauncher =
                             Text(
                                 when (roleUtilisateur?.lowercase(Locale.ROOT)) {
                                     "admin", "administrateur" -> "Administrateur"
-                                    "manager" -> "Manager"
+                                    "manager", "gerant", "gérant" -> "Gérant"
+                                    "responsable_rh", "responsable rh" -> "Responsable RH"
+                                    "comptable" -> "Comptable"
+                                    "magasinier" -> "Magasinier"
                                     "vendeur" -> "Vendeur"
                                     else -> if (estAdministrateur) "Administrateur" else "Vendeur"
                                 },
@@ -4156,7 +4159,8 @@ val enregistrerFactureLauncher =
 
         }
 
-        if (estAdministrateur) {
+        if (estAdministrateur || roleUtilisateur.equals("responsable_rh", ignoreCase = true) ||
+            roleUtilisateur.equals("responsable rh", ignoreCase = true)) {
             item {
                 Card(
                     onClick = { page = "Personnel" },
@@ -4744,8 +4748,10 @@ Slider(
 }
 
 "Personnel" -> {
-    if (!estAdministrateur) {
-        Text("Accès réservé au personnel RH autorisé.")
+    val estResponsableRH = roleUtilisateur.equals("responsable_rh", ignoreCase = true) ||
+        roleUtilisateur.equals("responsable rh", ignoreCase = true)
+    if (!estAdministrateur && !estResponsableRH) {
+        Text("Accès réservé au responsable RH autorisé.")
     } else {
         EcranPersonnel(onRetour = { page = "Plus" })
     }
