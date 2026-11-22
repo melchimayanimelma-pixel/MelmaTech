@@ -20,7 +20,8 @@ data class ProfilUtilisateur(
     val nomComplet: String,
     val role: String,
     val entrepriseId: String,
-    val photoUrl: String?
+    val photoUrl: String?,
+    val changementMotDePasseRequis: Boolean = false
 )
 
 object AuthService {
@@ -73,7 +74,7 @@ object AuthService {
         val url =
             "${SupabaseConfig.url}/rest/v1/profils" +
             "?id=eq.$id" +
-            "&select=id,nom_complet,role,entreprise_id,photo_url,actif,supprime_le"
+            "&select=id,nom_complet,role,entreprise_id,photo_url,actif,supprime_le,changement_mot_de_passe_requis"
 
         val request = Request.Builder()
             .url(url)
@@ -144,7 +145,9 @@ object AuthService {
                                 p.optString("photo_url").takeIf {
                                     it.isNotBlank()
                                 }
-                            }
+                            },
+                            changementMotDePasseRequis =
+                                p.optBoolean("changement_mot_de_passe_requis", false)
                         )
 
                         mainHandler.post {
@@ -670,7 +673,31 @@ object AuthService {
                         val detail = it.body?.string().orEmpty()
                         if (detail.isNotBlank()) "Supabase a refusé le changement de mot de passe." else "Impossible de modifier le mot de passe (${it.code})."
                     }
-                    mainHandler.post { callback(succes, message) }
+                    if (!succes) {
+                        mainHandler.post { callback(false, message) }
+                        return
+                    }
+                    val confirmation = JSONObject().put("action", "terminer_premiere_connexion")
+                    val confirmRequest = Request.Builder()
+                        .url("${SupabaseConfig.url}/functions/v1/creer-vendeur")
+                        .addHeader("apikey", SupabaseConfig.key)
+                        .addHeader("Authorization", "Bearer $token")
+                        .addHeader("Content-Type", "application/json")
+                        .post(confirmation.toString().toRequestBody(jsonType))
+                        .build()
+                    client.newCall(confirmRequest).enqueue(object : Callback {
+                        override fun onFailure(call: Call, e: IOException) {
+                            mainHandler.post { callback(false, "Mot de passe modifié, mais la validation de première connexion a échoué. Réessaie.") }
+                        }
+                        override fun onResponse(call: Call, confirmResponse: Response) {
+                            confirmResponse.use { cr ->
+                                val ok = cr.isSuccessful
+                                mainHandler.post {
+                                    callback(ok, if (ok) message else "Mot de passe modifié, mais la validation de première connexion a échoué.")
+                                }
+                            }
+                        }
+                    })
                 }
             }
         })
