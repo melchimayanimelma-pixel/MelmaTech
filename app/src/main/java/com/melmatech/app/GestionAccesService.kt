@@ -53,7 +53,7 @@ object GestionAccesService {
                     val entrepriseId = profil.entrepriseId
                     val utilisateursJson = get(
                         context,
-                        "profils?entreprise_id=eq.$entrepriseId&select=id,nom_complet,role,actif&order=nom_complet.asc"
+                        "profils?entreprise_id=eq.$entrepriseId&supprime_le=is.null&select=id,nom_complet,role,actif&order=nom_complet.asc"
                     )
                     val permissionsJson = get(
                         context,
