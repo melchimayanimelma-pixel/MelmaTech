@@ -6219,8 +6219,6 @@ Card(
     }
 }
 
-}
-
 @Composable
 fun DashboardCard(titre: String, montant: String) {
 
