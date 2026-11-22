@@ -4,6 +4,8 @@ package com.melmatech.app
 import android.content.Context
 import android.os.Handler
 import android.os.Looper
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import org.json.JSONArray
@@ -292,4 +294,228 @@ object GestionAccesService {
 
         return resultat
     }
+
+
+    private fun mutation(
+        context: Context,
+        table: String,
+        method: String,
+        filtre: String = "",
+        donnees: JSONObject? = null,
+        callback: (Boolean, String) -> Unit
+    ) {
+        AuthService.obtenirProfil(context) { okProfil, messageProfil, profil ->
+            if (!okProfil || profil == null) {
+                callback(false, messageProfil)
+                return@obtenirProfil
+            }
+            val token = AuthService.obtenirAccessToken(context)
+            val utilisateurId = AuthService.obtenirUtilisateurId(context)
+            if (token.isNullOrBlank() || utilisateurId.isNullOrBlank()) {
+                callback(false, "Session expirée. Reconnecte-toi.")
+                return@obtenirProfil
+            }
+
+            val url = "${SupabaseConfig.url}/rest/v1/$table" +
+                "?entreprise_id=eq.${profil.entrepriseId}" + filtre
+            val builder = Request.Builder()
+                .url(url)
+                .addHeader("apikey", SupabaseConfig.key)
+                .addHeader("Authorization", "Bearer $token")
+                .addHeader("Content-Type", "application/json")
+                .addHeader("Prefer", "return=minimal")
+
+            val body = donnees?.toString()?.toRequestBody(
+                "application/json; charset=utf-8".toMediaType()
+            )
+            val request = when (method) {
+                "POST" -> builder.post(body ?: "{}".toRequestBody("application/json".toMediaType())).build()
+                "PATCH" -> builder.patch(body ?: "{}".toRequestBody("application/json".toMediaType())).build()
+                "DELETE" -> builder.delete().build()
+                else -> {
+                    callback(false, "Méthode non prise en charge.")
+                    return@obtenirProfil
+                }
+            }
+
+            client.newCall(request).enqueue(object : okhttp3.Callback {
+                override fun onFailure(call: okhttp3.Call, e: IOException) {
+                    mainHandler.post {
+                        callback(false, "Erreur réseau : ${e.message ?: "connexion impossible"}")
+                    }
+                }
+
+                override fun onResponse(call: okhttp3.Call, response: okhttp3.Response) {
+                    response.use {
+                        val corps = it.body?.string().orEmpty()
+                        mainHandler.post {
+                            if (it.isSuccessful) callback(true, "Opération effectuée avec succès.")
+                            else callback(false, "Erreur Supabase (${it.code}) : $corps")
+                        }
+                    }
+                }
+            })
+        }
+    }
+
+    fun creerRole(
+        context: Context,
+        nom: String,
+        description: String?,
+        callback: (Boolean, String, String?) -> Unit
+    ) {
+        AuthService.obtenirProfil(context) { ok, message, profil ->
+            if (!ok || profil == null) {
+                callback(false, message, null)
+                return@obtenirProfil
+            }
+            val token = AuthService.obtenirAccessToken(context)
+            val userId = AuthService.obtenirUtilisateurId(context)
+            if (token.isNullOrBlank() || userId.isNullOrBlank()) {
+                callback(false, "Session expirée. Reconnecte-toi.", null)
+                return@obtenirProfil
+            }
+            val data = JSONObject().apply {
+                put("entreprise_id", profil.entrepriseId)
+                put("cree_par", userId)
+                put("nom", nom)
+                if (description != null) put("description", description)
+            }
+            val request = Request.Builder()
+                .url("${SupabaseConfig.url}/rest/v1/roles_personnalises")
+                .addHeader("apikey", SupabaseConfig.key)
+                .addHeader("Authorization", "Bearer $token")
+                .addHeader("Content-Type", "application/json")
+                .addHeader("Prefer", "return=representation")
+                .post(data.toString().toRequestBody("application/json".toMediaType()))
+                .build()
+            client.newCall(request).enqueue(object : okhttp3.Callback {
+                override fun onFailure(call: okhttp3.Call, e: IOException) {
+                    mainHandler.post { callback(false, "Erreur réseau : ${e.message}", null) }
+                }
+                override fun onResponse(call: okhttp3.Call, response: okhttp3.Response) {
+                    response.use {
+                        val body = it.body?.string().orEmpty()
+                        mainHandler.post {
+                            if (!it.isSuccessful) callback(false, "Erreur Supabase (${it.code}) : $body", null)
+                            else {
+                                val id = try { JSONArray(body).optJSONObject(0)?.optString("id") } catch (_: Exception) { null }
+                                callback(true, "Rôle créé.", id)
+                            }
+                        }
+                    }
+                }
+            })
+        }
+    }
+
+    fun modifierRole(context: Context, roleId: String, nom: String, description: String?, callback: (Boolean, String) -> Unit) {
+        val data = JSONObject().put("nom", nom).put("description", description)
+        mutation(context, "roles_personnalises", "PATCH", "&id=eq.$roleId", data, callback)
+    }
+
+    fun supprimerRole(context: Context, roleId: String, callback: (Boolean, String) -> Unit) {
+        mutation(context, "roles_personnalises", "DELETE", "&id=eq.$roleId", callback = callback)
+    }
+
+    fun attribuerPermissionRole(context: Context, roleId: String, permissionId: String, callback: (Boolean, String) -> Unit) {
+        val data = JSONObject().put("role_id", roleId).put("permission_id", permissionId)
+        AuthService.obtenirProfil(context) { ok, message, profil ->
+            if (!ok || profil == null) { callback(false, message); return@obtenirProfil }
+            data.put("entreprise_id", profil.entrepriseId)
+            mutation(context, "role_permissions", "POST", donnees = data, callback = callback)
+        }
+    }
+
+    fun retirerPermissionRole(context: Context, roleId: String, permissionId: String, callback: (Boolean, String) -> Unit) {
+        mutation(context, "role_permissions", "DELETE", "&role_id=eq.$roleId&permission_id=eq.$permissionId", callback = callback)
+    }
+
+    fun attribuerRoleUtilisateur(context: Context, utilisateurId: String, roleId: String, callback: (Boolean, String) -> Unit) {
+        AuthService.obtenirProfil(context) { ok, message, profil ->
+            if (!ok || profil == null) { callback(false, message); return@obtenirProfil }
+            val userId = AuthService.obtenirUtilisateurId(context)
+            if (userId.isNullOrBlank()) { callback(false, "Session expirée."); return@obtenirProfil }
+            val data = JSONObject()
+                .put("entreprise_id", profil.entrepriseId)
+                .put("utilisateur_id", utilisateurId)
+                .put("role_id", roleId)
+                .put("attribue_par", userId)
+            mutation(context, "utilisateur_roles", "POST", donnees = data, callback = callback)
+        }
+    }
+
+    fun retirerRoleUtilisateur(context: Context, utilisateurId: String, callback: (Boolean, String) -> Unit) {
+        mutation(context, "utilisateur_roles", "DELETE", "&utilisateur_id=eq.$utilisateurId", callback = callback)
+    }
+
+    fun definirPermissionIndividuelle(
+        context: Context, utilisateurId: String, permissionId: String, effet: String,
+        callback: (Boolean, String) -> Unit
+    ) {
+        if (effet != "autoriser" && effet != "refuser") {
+            callback(false, "Effet de permission invalide.")
+            return
+        }
+        AuthService.obtenirProfil(context) { ok, message, profil ->
+            if (!ok || profil == null) { callback(false, message); return@obtenirProfil }
+            val userId = AuthService.obtenirUtilisateurId(context)
+            if (userId.isNullOrBlank()) { callback(false, "Session expirée."); return@obtenirProfil }
+            val token = AuthService.obtenirAccessToken(context)
+            if (token.isNullOrBlank()) { callback(false, "Session expirée."); return@obtenirProfil }
+
+            val url = "${SupabaseConfig.url}/rest/v1/utilisateur_permissions" +
+                "?entreprise_id=eq.${profil.entrepriseId}&utilisateur_id=eq.$utilisateurId&permission_id=eq.$permissionId"
+            val delete = Request.Builder().url(url)
+                .addHeader("apikey", SupabaseConfig.key)
+                .addHeader("Authorization", "Bearer $token")
+                .delete().build()
+            client.newCall(delete).enqueue(object : okhttp3.Callback {
+                override fun onFailure(call: okhttp3.Call, e: IOException) {
+                    mainHandler.post { callback(false, "Erreur réseau : ${e.message}") }
+                }
+                override fun onResponse(call: okhttp3.Call, response: okhttp3.Response) {
+                    response.use {
+                        if (!it.isSuccessful) {
+                            val body = it.body?.string().orEmpty()
+                            mainHandler.post { callback(false, "Erreur Supabase (${it.code}) : $body") }
+                            return
+                        }
+                    }
+                    val data = JSONObject()
+                        .put("entreprise_id", profil.entrepriseId)
+                        .put("utilisateur_id", utilisateurId)
+                        .put("permission_id", permissionId)
+                        .put("attribue_par", userId)
+                        .put("effet", effet)
+                    val post = Request.Builder()
+                        .url("${SupabaseConfig.url}/rest/v1/utilisateur_permissions")
+                        .addHeader("apikey", SupabaseConfig.key)
+                        .addHeader("Authorization", "Bearer $token")
+                        .addHeader("Content-Type", "application/json")
+                        .post(data.toString().toRequestBody("application/json".toMediaType()))
+                        .build()
+                    client.newCall(post).enqueue(object : okhttp3.Callback {
+                        override fun onFailure(call: okhttp3.Call, e: IOException) {
+                            mainHandler.post { callback(false, "Erreur réseau : ${e.message}") }
+                        }
+                        override fun onResponse(call: okhttp3.Call, response: okhttp3.Response) {
+                            response.use {
+                                val body = it.body?.string().orEmpty()
+                                mainHandler.post {
+                                    if (it.isSuccessful) callback(true, "Permission individuelle enregistrée.")
+                                    else callback(false, "Erreur Supabase (${it.code}) : $body")
+                                }
+                            }
+                        }
+                    })
+                }
+            })
+        }
+    }
+
+    fun reinitialiserPermissionIndividuelle(context: Context, utilisateurId: String, permissionId: String, callback: (Boolean, String) -> Unit) {
+        mutation(context, "utilisateur_permissions", "DELETE", "&utilisateur_id=eq.$utilisateurId&permission_id=eq.$permissionId", callback = callback)
+    }
+
 }
