@@ -445,8 +445,14 @@ object GestionAccesService {
         }
     }
 
-    fun retirerRoleUtilisateur(context: Context, utilisateurId: String, callback: (Boolean, String) -> Unit) {
-        mutation(context, "utilisateur_roles", "DELETE", "&utilisateur_id=eq.$utilisateurId", callback = callback)
+    fun retirerRoleUtilisateur(context: Context, utilisateurId: String, roleId: String, callback: (Boolean, String) -> Unit) {
+        mutation(
+            context,
+            "utilisateur_roles",
+            "DELETE",
+            "&utilisateur_id=eq.$utilisateurId&role_id=eq.$roleId",
+            callback = callback
+        )
     }
 
     fun definirPermissionIndividuelle(
