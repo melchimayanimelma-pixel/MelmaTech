@@ -201,6 +201,11 @@ fun MelmaTechApp(context: Context) {
     }
     var nomProfilConnecte by remember { mutableStateOf("") }
     var photoProfilConnecte by remember { mutableStateOf("") }
+    var exigerChangementMotDePasse by remember { mutableStateOf(false) }
+    var nouveauMotDePasseInitial by remember { mutableStateOf("") }
+    var confirmerMotDePasseInitial by remember { mutableStateOf("") }
+    var messageMotDePasseInitial by remember { mutableStateOf("") }
+    var chargementMotDePasseInitial by remember { mutableStateOf(false) }
 
     var page by remember { mutableStateOf("Accueil") }
     var devise by remember {
@@ -363,8 +368,13 @@ val enregistrerFactureLauncher =
 
     val estAdministrateur =
         roleUtilisateur == "administrateur" ||
-        roleUtilisateur == "admin" ||
-        roleUtilisateur == "manager"
+        roleUtilisateur == "admin"
+
+    val estGerant = roleUtilisateur == "gerant" || roleUtilisateur == "manager"
+    val estResponsableRH = roleUtilisateur == "responsable_rh"
+    val estComptable = roleUtilisateur == "comptable"
+    val estMagasinier = roleUtilisateur == "magasinier"
+    val estConsultation = roleUtilisateur == "consultation"
 
     val produits = remember {
         mutableStateListOf<Produit>().apply {
@@ -657,11 +667,15 @@ val enregistrerFactureLauncher =
                 if (succes && profil != null) {
                     nomProfilConnecte = profil.nomComplet.orEmpty()
                     photoProfilConnecte = profil.photoUrl.orEmpty()
+                    roleUtilisateur = profil.role.lowercase(Locale.ROOT)
+                    exigerChangementMotDePasse = profil.changementMotDePasseRequis
                 }
             }
         } else {
             nomProfilConnecte = ""
             photoProfilConnecte = ""
+            roleUtilisateur = null
+            exigerChangementMotDePasse = false
         }
     }
 
@@ -893,6 +907,61 @@ val enregistrerFactureLauncher =
 
         } else {
 
+            if (exigerChangementMotDePasse) {
+                AlertDialog(
+                    onDismissRequest = { },
+                    title = { Text("Sécurisez votre compte") },
+                    text = {
+                        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                            Text("Pour votre première connexion, vous devez choisir un nouveau mot de passe avant d'accéder à MelmaTech.")
+                            OutlinedTextField(
+                                value = nouveauMotDePasseInitial,
+                                onValueChange = { nouveauMotDePasseInitial = it },
+                                label = { Text("Nouveau mot de passe") },
+                                singleLine = true,
+                                visualTransformation = PasswordVisualTransformation()
+                            )
+                            OutlinedTextField(
+                                value = confirmerMotDePasseInitial,
+                                onValueChange = { confirmerMotDePasseInitial = it },
+                                label = { Text("Confirmer le mot de passe") },
+                                singleLine = true,
+                                visualTransformation = PasswordVisualTransformation()
+                            )
+                            if (messageMotDePasseInitial.isNotBlank()) {
+                                Text(messageMotDePasseInitial, color = Color(0xFFD04452))
+                            }
+                        }
+                    },
+                    confirmButton = {
+                        Button(
+                            enabled = !chargementMotDePasseInitial,
+                            onClick = {
+                                when {
+                                    nouveauMotDePasseInitial.length < 8 ->
+                                        messageMotDePasseInitial = "Le mot de passe doit contenir au moins 8 caractères."
+                                    nouveauMotDePasseInitial != confirmerMotDePasseInitial ->
+                                        messageMotDePasseInitial = "Les deux mots de passe ne correspondent pas."
+                                    else -> {
+                                        chargementMotDePasseInitial = true
+                                        AuthService.changerMonMotDePasse(context, nouveauMotDePasseInitial) { ok, msg ->
+                                            chargementMotDePasseInitial = false
+                                            messageMotDePasseInitial = msg
+                                            if (ok) {
+                                                exigerChangementMotDePasse = false
+                                                nouveauMotDePasseInitial = ""
+                                                confirmerMotDePasseInitial = ""
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        ) {
+                            Text(if (chargementMotDePasseInitial) "Patientez..." else "Confirmer le nouveau mot de passe")
+                        }
+                    }
+                )
+            } else {
             Scaffold(
     topBar = {
         TopAppBar(
@@ -3973,9 +4042,13 @@ val enregistrerFactureLauncher =
                             Text(
                                 when (roleUtilisateur?.lowercase(Locale.ROOT)) {
                                     "admin", "administrateur" -> "Administrateur"
-                                    "manager" -> "Manager"
+                                    "gerant", "manager" -> "Gérant"
+                                    "responsable_rh" -> "Responsable des ressources humaines"
+                                    "comptable" -> "Comptable"
+                                    "magasinier" -> "Magasinier"
+                                    "consultation" -> "Consultation"
                                     "vendeur" -> "Vendeur"
-                                    else -> if (estAdministrateur) "Administrateur" else "Vendeur"
+                                    else -> "Utilisateur"
                                 },
                                 color = Color(0xFFBDA6E8),
                                 style = MaterialTheme.typography.bodySmall,
@@ -4121,7 +4194,7 @@ val enregistrerFactureLauncher =
                                 fontWeight = FontWeight.SemiBold
                             )
                             Text(
-                                "Gérer les comptes des vendeurs.",
+                                "Créer et gérer les comptes de l'équipe.",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -4156,7 +4229,7 @@ val enregistrerFactureLauncher =
 
         }
 
-        if (estAdministrateur) {
+        if (estAdministrateur || estResponsableRH) {
             item {
                 Card(
                     onClick = { page = "Personnel" },
@@ -4744,8 +4817,8 @@ Slider(
 }
 
 "Personnel" -> {
-    if (!estAdministrateur) {
-        Text("Accès réservé à l'administrateur et au manager.")
+    if (!estAdministrateur && !estResponsableRH) {
+        Text("Accès réservé à l'administrateur et au responsable des ressources humaines.")
     } else {
         EcranPersonnel(onRetour = { page = "Plus" })
     }
@@ -7157,6 +7230,7 @@ fun ActionsProduit(
                 tint = Color(0xFFD64545),
                 modifier = Modifier.size(19.dp)
             )
+            }
         }
     }
 }
