@@ -83,6 +83,7 @@ object GestionAccesService {
                     val utilisateursJson = get(
                         context,
                         "profils?entreprise_id=eq.$entrepriseId" +
+                            "&supprime_le=is.null" +
                             "&select=id,nom_complet,role,actif" +
                             "&order=nom_complet.asc"
                     )
