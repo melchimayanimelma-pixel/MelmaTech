@@ -975,8 +975,13 @@ val enregistrerFactureLauncher =
                 ) {
 
                     // Empêche l'accès aux pages réservées.
+                    val estResponsableRHConnecte =
+                        roleUtilisateur == "responsable_rh" ||
+                        roleUtilisateur == "responsable rh"
+
                     if (
                         !estAdministrateur &&
+                        !(estResponsableRHConnecte && page == "Personnel") &&
                         (page == "Produits" || page == "Utilisateurs" || page == "Personnel" || page == "GestionAcces")
                     ) {
                         page = "Accueil"
