@@ -537,7 +537,7 @@ fun EcranGestionAcces(
                                             onClick = {
                                                 operationEnCours = true
                                                 GestionAccesService.retirerRoleUtilisateur(
-                                                    context, utilisateurActuel.id
+                                                    context, utilisateurActuel.id, role.id
                                                 ) { ok, resultat -> terminerOperation(ok, resultat) }
                                             }
                                         ) { Text("Retirer") }
