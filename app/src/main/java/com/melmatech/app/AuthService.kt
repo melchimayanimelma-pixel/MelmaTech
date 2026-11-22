@@ -551,8 +551,15 @@ object AuthService {
         context: Context,
         callback: (Boolean, String, List<UtilisateurEntreprise>) -> Unit
     ) {
+        val utilisateurId = obtenirUtilisateurId(context)
+        if (utilisateurId.isNullOrBlank()) {
+            callback(false, "Session expirée. Reconnecte-toi.", emptyList())
+            return
+        }
+
         val donnees = JSONObject().apply {
             put("action", "lister")
+            put("vendeurId", utilisateurId)
         }
 
         appelerGestionVendeurs(context, donnees) { succes, message, resultat ->
