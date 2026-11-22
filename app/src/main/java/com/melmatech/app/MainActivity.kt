@@ -4801,6 +4801,9 @@ Slider(
             mutableStateOf("")
         }
 
+        var roleSaisi by remember { mutableStateOf("vendeur") }
+        var menuRoleOuvert by remember { mutableStateOf(false) }
+
         var afficherMotDePasse by remember {
             mutableStateOf(false)
         }
@@ -4965,7 +4968,8 @@ val validerPhotoRecadree: (Bitmap) -> Unit = { bitmap ->
 
                 if (succes) {
                     vendeurs = liste.filter {
-                        it.role.equals("vendeur", ignoreCase = true)
+                        !it.role.equals("administrateur", ignoreCase = true) &&
+                            !it.role.equals("admin", ignoreCase = true)
                     }
                     messageUtilisateurs = ""
                 } else {
@@ -5156,6 +5160,7 @@ val validerPhotoRecadree: (Bitmap) -> Unit = { bitmap ->
                         nomSaisi = ""
                         emailSaisi = ""
                         motDePasseSaisi = ""
+                        roleSaisi = "vendeur"
                         messageUtilisateurs = ""
                         afficherFormulaire = true
                     },
@@ -5745,6 +5750,64 @@ Card(
                         )
 
                         if (vendeurModifie == null) {
+                            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                Text(
+                                    "RÔLE DU MEMBRE",
+                                    color = Color(0xFF655D70),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Box {
+                                    OutlinedButton(
+                                        onClick = { menuRoleOuvert = true },
+                                        enabled = !chargementUtilisateurs,
+                                        modifier = Modifier.fillMaxWidth(),
+                                        shape = RoundedCornerShape(14.dp)
+                                    ) {
+                                        Text(
+                                            when (roleSaisi) {
+                                                "gerant" -> "Gérant"
+                                                "responsable_rh" -> "Responsable des ressources humaines"
+                                                "comptable" -> "Comptable"
+                                                "magasinier" -> "Magasinier"
+                                                "consultation" -> "Consultation"
+                                                else -> "Vendeur"
+                                            },
+                                            modifier = Modifier.weight(1f)
+                                        )
+                                        Text("⌄", color = Color(0xFF6540A5))
+                                    }
+                                    DropdownMenu(
+                                        expanded = menuRoleOuvert,
+                                        onDismissRequest = { menuRoleOuvert = false }
+                                    ) {
+                                        listOf(
+                                            "vendeur" to "Vendeur",
+                                            "gerant" to "Gérant",
+                                            "responsable_rh" to "Responsable des ressources humaines",
+                                            "comptable" to "Comptable",
+                                            "magasinier" to "Magasinier",
+                                            "consultation" to "Consultation"
+                                        ).forEach { (value, label) ->
+                                            DropdownMenuItem(
+                                                text = { Text(label) },
+                                                onClick = {
+                                                    roleSaisi = value
+                                                    menuRoleOuvert = false
+                                                }
+                                            )
+                                        }
+                                    }
+                                }
+                                Text(
+                                    "Les accès seront déterminés par le rôle attribué.",
+                                    color = Color(0xFF81778F),
+                                    style = MaterialTheme.typography.bodySmall
+                                )
+                            }
+                        }
+
+                        if (vendeurModifie == null) {
                             OutlinedTextField(
                                 value = motDePasseSaisi,
                                 onValueChange = {
@@ -5816,7 +5879,8 @@ Card(
                                         context,
                                         nom,
                                         email,
-                                        motDePasseSaisi
+                                        motDePasseSaisi,
+                                        roleSaisi
                                     ) { succes, message ->
 
                                         chargementUtilisateurs = false
