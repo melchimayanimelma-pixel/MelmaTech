@@ -5180,7 +5180,7 @@ val validerPhotoRecadree: (Bitmap) -> Unit = { bitmap ->
                     Spacer(Modifier.width(8.dp))
 
                     Text(
-                        "Ajouter un vendeur",
+                        "Ajouter un utilisateur",
                         fontWeight = FontWeight.Bold
                     )
                 }
@@ -5283,7 +5283,7 @@ val validerPhotoRecadree: (Bitmap) -> Unit = { bitmap ->
                     singleLine = true,
                     shape = RoundedCornerShape(16.dp),
                     label = {
-                        Text("Rechercher un vendeur")
+                        Text("Rechercher un utilisateur")
                     },
                     placeholder = {
                         Text("Nom ou adresse e-mail")
@@ -5332,7 +5332,7 @@ val validerPhotoRecadree: (Bitmap) -> Unit = { bitmap ->
 
             item {
                 Text(
-                    "Équipe commerciale",
+                    "Membres de l’équipe",
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold
                 )
@@ -5676,16 +5676,16 @@ Card(
 
                         Text(
                             text = if (vendeurModifie == null)
-                                "Ajouter un vendeur"
+                                "Ajouter un utilisateur"
                             else
-                                "Modifier le vendeur",
+                                "Modifier l’utilisateur",
                             style = MaterialTheme.typography.headlineSmall,
                             color = Color(0xFF30145F)
                         )
 
                         Text(
                             text = if (vendeurModifie == null)
-                                "Créez un accès pour un nouveau membre de votre équipe."
+                                "Créez un compte et choisissez son rôle dans votre organisation."
                             else
                                 "Modifiez les informations de ce membre de votre équipe.",
                             style = MaterialTheme.typography.bodyMedium,
@@ -5921,7 +5921,7 @@ Card(
                             if (chargementUtilisateurs)
                                 "Patiente..."
                             else if (vendeurModifie == null)
-                                "Créer le vendeur"
+                                "Créer le compte"
                             else
                                 "Enregistrer"
                         )
