@@ -512,12 +512,14 @@ object AuthService {
         nomComplet: String,
         email: String,
         motDePasse: String,
+        role: String = "vendeur",
         callback: (Boolean, String, String?) -> Unit
     ) {
         val donnees = JSONObject().apply {
             put("nomComplet", nomComplet)
             put("email", email)
             put("motDePasse", motDePasse)
+            put("role", role)
         }
 
         appelerGestionVendeurs(context, donnees) { succes, message, resultat ->
@@ -534,13 +536,15 @@ object AuthService {
         nomComplet: String,
         email: String,
         motDePasse: String,
+        role: String = "vendeur",
         callback: (Boolean, String) -> Unit
     ) {
         creerVendeurAvecId(
             context,
             nomComplet,
             email,
-            motDePasse
+            motDePasse,
+            role
         ) { succes, message, _ ->
             callback(succes, message)
         }
