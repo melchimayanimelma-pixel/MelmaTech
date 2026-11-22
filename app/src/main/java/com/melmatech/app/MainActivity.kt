@@ -4745,7 +4745,7 @@ Slider(
 
 "Personnel" -> {
     if (!estAdministrateur) {
-        Text("Accès réservé à l'administrateur et au manager.")
+        Text("Accès réservé au personnel RH autorisé.")
     } else {
         EcranPersonnel(onRetour = { page = "Plus" })
     }
@@ -4800,6 +4800,9 @@ Slider(
         var motDePasseSaisi by remember {
             mutableStateOf("")
         }
+
+        var roleSaisi by remember { mutableStateOf("vendeur") }
+        var menuRolesOuvert by remember { mutableStateOf(false) }
 
         var afficherMotDePasse by remember {
             mutableStateOf(false)
@@ -4964,9 +4967,7 @@ val validerPhotoRecadree: (Bitmap) -> Unit = { bitmap ->
                 chargementUtilisateurs = false
 
                 if (succes) {
-                    vendeurs = liste.filter {
-                        it.role.equals("vendeur", ignoreCase = true)
-                    }
+                    vendeurs = liste
                     messageUtilisateurs = ""
                 } else {
                     messageUtilisateurs = message
@@ -5153,6 +5154,7 @@ val validerPhotoRecadree: (Bitmap) -> Unit = { bitmap ->
                 Button(
                     onClick = {
                         vendeurModifie = null
+                        roleSaisi = "vendeur"
                         nomSaisi = ""
                         emailSaisi = ""
                         motDePasseSaisi = ""
@@ -5175,7 +5177,7 @@ val validerPhotoRecadree: (Bitmap) -> Unit = { bitmap ->
                     Spacer(Modifier.width(8.dp))
 
                     Text(
-                        "Ajouter un vendeur",
+                        "Ajouter un utilisateur",
                         fontWeight = FontWeight.Bold
                     )
                 }
@@ -5460,7 +5462,14 @@ Card(
                 )
 
                 Text(
-                    "Vendeur",
+                    when (vendeur.role.lowercase(Locale.ROOT)) {
+                        "responsable_rh", "responsable rh" -> "Responsable RH"
+                        "comptable" -> "Comptable"
+                        "gerant", "gérant", "manager" -> "Gérant"
+                        "magasinier" -> "Magasinier"
+                        "vendeur" -> "Vendeur"
+                        else -> vendeur.role.replaceFirstChar { it.uppercase() }
+                    },
                     color = violet,
                     style = MaterialTheme.typography.labelMedium,
                     fontWeight = FontWeight.SemiBold
@@ -5537,6 +5546,7 @@ Card(
                     vendeurModifie = vendeur
                     nomSaisi = vendeur.nomComplet
                     emailSaisi = vendeur.email
+                    roleSaisi = vendeur.role
                     messageUtilisateurs = ""
                     afficherFormulaire = true
                 },
@@ -5671,9 +5681,9 @@ Card(
 
                         Text(
                             text = if (vendeurModifie == null)
-                                "Ajouter un vendeur"
+                                "Ajouter un utilisateur"
                             else
-                                "Modifier le vendeur",
+                                "Modifier l'utilisateur",
                             style = MaterialTheme.typography.headlineSmall,
                             color = Color(0xFF30145F)
                         )
@@ -5717,6 +5727,45 @@ Card(
                                 focusedLabelColor = Color(0xFF6540A5)
                             )
                         )
+
+                        Text("Rôle du compte", fontWeight = FontWeight.SemiBold, color = Color(0xFF51445F))
+                        Box {
+                            OutlinedButton(
+                                onClick = { menuRolesOuvert = true },
+                                enabled = !chargementUtilisateurs,
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Text(
+                                    when (roleSaisi) {
+                                        "responsable_rh" -> "Responsable RH"
+                                        "comptable" -> "Comptable"
+                                        "gerant" -> "Gérant"
+                                        "magasinier" -> "Magasinier"
+                                        else -> "Vendeur"
+                                    }
+                                )
+                            }
+                            DropdownMenu(
+                                expanded = menuRolesOuvert,
+                                onDismissRequest = { menuRolesOuvert = false }
+                            ) {
+                                listOf(
+                                    "vendeur" to "Vendeur",
+                                    "responsable_rh" to "Responsable RH",
+                                    "comptable" to "Comptable",
+                                    "gerant" to "Gérant",
+                                    "magasinier" to "Magasinier"
+                                ).forEach { (valeur, libelle) ->
+                                    DropdownMenuItem(
+                                        text = { Text(libelle) },
+                                        onClick = {
+                                            roleSaisi = valeur
+                                            menuRolesOuvert = false
+                                        }
+                                    )
+                                }
+                            }
+                        }
 
                         OutlinedTextField(
                             value = emailSaisi,
@@ -5774,7 +5823,7 @@ Card(
                             )
 
                             Text(
-                                text = "Le vendeur pourra utiliser ces identifiants pour accéder à son compte.",
+                                text = "L'utilisateur pourra utiliser ces identifiants pour accéder à son compte.",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = Color(0xFF655D70)
                             )
@@ -5816,7 +5865,8 @@ Card(
                                         context,
                                         nom,
                                         email,
-                                        motDePasseSaisi
+                                        motDePasseSaisi,
+                                        roleSaisi
                                     ) { succes, message ->
 
                                         chargementUtilisateurs = false
@@ -5833,7 +5883,8 @@ Card(
                                         context,
                                         vendeurModifie!!.id,
                                         nom,
-                                        email
+                                        email,
+                                        roleSaisi
                                     ) { succes, message ->
 
                                         chargementUtilisateurs = false
@@ -5857,7 +5908,7 @@ Card(
                             if (chargementUtilisateurs)
                                 "Patiente..."
                             else if (vendeurModifie == null)
-                                "Créer le vendeur"
+                                "Créer l'utilisateur"
                             else
                                 "Enregistrer"
                         )
