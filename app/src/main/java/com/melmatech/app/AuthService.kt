@@ -73,7 +73,7 @@ object AuthService {
         val url =
             "${SupabaseConfig.url}/rest/v1/profils" +
             "?id=eq.$id" +
-            "&select=id,nom_complet,role,entreprise_id,photo_url,actif"
+            "&select=id,nom_complet,role,entreprise_id,photo_url,actif,supprime_le"
 
         val request = Request.Builder()
             .url(url)
@@ -117,7 +117,16 @@ object AuthService {
 
                         val p = profils.getJSONObject(0)
 
+                        if (!p.isNull("supprime_le")) {
+                            deconnecter(context)
+                            mainHandler.post {
+                                callback(false, "Ce compte a été supprimé. Contacte ton administrateur.", null)
+                            }
+                            return
+                        }
+
                         if (!p.optBoolean("actif", false)) {
+                            deconnecter(context)
                             mainHandler.post {
                                 callback(false, "Compte inactif.", null)
                             }
@@ -353,7 +362,7 @@ object AuthService {
 
         val url =
             "${SupabaseConfig.url}/rest/v1/profils" +
-            "?id=eq.$cibleId&select=entreprise_id,actif"
+            "?id=eq.$cibleId&select=entreprise_id,actif,supprime_le"
 
         val request = Request.Builder()
             .url(url)
@@ -392,6 +401,13 @@ object AuthService {
                         }
 
                         val p = profils.getJSONObject(0)
+
+                        if (!p.isNull("supprime_le")) {
+                            mainHandler.post {
+                                callback(false, "Le compte cible a été supprimé.", null)
+                            }
+                            return
+                        }
 
                         if (!p.optBoolean("actif", false)) {
                             mainHandler.post {
