@@ -149,6 +149,9 @@ fun EcranPersonnel(onRetour: () -> Unit) {
     var pagesApercu by remember { mutableStateOf<List<Bitmap>>(emptyList()) }
     var chargementApercu by remember { mutableStateOf(false) }
     var erreurApercu by remember { mutableStateOf("") }
+    var afficherDepartement by remember { mutableStateOf(false) }
+    var nouveauDepartement by remember { mutableStateOf("") }
+    var descriptionDepartement by remember { mutableStateOf("") }
     var presences by remember { mutableStateOf(emptyList<PresenceRH>()) }
     var conges by remember { mutableStateOf(emptyList<CongeRH>()) }
     var bulletins by remember { mutableStateOf(emptyList<PaieRH>()) }
@@ -172,6 +175,26 @@ fun EcranPersonnel(onRetour: () -> Unit) {
     fun authHeaders(builder: Request.Builder, token: String): Request.Builder =
         builder.addHeader("apikey", SupabaseConfig.key)
             .addHeader("Authorization", "Bearer $token")
+
+    fun ajouterDepartement() {
+        val p = profil ?: return
+        val token = AuthService.obtenirAccessToken(context) ?: return
+        if (nouveauDepartement.isBlank()) { message = "Le nom du département est obligatoire."; return }
+        val payload = JSONObject().put("entreprise_id", p.entrepriseId).put("nom", nouveauDepartement.trim())
+            .put("description", descriptionDepartement.trim().ifBlank { JSONObject.NULL })
+        val req = authHeaders(Request.Builder().url("${SupabaseConfig.url}/rest/v1/departements"), token)
+            .addHeader("Content-Type", "application/json").addHeader("Prefer", "return=minimal")
+            .post(payload.toString().toRequestBody("application/json; charset=utf-8".toMediaType())).build()
+        client.newCall(req).enqueue(object : Callback {
+            override fun onFailure(call: Call, e: IOException) { mainHandler.post { message = "Création du département impossible : ${e.message}" } }
+            override fun onResponse(call: Call, response: Response) { response.use { mainHandler.post {
+                if (it.isSuccessful) {
+                    afficherDepartement = false; nouveauDepartement = ""; descriptionDepartement = ""
+                    message = "Département ajouté."; chargerEmployes()
+                } else message = "Création refusée (${it.code}) : ${it.body?.string().orEmpty().take(120)}"
+            } } }
+        })
+    }
 
     fun chargerPresences() {
         val p = profil ?: return
@@ -794,16 +817,19 @@ fun EcranPersonnel(onRetour: () -> Unit) {
                     }
                 }
                 "Organisation" -> {
-                    Text("Départements de l'entreprise", fontWeight = FontWeight.Bold)
-                    if (departements.isEmpty()) Text("Aucun département actif enregistré.")
-                    else LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                        Column { Text("Structure de l'entreprise", fontWeight = FontWeight.Bold); Text("${departements.size} département(s)", color = Color.Gray, style = MaterialTheme.typography.bodySmall) }
+                        Button(onClick = { afficherDepartement = true }) { Icon(Icons.Filled.AccountTree, null); Text(" Ajouter") }
+                    }
+                    if (departements.isEmpty()) {
+                        Card(colors = CardDefaults.cardColors(containerColor = Color.White)) { Column(Modifier.fillMaxWidth().padding(18.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) { Icon(Icons.Filled.AccountTree, null, tint = violetRH, modifier = Modifier.size(30.dp)); Text("Aucun département", fontWeight = FontWeight.Bold); Text("Crée les départements pour structurer les équipes.", color = Color.Gray) } }
+                    } else LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         items(departements) { dep ->
-                            Card(colors = CardDefaults.cardColors(containerColor = Color.White)) {
-                                Text(dep, Modifier.fillMaxWidth().padding(14.dp), fontWeight = FontWeight.SemiBold)
+                            Card(colors = CardDefaults.cardColors(containerColor = Color.White), shape = RoundedCornerShape(14.dp)) {
+                                Row(Modifier.fillMaxWidth().padding(14.dp), verticalAlignment = Alignment.CenterVertically) { Icon(Icons.Filled.AccountTree, null, tint = violetRH); Text(dep, Modifier.weight(1f).padding(start = 12.dp), fontWeight = FontWeight.SemiBold); Icon(Icons.Filled.ArrowForward, null, tint = Color.Gray) }
                             }
                         }
                     }
-                    Text("Les postes sont associés aux employés et seront administrables dans une prochaine étape.")
                 }
                 "Présences" -> {
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
@@ -980,6 +1006,19 @@ fun EcranPersonnel(onRetour: () -> Unit) {
                 }
             }
         }
+    }
+
+    if (afficherDepartement) {
+        AlertDialog(
+            onDismissRequest = { afficherDepartement = false },
+            title = { Text("Ajouter un département") },
+            text = { Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedTextField(nouveauDepartement, { nouveauDepartement = it }, label = { Text("Nom du département") }, singleLine = true)
+                OutlinedTextField(descriptionDepartement, { descriptionDepartement = it }, label = { Text("Description (facultative)") }, minLines = 2)
+            } },
+            confirmButton = { Button(onClick = { ajouterDepartement() }) { Text("Enregistrer") } },
+            dismissButton = { TextButton(onClick = { afficherDepartement = false }) { Text("Annuler") } }
+        )
     }
 
     if (afficherDemandeConge) {
