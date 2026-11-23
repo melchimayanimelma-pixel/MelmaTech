@@ -12,11 +12,27 @@ android {
         applicationId = "com.melmatech.app"
         minSdk = 24
         targetSdk = 35
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = providers.gradleProperty("VERSION_CODE").orElse("1").get().toInt()
+        versionName = providers.gradleProperty("VERSION_NAME").orElse("1.0").get()
 
         buildConfigField("String", "SUPABASE_URL", "\"https://yxdwryjdckupdaduajuy.supabase.co\"")
         buildConfigField("String", "SUPABASE_KEY", "\"sb_publishable_PU_7owmDVUa_CFwYGkJlgw_SEFAuIHn\"")
+    }
+
+    signingConfigs {
+        create("release") {
+            storeFile = file(System.getenv("ANDROID_KEYSTORE_PATH") ?: "missing-release-keystore.jks")
+            storePassword = System.getenv("ANDROID_KEYSTORE_PASSWORD") ?: ""
+            keyAlias = System.getenv("ANDROID_KEY_ALIAS") ?: ""
+            keyPassword = System.getenv("ANDROID_KEY_PASSWORD") ?: ""
+        }
+    }
+
+    buildTypes {
+        getByName("release") {
+            signingConfig = signingConfigs.getByName("release")
+            isMinifyEnabled = false
+        }
     }
 
     buildFeatures {
