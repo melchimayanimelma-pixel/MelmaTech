@@ -504,6 +504,7 @@ fun EcranPersonnel(onRetour: () -> Unit) {
                                                                                 val width = 900
                                                                                 val height = (width.toFloat() * page.height / page.width).toInt().coerceAtLeast(1)
                                                                                 val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+                                                                                bitmap.eraseColor(android.graphics.Color.WHITE)
                                                                                 page.render(bitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
                                                                                 bitmap
                                                                             } finally { page.close() }
@@ -617,7 +618,7 @@ fun EcranPersonnel(onRetour: () -> Unit) {
                                     "image/webp" -> "webp"
                                     else -> selected.typeMime.substringAfter("/", "bin").substringBefore(";")
                                 }
-                                val nomFichier = if (selected.nom.matches(Regex("\\\\d{7,}")) && !selected.nom.contains('.')) {
+                                val nomFichier = if (selected.nom.matches(Regex("\\d{7,}")) && !selected.nom.contains('.')) {
                                     "${selected.categorie.lowercase()}_${selected.id.take(8)}.${extension}"
                                 } else selected.nom.replace(Regex("[/\\\\]"), "_")
                                 val request = DownloadManager.Request(Uri.parse(downloadUrl))
