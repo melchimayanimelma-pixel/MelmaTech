@@ -82,6 +82,7 @@ fun EcranPersonnel(onRetour: () -> Unit) {
     var documents by remember { mutableStateOf(emptyList<DocumentRH>()) }
     var employeSelectionne by remember { mutableStateOf<EmployeListe?>(null) }
     var onglet by remember { mutableStateOf("Accueil RH") }
+    var message by remember { mutableStateOf("") }
     val historiqueOnglets = remember { mutableStateListOf("Accueil RH") }
 
     fun naviguerVers(destination: String) {
@@ -101,7 +102,6 @@ fun EcranPersonnel(onRetour: () -> Unit) {
         message = ""
     }
     var chargement by remember { mutableStateOf(true) }
-    var message by remember { mutableStateOf("") }
     var recherche by remember { mutableStateOf("") }
     var afficherAjout by remember { mutableStateOf(false) }
     var nom by remember { mutableStateOf("") }
