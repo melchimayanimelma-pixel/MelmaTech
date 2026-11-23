@@ -8,6 +8,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -430,7 +431,6 @@ fun EcranPersonnel(onRetour: () -> Unit) {
             title = { Text("Ajouter un employé") },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(7.dp), modifier = Modifier.heightIn(max = 440.dp)) {
-                    androidx.compose.foundation.rememberScrollState()
                     androidx.compose.foundation.layout.Column(Modifier.verticalScroll(androidx.compose.foundation.rememberScrollState()), verticalArrangement = Arrangement.spacedBy(7.dp)) {
                         OutlinedTextField(nom, { nom = it }, label = { Text("Nom *") }, singleLine = true)
                         OutlinedTextField(postnom, { postnom = it }, label = { Text("Postnom") }, singleLine = true)
