@@ -138,17 +138,6 @@ fun EcranPersonnel(onRetour: () -> Unit) {
         message = ""
     }
 
-    fun actualiserOnglet() {
-        message = ""
-        when (onglet) {
-            "Accueil RH", "Employés", "Dossiers", "Organisation" -> chargerEmployes()
-            "Présences" -> chargerPresences()
-            "Congés" -> chargerConges()
-            "Paie" -> chargerPaie()
-            "Rapports" -> { chargerPresences(); chargerConges(); chargerPaie() }
-        }
-        if (onglet == "Dossiers") employeSelectionne?.let { chargerDocuments(it) }
-    }
     var chargement by remember { mutableStateOf(true) }
     var recherche by remember { mutableStateOf("") }
     var afficherAjout by remember { mutableStateOf(false) }
@@ -603,6 +592,18 @@ fun EcranPersonnel(onRetour: () -> Unit) {
             afficherAjout -> afficherAjout = false
             else -> revenirOngletPrecedent()
         }
+    }
+
+    fun actualiserOnglet() {
+        message = ""
+        when (onglet) {
+            "Accueil RH", "Employés", "Dossiers", "Organisation" -> chargerEmployes()
+            "Présences" -> chargerPresences()
+            "Congés" -> chargerConges()
+            "Paie" -> chargerPaie()
+            "Rapports" -> { chargerPresences(); chargerConges(); chargerPaie() }
+        }
+        if (onglet == "Dossiers") employeSelectionne?.let { chargerDocuments(it) }
     }
 
     LaunchedEffect(Unit) { chargerEmployes() }
