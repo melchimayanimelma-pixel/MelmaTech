@@ -190,7 +190,7 @@ fun EcranPersonnel(onRetour: () -> Unit) {
             override fun onResponse(call: Call, response: Response) { response.use { mainHandler.post {
                 if (it.isSuccessful) {
                     afficherDepartement = false; nouveauDepartement = ""; descriptionDepartement = ""
-                    message = "Département ajouté."; chargerEmployes()
+                    departements = (departements + nouveauDepartement.trim()).distinct(); message = "Département ajouté."
                 } else message = "Création refusée (${it.code}) : ${it.body?.string().orEmpty().take(120)}"
             } } }
         })
