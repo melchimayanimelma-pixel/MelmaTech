@@ -609,6 +609,8 @@ fun EcranPersonnel(onRetour: () -> Unit) {
     LaunchedEffect(Unit) { chargerEmployes() }
     LaunchedEffect(onglet, profil) {
         if (profil != null) when (onglet) {
+            "Employés", "Organisation" -> chargerEmployes()
+            "Dossiers" -> employeSelectionne?.let { chargerDocuments(it) }
             "Présences" -> chargerPresences()
             "Congés" -> chargerConges()
             "Paie" -> chargerPaie()
