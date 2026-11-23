@@ -650,12 +650,20 @@ fun EcranPersonnel(onRetour: () -> Unit) {
             }
         }
 
-        Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
-            listOf("Accueil RH", "Employés", "Organisation", "Présences", "Congés", "Paie", "Rapports").forEach { destination ->
-                val selectionne = onglet == destination
-                TextButton(onClick = { if (onglet != destination) { historiqueOnglets.add(destination); onglet = destination; message = ""; departementSelectionne = null } }) {
-                    Text(destination, color = if (selectionne) violetRH else Color.Gray, fontWeight = if (selectionne) FontWeight.Bold else FontWeight.Normal, maxLines = 1)
-                }
+        val sectionsRH = listOf("Accueil RH", "Employés", "Organisation", "Présences", "Congés", "Paie", "Rapports")
+        val sectionActive = if (onglet == "Dossiers") "Employés" else onglet
+        ScrollableTabRow(
+            selectedTabIndex = sectionsRH.indexOf(sectionActive).coerceAtLeast(0),
+            edgePadding = 0.dp,
+            containerColor = fondRH,
+            contentColor = violetRH
+        ) {
+            sectionsRH.forEach { destination ->
+                Tab(
+                    selected = sectionActive == destination,
+                    onClick = { if (onglet != destination) { historiqueOnglets.add(destination); onglet = destination; message = ""; departementSelectionne = null } },
+                    text = { Text(destination, maxLines = 1) }
+                )
             }
         }
         if (chargement) {
