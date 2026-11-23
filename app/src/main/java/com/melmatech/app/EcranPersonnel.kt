@@ -12,6 +12,9 @@ import android.os.ParcelFileDescriptor
 import android.provider.OpenableColumns
 import android.widget.Toast
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.gestures.rememberTransformableState
+import androidx.compose.foundation.gestures.transformable
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
@@ -598,7 +601,7 @@ fun EcranPersonnel(onRetour: () -> Unit) {
                             itemsIndexed(pagesApercu) { index, bitmap ->
                                 Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
                                     Text("Page ${index + 1} / ${pagesApercu.size}", color = Color.Gray, style = MaterialTheme.typography.labelSmall)
-                                    Image(bitmap = bitmap.asImageBitmap(), contentDescription = "Page ${index + 1} du document", modifier = Modifier.fillMaxWidth(), contentScale = ContentScale.Fit)
+                                    ApercuPageRH(bitmap = bitmap, numero = index + 1, total = pagesApercu.size)
                                 }
                             }
                         }
@@ -673,6 +676,23 @@ fun EcranPersonnel(onRetour: () -> Unit) {
             },
             confirmButton = { Button(onClick = { ajouterEmploye() }, enabled = !enregistrement) { Text(if (enregistrement) "Enregistrement…" else "Enregistrer") } },
             dismissButton = { TextButton(onClick = { afficherAjout = false }, enabled = !enregistrement) { Text("Annuler") } }
+        )
+    }
+}
+
+@Composable
+private fun ApercuPageRH(bitmap: Bitmap, numero: Int, total: Int) {
+    var zoom by remember { mutableFloatStateOf(1f) }
+    val transformState = rememberTransformableState { zoomChange, _, _ ->
+        zoom = (zoom * zoomChange).coerceIn(1f, 4f)
+    }
+    Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+        Text("Page $numero / $total • Pincer pour agrandir", color = Color.Gray, style = MaterialTheme.typography.labelSmall)
+        Image(
+            bitmap = bitmap.asImageBitmap(),
+            contentDescription = "Page $numero du document",
+            modifier = Modifier.fillMaxWidth().graphicsLayer(scaleX = zoom, scaleY = zoom).transformable(transformState),
+            contentScale = ContentScale.Fit
         )
     }
 }
