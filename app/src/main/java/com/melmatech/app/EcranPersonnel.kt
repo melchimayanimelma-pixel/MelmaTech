@@ -38,6 +38,13 @@ import androidx.compose.material3.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.People
 import androidx.compose.material.icons.filled.Folder
+import androidx.compose.material.icons.filled.UploadFile
+import androidx.compose.material.icons.filled.FolderOpen
+import androidx.compose.material.icons.filled.PictureAsPdf
+import androidx.compose.material.icons.filled.Image
+import androidx.compose.material.icons.filled.InsertDriveFile
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.AccountTree
 import androidx.compose.material.icons.filled.EventAvailable
 import androidx.compose.material.icons.filled.BeachAccess
