@@ -37,8 +37,11 @@ jobs:
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: gradle assembleDebug
 
+      - name: Renommer l'APK pour la distribution
+        run: cp app/build/outputs/apk/debug/app-debug.apk app/build/outputs/apk/debug/MelmaTech.apk
+
       - uses: actions/upload-artifact@v4
         with:
-          name: MelmaTech-APK-${{ github.run_number }}
-          path: app/build/outputs/apk/debug/app-debug.apk
+          name: MelmaTech-${{ github.run_number }}.apk
+          path: app/build/outputs/apk/debug/MelmaTech.apk
           if-no-files-found: error
