@@ -7,6 +7,7 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.pdf.PdfRenderer
 import android.os.Environment
+import android.os.Build
 import android.os.ParcelFileDescriptor
 import android.provider.OpenableColumns
 import android.widget.Toast
@@ -475,32 +476,32 @@ fun EcranPersonnel(onRetour: () -> Unit) {
                                                 chargementApercu = false
                                                 erreurApercu = "Session expirée. Reconnecte-toi."
                                             } else {
-                                                val fileUrl = "${K}{SupabaseConfig.url}/storage/v1/object/rh-prive/${K}{Uri.encode(d.chemin, "/")}"
+                                                val fileUrl = "${SupabaseConfig.url}/storage/v1/object/rh-prive/${Uri.encode(d.chemin, "/")}"
                                                 val previewRequest = authHeaders(Request.Builder().url(fileUrl), accessToken).get().build()
                                                 client.newCall(previewRequest).enqueue(object : Callback {
                                                     override fun onFailure(call: Call, e: IOException) {
-                                                        mainHandler.post { chargementApercu = false; erreurApercu = "Ouverture impossible : ${K}{e.message}" }
+                                                        mainHandler.post { chargementApercu = false; erreurApercu = "Ouverture impossible : ${e.message}" }
                                                     }
                                                     override fun onResponse(call: Call, response: Response) {
                                                         response.use { res ->
                                                             if (!res.isSuccessful) {
-                                                                mainHandler.post { chargementApercu = false; erreurApercu = "Document inaccessible (${K}{res.code}). Vérifie les autorisations RH." }
+                                                                mainHandler.post { chargementApercu = false; erreurApercu = "Document inaccessible (${res.code}). Vérifie les autorisations RH." }
                                                                 return
                                                             }
                                                             try {
                                                                 val bytes = res.body?.bytes() ?: throw IOException("Fichier vide")
                                                                 val mime = d.typeMime.lowercase()
                                                                 val pages = if (mime == "application/pdf" || d.nom.endsWith(".pdf", true)) {
-                                                                    val temp = java.io.File(context.cacheDir, "rh_preview_${K}{d.id}.pdf")
+                                                                    val temp = java.io.File(context.cacheDir, "rh_preview_${d.id}.pdf")
                                                                     temp.writeBytes(bytes)
                                                                     val fd = ParcelFileDescriptor.open(temp, ParcelFileDescriptor.MODE_READ_ONLY)
                                                                     val renderer = PdfRenderer(fd)
                                                                     try {
-                                                                        val count = renderer.pageCount.coerceAtMost(30)
+                                                                        val count = renderer.pageCount.coerceAtMost(10)
                                                                         (0 until count).map { pageIndex ->
                                                                             val page = renderer.openPage(pageIndex)
                                                                             try {
-                                                                                val width = 1200
+                                                                                val width = 900
                                                                                 val height = (width.toFloat() * page.height / page.width).toInt().coerceAtLeast(1)
                                                                                 val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
                                                                                 page.render(bitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
@@ -524,7 +525,7 @@ fun EcranPersonnel(onRetour: () -> Unit) {
                                                                     if (pages.isEmpty()) erreurApercu = "Aperçu intégré indisponible pour ce format. Télécharge le fichier pour l'ouvrir avec une application compatible."
                                                                 }
                                                             } catch (e: Exception) {
-                                                                mainHandler.post { chargementApercu = false; erreurApercu = "Impossible de lire le document : ${K}{e.message}" }
+                                                                mainHandler.post { chargementApercu = false; erreurApercu = "Impossible de lire le document : ${e.message}" }
                                                             }
                                                         }
                                                     }
@@ -540,7 +541,7 @@ fun EcranPersonnel(onRetour: () -> Unit) {
                                         Spacer(Modifier.width(12.dp))
                                         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
                                             Text(if (nomInconnu) "Nom original indisponible" else d.nom, fontWeight = FontWeight.SemiBold)
-                                            Text("${K}{d.categorie} • ${K}{d.date.take(10)}", color = Color.Gray, style = MaterialTheme.typography.bodySmall)
+                                            Text("${d.categorie} • ${d.date.take(10)}", color = Color.Gray, style = MaterialTheme.typography.bodySmall)
                                             if (nomInconnu) Text("Ancien fichier importé sans son nom d'origine", color = Color(0xFF9A6700), style = MaterialTheme.typography.labelSmall)
                                         }
                                         Text("Ouvrir  ›", color = violetRH, style = MaterialTheme.typography.labelMedium)
@@ -585,8 +586,8 @@ fun EcranPersonnel(onRetour: () -> Unit) {
                 Column(Modifier.fillMaxSize().padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                         Column(Modifier.weight(1f)) {
-                            Text(selected.nom, fontWeight = FontWeight.Bold, maxLines = 2)
-                            Text("${K}{selected.categorie} • ${K}{selected.date.take(10)}", color = Color.Gray, style = MaterialTheme.typography.bodySmall)
+                            Text(if (selected.nom.matches(Regex("\\d{7,}")) && !selected.nom.contains('.')) "Nom original indisponible" else selected.nom, fontWeight = FontWeight.Bold, maxLines = 2)
+                            Text("${selected.categorie} • ${selected.date.take(10)}", color = Color.Gray, style = MaterialTheme.typography.bodySmall)
                         }
                         TextButton(onClick = { documentApercu = null; pagesApercu = emptyList() }) { Text("Fermer") }
                     }
@@ -595,8 +596,8 @@ fun EcranPersonnel(onRetour: () -> Unit) {
                         pagesApercu.isNotEmpty() -> LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                             itemsIndexed(pagesApercu) { index, bitmap ->
                                 Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
-                                    Text("Page ${K}{index + 1} / ${K}{pagesApercu.size}", color = Color.Gray, style = MaterialTheme.typography.labelSmall)
-                                    Image(bitmap = bitmap.asImageBitmap(), contentDescription = "Page ${K}{index + 1} du document", modifier = Modifier.fillMaxWidth(), contentScale = ContentScale.Fit)
+                                    Text("Page ${index + 1} / ${pagesApercu.size}", color = Color.Gray, style = MaterialTheme.typography.labelSmall)
+                                    Image(bitmap = bitmap.asImageBitmap(), contentDescription = "Page ${index + 1} du document", modifier = Modifier.fillMaxWidth(), contentScale = ContentScale.Fit)
                                 }
                             }
                         }
@@ -608,19 +609,33 @@ fun EcranPersonnel(onRetour: () -> Unit) {
                             Toast.makeText(context, "Session expirée. Reconnecte-toi.", Toast.LENGTH_LONG).show()
                         } else {
                             try {
-                                val downloadUrl = "${K}{SupabaseConfig.url}/storage/v1/object/rh-prive/${K}{Uri.encode(selected.chemin, "/")}"
+                                val downloadUrl = "${SupabaseConfig.url}/storage/v1/object/rh-prive/${Uri.encode(selected.chemin, "/")}"
+                                val extension = when (selected.typeMime.lowercase()) {
+                                    "application/pdf" -> "pdf"
+                                    "image/jpeg" -> "jpg"
+                                    "image/png" -> "png"
+                                    "image/webp" -> "webp"
+                                    else -> selected.typeMime.substringAfter("/", "bin").substringBefore(";")
+                                }
+                                val nomFichier = if (selected.nom.matches(Regex("\\\\d{7,}")) && !selected.nom.contains('.')) {
+                                    "${selected.categorie.lowercase()}_${selected.id.take(8)}.${extension}"
+                                } else selected.nom.replace(Regex("[/\\\\]"), "_")
                                 val request = DownloadManager.Request(Uri.parse(downloadUrl))
-                                    .setTitle(selected.nom)
+                                    .setTitle(nomFichier)
                                     .setDescription("Téléchargement du dossier RH")
                                     .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
-                                    .setDestinationInExternalFilesDir(context, Environment.DIRECTORY_DOWNLOADS, selected.nom)
                                     .addRequestHeader("apikey", SupabaseConfig.key)
-                                    .addRequestHeader("Authorization", "Bearer ${K}{accessToken}")
+                                    .addRequestHeader("Authorization", "Bearer ${accessToken}")
+                                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                                    request.setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, nomFichier)
+                                } else {
+                                    request.setDestinationInExternalFilesDir(context, Environment.DIRECTORY_DOWNLOADS, nomFichier)
+                                }
                                 val manager = context.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
                                 manager.enqueue(request)
                                 Toast.makeText(context, "Téléchargement lancé. Consulte les notifications.", Toast.LENGTH_LONG).show()
                             } catch (e: Exception) {
-                                Toast.makeText(context, "Téléchargement impossible : ${K}{e.message}", Toast.LENGTH_LONG).show()
+                                Toast.makeText(context, "Téléchargement impossible : ${e.message}", Toast.LENGTH_LONG).show()
                             }
                         }
                     }) { Text("Télécharger le document") }
