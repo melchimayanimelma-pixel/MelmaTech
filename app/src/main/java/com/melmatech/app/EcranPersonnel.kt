@@ -565,6 +565,7 @@ fun EcranPersonnel(onRetour: () -> Unit) {
             "Présences" -> chargerPresences()
             "Congés" -> chargerConges()
             "Paie" -> chargerPaie()
+            "Rapports" -> { chargerPresences(); chargerConges(); chargerPaie() }
         }
     }
 
@@ -979,6 +980,70 @@ fun EcranPersonnel(onRetour: () -> Unit) {
                 }
             }
         }
+    }
+
+    if (afficherDemandeConge) {
+        AlertDialog(
+            onDismissRequest = { afficherDemandeConge = false },
+            title = { Text("Nouvelle demande de congé") },
+            text = {
+                Column(Modifier.heightIn(max = 480.dp).verticalScroll(androidx.compose.foundation.rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    var menuEmployeConge by remember { mutableStateOf(false) }
+                    Box {
+                        OutlinedButton(onClick = { menuEmployeConge = true }, modifier = Modifier.fillMaxWidth()) {
+                            Text(employes.firstOrNull { it.id == employeConge }?.nom ?: "Choisir un employé")
+                        }
+                        DropdownMenu(expanded = menuEmployeConge, onDismissRequest = { menuEmployeConge = false }) {
+                            employes.forEach { e -> DropdownMenuItem(text = { Text(e.nom) }, onClick = { employeConge = e.id; menuEmployeConge = false }) }
+                        }
+                    }
+                    var menuTypeConge by remember { mutableStateOf(false) }
+                    Box {
+                        OutlinedButton(onClick = { menuTypeConge = true }, modifier = Modifier.fillMaxWidth()) { Text("Type : $typeConge") }
+                        DropdownMenu(expanded = menuTypeConge, onDismissRequest = { menuTypeConge = false }) {
+                            listOf("Annuel", "Maladie", "Maternité", "Paternité", "Exceptionnel", "Sans solde").forEach { t ->
+                                DropdownMenuItem(text = { Text(t) }, onClick = { typeConge = t; menuTypeConge = false })
+                            }
+                        }
+                    }
+                    OutlinedTextField(debutConge, { debutConge = it }, label = { Text("Date de début (AAAA-MM-JJ)") }, singleLine = true)
+                    OutlinedTextField(finConge, { finConge = it }, label = { Text("Date de fin (AAAA-MM-JJ)") }, singleLine = true)
+                    OutlinedTextField(motifConge, { motifConge = it }, label = { Text("Motif") }, minLines = 2)
+                }
+            },
+            confirmButton = { Button(onClick = { enregistrerConge() }) { Text("Enregistrer") } },
+            dismissButton = { TextButton(onClick = { afficherDemandeConge = false }) { Text("Annuler") } }
+        )
+    }
+
+    if (afficherBulletin) {
+        AlertDialog(
+            onDismissRequest = { afficherBulletin = false },
+            title = { Text("Créer un bulletin de paie") },
+            text = {
+                Column(Modifier.heightIn(max = 500.dp).verticalScroll(androidx.compose.foundation.rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    var menuEmployePaie by remember { mutableStateOf(false) }
+                    Box {
+                        OutlinedButton(onClick = { menuEmployePaie = true }, modifier = Modifier.fillMaxWidth()) {
+                            Text(employes.firstOrNull { it.id == employePaie }?.nom ?: "Choisir un employé")
+                        }
+                        DropdownMenu(expanded = menuEmployePaie, onDismissRequest = { menuEmployePaie = false }) {
+                            employes.forEach { e -> DropdownMenuItem(text = { Text(e.nom) }, onClick = { employePaie = e.id; basePaie = ""; menuEmployePaie = false }) }
+                        }
+                    }
+                    OutlinedTextField(debutPaie, { debutPaie = it }, label = { Text("Début période (AAAA-MM-JJ)") }, singleLine = true)
+                    OutlinedTextField(finPaie, { finPaie = it }, label = { Text("Fin période (AAAA-MM-JJ)") }, singleLine = true)
+                    OutlinedTextField(basePaie, { basePaie = it }, label = { Text("Salaire de base") }, singleLine = true)
+                    OutlinedTextField(primesPaie, { primesPaie = it }, label = { Text("Primes") }, singleLine = true)
+                    OutlinedTextField(retenuesPaie, { retenuesPaie = it }, label = { Text("Retenues") }, singleLine = true)
+                    val net = (basePaie.toDoubleOrNull() ?: 0.0) + (primesPaie.toDoubleOrNull() ?: 0.0) - (retenuesPaie.toDoubleOrNull() ?: 0.0)
+                    Text("Net à payer : ${"%.2f".format(net)}", color = violetRH, fontWeight = FontWeight.Bold)
+                    Text("Le bulletin sera créé en brouillon. Sa validation et son paiement restent des opérations distinctes.", color = Color.Gray, style = MaterialTheme.typography.bodySmall)
+                }
+            },
+            confirmButton = { Button(onClick = { creerBulletin() }) { Text("Créer le bulletin") } },
+            dismissButton = { TextButton(onClick = { afficherBulletin = false }) { Text("Annuler") } }
+        )
     }
 
     if (afficherAjout) {
