@@ -60,7 +60,7 @@ fun EcranPersonnel(onRetour: () -> Unit) {
     var departements by remember { mutableStateOf(emptyList<String>()) }
     var documents by remember { mutableStateOf(emptyList<DocumentRH>()) }
     var employeSelectionne by remember { mutableStateOf<EmployeListe?>(null) }
-    var onglet by remember { mutableStateOf("Employés") }
+    var onglet by remember { mutableStateOf("Accueil RH") }
     var chargement by remember { mutableStateOf(true) }
     var message by remember { mutableStateOf("") }
     var recherche by remember { mutableStateOf("") }
@@ -301,27 +301,31 @@ fun EcranPersonnel(onRetour: () -> Unit) {
     LaunchedEffect(Unit) { chargerEmployes() }
 
     Column(
-        modifier = Modifier.fillMaxSize().background(fondRH).padding(14.dp),
-        verticalArrangement = Arrangement.spacedBy(10.dp)
+        modifier = Modifier.fillMaxSize().background(fondRH).padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
-                Text("RESSOURCES HUMAINES", color = violetRH, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
-                Text("Gestion du personnel", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+                Text("MELMATECH RH", color = violetRH, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
+                Text("Espace RH", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
                 Text(profil?.nomComplet.orEmpty(), color = Color.Gray, style = MaterialTheme.typography.bodySmall)
             }
-            OutlinedButton(onClick = onRetour) { Text("Retour") }
+            OutlinedButton(onClick = onRetour) { Text("Quitter") }
         }
 
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            StatRH("Employés", employes.size.toString(), Modifier.weight(1f))
-            StatRH("Actifs", employes.count { it.statut == "actif" }.toString(), Modifier.weight(1f))
-            StatRH("Inactifs", employes.count { it.statut != "actif" }.toString(), Modifier.weight(1f))
-        }
-
-        ScrollableTabRow(selectedTabIndex = listOf("Employés", "Dossiers", "Organisation", "Présences", "Congés", "Paie", "Rapports").indexOf(onglet).coerceAtLeast(0), edgePadding = 0.dp) {
-            listOf("Employés", "Dossiers", "Organisation", "Présences", "Congés", "Paie", "Rapports").forEach { tab ->
-                Tab(selected = onglet == tab, onClick = { onglet = tab; message = "" }, text = { Text(tab) })
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(containerColor = Color.White),
+            shape = RoundedCornerShape(16.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 12.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                StatCompactRH("Employés", employes.size.toString())
+                StatCompactRH("Actifs", employes.count { it.statut == "actif" }.toString())
+                StatCompactRH("Inactifs", employes.count { it.statut != "actif" }.toString())
             }
         }
 
@@ -330,7 +334,49 @@ fun EcranPersonnel(onRetour: () -> Unit) {
                 CircularProgressIndicator()
             }
         } else {
+            if (onglet != "Accueil RH") {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    TextButton(onClick = { onglet = "Accueil RH"; message = "" }) { Text("‹ Menu RH") }
+                    Text(onglet, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                }
+            }
             when (onglet) {
+                "Accueil RH" -> {
+                    Text("Que souhaitez-vous gérer ?", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                    LazyColumn(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        item {
+                            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                                CarteMenuRH("Employés", "Liste et fiches du personnel", Modifier.weight(1f)) { onglet = "Employés" }
+                                CarteMenuRH("Dossiers", "CV, contrats et documents", Modifier.weight(1f)) {
+                                    if (employes.isNotEmpty()) {
+                                        employeSelectionne = employes.first()
+                                        chargerDocuments(employes.first())
+                                    }
+                                    onglet = "Dossiers"
+                                }
+                            }
+                        }
+                        item {
+                            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                                CarteMenuRH("Organisation", "Départements et postes", Modifier.weight(1f)) { onglet = "Organisation" }
+                                CarteMenuRH("Présences", "Pointage et absences", Modifier.weight(1f)) { onglet = "Présences" }
+                            }
+                        }
+                        item {
+                            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                                CarteMenuRH("Congés", "Demandes et validations", Modifier.weight(1f)) { onglet = "Congés" }
+                                CarteMenuRH("Paie", "Salaires et bulletins", Modifier.weight(1f)) { onglet = "Paie" }
+                            }
+                        }
+                        item {
+                            CarteMenuRH("Rapports RH", "Effectifs et indicateurs", Modifier.fillMaxWidth()) { onglet = "Rapports" }
+                        }
+                    }
+                }
                 "Employés" -> {
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
                         OutlinedTextField(recherche, { recherche = it }, modifier = Modifier.weight(1f), singleLine = true, label = { Text("Rechercher un employé") })
@@ -458,11 +504,28 @@ fun EcranPersonnel(onRetour: () -> Unit) {
 }
 
 @Composable
-private fun StatRH(titre: String, valeur: String, modifier: Modifier = Modifier) {
-    Card(modifier = modifier, colors = CardDefaults.cardColors(containerColor = Color.White), shape = RoundedCornerShape(14.dp)) {
-        Column(Modifier.fillMaxWidth().padding(12.dp)) {
-            Text(valeur, color = violetRH, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
-            Text(titre, color = Color.Gray, style = MaterialTheme.typography.bodySmall)
+private fun StatCompactRH(titre: String, valeur: String) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(valeur, color = violetRH, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+        Text(titre, color = Color.Gray, style = MaterialTheme.typography.labelSmall)
+    }
+}
+
+@Composable
+private fun CarteMenuRH(titre: String, description: String, modifier: Modifier = Modifier, onClick: () -> Unit) {
+    Card(
+        modifier = modifier.heightIn(min = 104.dp).clickable(onClick = onClick),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        shape = RoundedCornerShape(16.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+    ) {
+        Column(
+            modifier = Modifier.fillMaxWidth().padding(14.dp),
+            verticalArrangement = Arrangement.spacedBy(7.dp)
+        ) {
+            Text(titre, color = violetRH, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+            Text(description, color = Color.Gray, style = MaterialTheme.typography.bodySmall)
+            Text("Ouvrir  ›", color = violetRH, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold)
         }
     }
 }
