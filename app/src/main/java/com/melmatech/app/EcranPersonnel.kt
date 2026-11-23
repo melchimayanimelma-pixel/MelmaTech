@@ -33,6 +33,21 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.People
+import androidx.compose.material.icons.filled.Folder
+import androidx.compose.material.icons.filled.AccountTree
+import androidx.compose.material.icons.filled.EventAvailable
+import androidx.compose.material.icons.filled.BeachAccess
+import androidx.compose.material.icons.filled.Payments
+import androidx.compose.material.icons.filled.Assessment
+import androidx.compose.material.icons.filled.ArrowForward
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Cancel
+import androidx.compose.material.icons.filled.Schedule
+import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Work
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -64,6 +79,21 @@ private data class DocumentRH(
     val chemin: String,
     val date: String,
     val typeMime: String
+)
+
+private data class PresenceRH(
+    val id: String, val employe: String, val date: String,
+    val arrivee: String, val depart: String, val statut: String
+)
+private data class CongeRH(
+    val id: String, val employeId: String, val employe: String,
+    val type: String, val debut: String, val fin: String,
+    val motif: String, val statut: String
+)
+private data class PaieRH(
+    val id: String, val employe: String, val debut: String,
+    val fin: String, val base: Double, val primes: Double,
+    val retenues: Double, val net: Double, val statut: String
 )
 
 private val violetRH = Color(0xFF6C3CE9)
@@ -119,12 +149,179 @@ fun EcranPersonnel(onRetour: () -> Unit) {
     var pagesApercu by remember { mutableStateOf<List<Bitmap>>(emptyList()) }
     var chargementApercu by remember { mutableStateOf(false) }
     var erreurApercu by remember { mutableStateOf("") }
+    var presences by remember { mutableStateOf(emptyList<PresenceRH>()) }
+    var conges by remember { mutableStateOf(emptyList<CongeRH>()) }
+    var bulletins by remember { mutableStateOf(emptyList<PaieRH>()) }
+    var chargementModule by remember { mutableStateOf(false) }
+    var afficherDemandeConge by remember { mutableStateOf(false) }
+    var employeConge by remember { mutableStateOf("") }
+    var typeConge by remember { mutableStateOf("Annuel") }
+    var debutConge by remember { mutableStateOf("") }
+    var finConge by remember { mutableStateOf("") }
+    var motifConge by remember { mutableStateOf("") }
+    var afficherBulletin by remember { mutableStateOf(false) }
+    var employePaie by remember { mutableStateOf("") }
+    var basePaie by remember { mutableStateOf("") }
+    var primesPaie by remember { mutableStateOf("0") }
+    var retenuesPaie by remember { mutableStateOf("0") }
+    var debutPaie by remember { mutableStateOf("") }
+    var finPaie by remember { mutableStateOf("") }
 
     val estRH = profil?.role?.trim()?.lowercase() == "responsable_rh"
 
     fun authHeaders(builder: Request.Builder, token: String): Request.Builder =
         builder.addHeader("apikey", SupabaseConfig.key)
             .addHeader("Authorization", "Bearer $token")
+
+    fun chargerPresences() {
+        val p = profil ?: return
+        val token = AuthService.obtenirAccessToken(context) ?: return
+        chargementModule = true
+        val url = "${SupabaseConfig.url}/rest/v1/presences_employes?entreprise_id=eq.${p.entrepriseId}&select=id,employe_id,date_presence,heure_arrivee,heure_depart,statut,employes(nom,postnom,prenom)&order=date_presence.desc"
+        val req = authHeaders(Request.Builder().url(url), token).get().build()
+        client.newCall(req).enqueue(object : Callback {
+            override fun onFailure(call: Call, e: IOException) { mainHandler.post { chargementModule = false; message = "Erreur de chargement des présences : ${e.message}" } }
+            override fun onResponse(call: Call, response: Response) { response.use {
+                val body = it.body?.string().orEmpty()
+                mainHandler.post {
+                    chargementModule = false
+                    if (!it.isSuccessful) { message = "Chargement des présences impossible (${it.code})."; return@post }
+                    try {
+                        val a = JSONArray(body)
+                        presences = (0 until a.length()).map { i ->
+                            val x = a.getJSONObject(i); val e = x.optJSONObject("employes")
+                            PresenceRH(x.optString("id"), listOf(e?.optString("prenom"), e?.optString("nom"), e?.optString("postnom")).filterNotNull().filter { n -> n.isNotBlank() && n != "null" }.joinToString(" ").ifBlank { "Employé" }, x.optString("date_presence"), x.optString("heure_arrivee").take(5).let { v -> if (v == "null") "—" else v }, x.optString("heure_depart").take(5).let { v -> if (v == "null") "—" else v }, x.optString("statut"))
+                        }
+                    } catch (_: Exception) { message = "Format des présences illisible." }
+                }
+            } }
+        })
+    }
+
+    fun enregistrerPresence(employe: EmployeListe, statut: String = "present") {
+        val p = profil ?: return
+        val token = AuthService.obtenirAccessToken(context) ?: return
+        val now = java.text.SimpleDateFormat("HH:mm:ss", java.util.Locale.getDefault()).format(java.util.Date())
+        val payload = JSONObject().put("entreprise_id", p.entrepriseId).put("employe_id", employe.id)
+            .put("statut", statut).put("cree_par", p.id)
+            .put("heure_arrivee", if (statut == "present" || statut == "retard") now else JSONObject.NULL)
+        val req = authHeaders(Request.Builder().url("${SupabaseConfig.url}/rest/v1/presences_employes"), token)
+            .addHeader("Content-Type", "application/json").addHeader("Prefer", "return=minimal")
+            .post(payload.toString().toRequestBody("application/json; charset=utf-8".toMediaType())).build()
+        client.newCall(req).enqueue(object : Callback {
+            override fun onFailure(call: Call, e: IOException) { mainHandler.post { message = "Pointage impossible : ${e.message}" } }
+            override fun onResponse(call: Call, response: Response) { response.use { mainHandler.post {
+                if (it.isSuccessful) { message = "Pointage enregistré pour ${employe.nom}."; chargerPresences() }
+                else message = "Pointage refusé (${it.code}) : ${it.body?.string().orEmpty().take(120)}"
+            } } }
+        })
+    }
+
+    fun chargerConges() {
+        val p = profil ?: return
+        val token = AuthService.obtenirAccessToken(context) ?: return
+        chargementModule = true
+        val url = "${SupabaseConfig.url}/rest/v1/demandes_conges?entreprise_id=eq.${p.entrepriseId}&select=id,employe_id,type_conge,date_debut,date_fin,motif,statut,employes(nom,postnom,prenom)&order=cree_le.desc"
+        val req = authHeaders(Request.Builder().url(url), token).get().build()
+        client.newCall(req).enqueue(object : Callback {
+            override fun onFailure(call: Call, e: IOException) { mainHandler.post { chargementModule = false; message = "Erreur de chargement des congés : ${e.message}" } }
+            override fun onResponse(call: Call, response: Response) { response.use {
+                val body = it.body?.string().orEmpty()
+                mainHandler.post {
+                    chargementModule = false
+                    if (!it.isSuccessful) { message = "Chargement des congés impossible (${it.code})."; return@post }
+                    try {
+                        val a = JSONArray(body)
+                        conges = (0 until a.length()).map { i ->
+                            val x = a.getJSONObject(i); val e = x.optJSONObject("employes")
+                            CongeRH(x.optString("id"), x.optString("employe_id"), listOf(e?.optString("prenom"), e?.optString("nom"), e?.optString("postnom")).filterNotNull().filter { n -> n.isNotBlank() && n != "null" }.joinToString(" ").ifBlank { "Employé" }, x.optString("type_conge"), x.optString("date_debut"), x.optString("date_fin"), x.optString("motif").takeUnless { v -> v == "null" }.orEmpty(), x.optString("statut"))
+                        }
+                    } catch (_: Exception) { message = "Format des congés illisible." }
+                }
+            } }
+        })
+    }
+
+    fun enregistrerConge() {
+        val p = profil ?: return
+        val token = AuthService.obtenirAccessToken(context) ?: return
+        if (employeConge.isBlank() || debutConge.isBlank() || finConge.isBlank() || finConge < debutConge) { message = "Sélectionne un employé et des dates valides."; return }
+        val payload = JSONObject().put("entreprise_id", p.entrepriseId).put("employe_id", employeConge)
+            .put("type_conge", typeConge).put("date_debut", debutConge).put("date_fin", finConge)
+            .put("motif", motifConge.ifBlank { JSONObject.NULL }).put("cree_par", p.id)
+        val req = authHeaders(Request.Builder().url("${SupabaseConfig.url}/rest/v1/demandes_conges"), token)
+            .addHeader("Content-Type", "application/json").addHeader("Prefer", "return=minimal")
+            .post(payload.toString().toRequestBody("application/json; charset=utf-8".toMediaType())).build()
+        client.newCall(req).enqueue(object : Callback {
+            override fun onFailure(call: Call, e: IOException) { mainHandler.post { message = "Enregistrement impossible : ${e.message}" } }
+            override fun onResponse(call: Call, response: Response) { response.use { mainHandler.post {
+                if (it.isSuccessful) { afficherDemandeConge = false; message = "Demande de congé enregistrée."; chargerConges() }
+                else message = "Demande refusée (${it.code}) : ${it.body?.string().orEmpty().take(120)}"
+            } } }
+        })
+    }
+
+    fun deciderConge(id: String, statut: String) {
+        val p = profil ?: return
+        val token = AuthService.obtenirAccessToken(context) ?: return
+        val payload = JSONObject().put("statut", statut).put("decision_par", p.id)
+            .put("decision_le", java.time.OffsetDateTime.now().toString())
+        val req = authHeaders(Request.Builder().url("${SupabaseConfig.url}/rest/v1/demandes_conges?id=eq.$id&entreprise_id=eq.${p.entrepriseId}"), token)
+            .addHeader("Content-Type", "application/json").addHeader("Prefer", "return=minimal")
+            .patch(payload.toString().toRequestBody("application/json; charset=utf-8".toMediaType())).build()
+        client.newCall(req).enqueue(object : Callback {
+            override fun onFailure(call: Call, e: IOException) { mainHandler.post { message = "Décision non enregistrée : ${e.message}" } }
+            override fun onResponse(call: Call, response: Response) { response.use { mainHandler.post {
+                if (it.isSuccessful) { message = if (statut == "approuve") "Congé approuvé." else "Congé refusé."; chargerConges() }
+                else message = "Modification refusée (${it.code})."
+            } } }
+        })
+    }
+
+    fun chargerPaie() {
+        val p = profil ?: return
+        val token = AuthService.obtenirAccessToken(context) ?: return
+        chargementModule = true
+        val url = "${SupabaseConfig.url}/rest/v1/bulletins_paie?entreprise_id=eq.${p.entrepriseId}&select=id,employe_id,periode_debut,periode_fin,salaire_base,primes,retenues,net_a_payer,statut,employes(nom,postnom,prenom)&order=periode_fin.desc"
+        val req = authHeaders(Request.Builder().url(url), token).get().build()
+        client.newCall(req).enqueue(object : Callback {
+            override fun onFailure(call: Call, e: IOException) { mainHandler.post { chargementModule = false; message = "Erreur de chargement de la paie : ${e.message}" } }
+            override fun onResponse(call: Call, response: Response) { response.use {
+                val body = it.body?.string().orEmpty()
+                mainHandler.post {
+                    chargementModule = false
+                    if (!it.isSuccessful) { message = "Chargement de la paie impossible (${it.code})."; return@post }
+                    try {
+                        val a = JSONArray(body)
+                        bulletins = (0 until a.length()).map { i ->
+                            val x = a.getJSONObject(i); val e = x.optJSONObject("employes")
+                            PaieRH(x.optString("id"), listOf(e?.optString("prenom"), e?.optString("nom"), e?.optString("postnom")).filterNotNull().filter { n -> n.isNotBlank() && n != "null" }.joinToString(" ").ifBlank { "Employé" }, x.optString("periode_debut"), x.optString("periode_fin"), x.optDouble("salaire_base"), x.optDouble("primes"), x.optDouble("retenues"), x.optDouble("net_a_payer"), x.optString("statut"))
+                        }
+                    } catch (_: Exception) { message = "Format des bulletins illisible." }
+                }
+            } }
+        })
+    }
+
+    fun creerBulletin() {
+        val p = profil ?: return
+        val token = AuthService.obtenirAccessToken(context) ?: return
+        val base = basePaie.toDoubleOrNull(); val primes = primesPaie.toDoubleOrNull(); val retenues = retenuesPaie.toDoubleOrNull()
+        if (employePaie.isBlank() || debutPaie.isBlank() || finPaie.isBlank() || finPaie < debutPaie || base == null || primes == null || retenues == null || base < 0 || primes < 0 || retenues < 0 || base + primes < retenues) { message = "Vérifie l'employé, les dates et les montants."; return }
+        val payload = JSONObject().put("entreprise_id", p.entrepriseId).put("employe_id", employePaie)
+            .put("periode_debut", debutPaie).put("periode_fin", finPaie).put("salaire_base", base)
+            .put("primes", primes).put("retenues", retenues).put("cree_par", p.id)
+        val req = authHeaders(Request.Builder().url("${SupabaseConfig.url}/rest/v1/bulletins_paie"), token)
+            .addHeader("Content-Type", "application/json").addHeader("Prefer", "return=minimal")
+            .post(payload.toString().toRequestBody("application/json; charset=utf-8".toMediaType())).build()
+        client.newCall(req).enqueue(object : Callback {
+            override fun onFailure(call: Call, e: IOException) { mainHandler.post { message = "Création du bulletin impossible : ${e.message}" } }
+            override fun onResponse(call: Call, response: Response) { response.use { mainHandler.post {
+                if (it.isSuccessful) { afficherBulletin = false; message = "Bulletin créé en brouillon."; chargerPaie() }
+                else message = "Création refusée (${it.code}) : ${it.body?.string().orEmpty().take(120)}"
+            } } }
+        })
+    }
 
     fun chargerDocuments(employe: EmployeListe) {
         val p = profil ?: return
@@ -363,6 +560,13 @@ fun EcranPersonnel(onRetour: () -> Unit) {
     }
 
     LaunchedEffect(Unit) { chargerEmployes() }
+    LaunchedEffect(onglet, profil) {
+        if (profil != null) when (onglet) {
+            "Présences" -> chargerPresences()
+            "Congés" -> chargerConges()
+            "Paie" -> chargerPaie()
+        }
+    }
 
     Column(
         modifier = Modifier.fillMaxSize().background(fondRH).padding(horizontal = 16.dp, vertical = 12.dp),
