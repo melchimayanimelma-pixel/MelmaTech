@@ -274,7 +274,7 @@ fun EcranPersonnel(onRetour: () -> Unit) {
                         .put("ajoute_par", p.id)
                     val metaRequest = authHeaders(Request.Builder().url("${SupabaseConfig.url}/rest/v1/documents_employes"), token)
                         .addHeader("Content-Type", "application/json")
-                        .post(metadata.toString().toRequestBody("application/json; charset=utf-8"))
+                        .post(metadata.toString().toRequestBody("application/json; charset=utf-8".toMediaType()))
                         .build()
                     client.newCall(metaRequest).enqueue(object : Callback {
                         override fun onFailure(call: Call, e: IOException) {
