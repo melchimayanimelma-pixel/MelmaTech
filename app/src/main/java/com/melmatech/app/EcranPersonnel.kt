@@ -689,8 +689,9 @@ fun EcranPersonnel(onRetour: () -> Unit) {
             }
         }
 
-        val sectionsRH = listOf("Accueil RH", "Employés", "Organisation", "Présences", "Congés", "Paie", "Rapports")
-        val sectionActive = if (onglet == "Dossiers") "Employés" else onglet
+        // Les dossiers ont leur propre onglet : ne pas les masquer sous « Employés ».
+        val sectionsRH = listOf("Accueil RH", "Employés", "Dossiers", "Organisation", "Présences", "Congés", "Paie", "Rapports")
+        val sectionActive = onglet
         ScrollableTabRow(
             selectedTabIndex = sectionsRH.indexOf(sectionActive).coerceAtLeast(0),
             edgePadding = 0.dp,
