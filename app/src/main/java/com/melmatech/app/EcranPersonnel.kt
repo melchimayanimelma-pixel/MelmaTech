@@ -815,104 +815,146 @@ fun EcranPersonnel(onRetour: () -> Unit) {
                             }
                         }
                     } else {
-                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                            Column(Modifier.weight(1f)) {
-                                Text("Dossier du personnel", fontWeight = FontWeight.Bold)
-                                Text(cible.nom, color = Color.Gray)
+                        // Une seule zone défilante pour voir les informations ET les documents sans écran coupé.
+                        LazyColumn(
+                            Modifier.weight(1f),
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            item {
+                                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                                    Column(Modifier.weight(1f)) {
+                                        Text("Dossier du personnel", fontWeight = FontWeight.Bold)
+                                        Text(cible.nom, color = Color.Gray)
+                                        Text("${cible.matricule} • ${cible.departement}", color = violetRH, style = MaterialTheme.typography.bodySmall)
+                                    }
+                                    TextButton(onClick = { employeSelectionne = null; documents = emptyList(); naviguerVers("Employés") }) { Text("Liste") }
+                                }
                             }
-                            TextButton(onClick = { employeSelectionne = null; documents = emptyList() }) { Text("Changer") }
-                        }
-                        Card(colors = CardDefaults.cardColors(containerColor = Color.White), shape = RoundedCornerShape(14.dp)) {
-                            Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                                Text("Informations personnelles", color = violetRH, fontWeight = FontWeight.Bold)
-                                LigneInfoRH("Nom complet", cible.nom)
-                                LigneInfoRH("Téléphone", cible.telephone.ifBlank { "Non renseigné" })
-                                LigneInfoRH("E-mail", cible.email.ifBlank { "Non renseigné" })
-                                Divider(color = fondRH)
-                                Text("Informations professionnelles", color = violetRH, fontWeight = FontWeight.Bold)
-                                LigneInfoRH("Matricule", cible.matricule)
-                                LigneInfoRH("Poste", cible.poste.ifBlank { "Non renseigné" })
-                                LigneInfoRH("Département", cible.departement.ifBlank { "Non affecté" })
-                                LigneInfoRH("Type de contrat", cible.typeContrat.ifBlank { "Non renseigné" })
-                                LigneInfoRH("Statut", cible.statut.replaceFirstChar { it.uppercase() })
-                            }
-                        }
-                        if (estRH) {
-                            var menuCategorie by remember { mutableStateOf(false) }
-                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                                Box {
-                                    OutlinedButton(onClick = { menuCategorie = true }) { Text(categorieDocument) }
-                                    DropdownMenu(expanded = menuCategorie, onDismissRequest = { menuCategorie = false }) {
-                                        listOf("Contrat", "CV", "Diplôme", "Identité", "Photo", "Certificat", "Autre").forEach { cat ->
-                                            DropdownMenuItem(text = { Text(cat) }, onClick = { categorieDocument = cat; menuCategorie = false })
-                                        }
+                            item {
+                                Card(colors = CardDefaults.cardColors(containerColor = Color.White), shape = RoundedCornerShape(16.dp)) {
+                                    Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                        Text("Informations personnelles", color = violetRH, fontWeight = FontWeight.Bold)
+                                        LigneInfoRH("Nom complet", cible.nom)
+                                        LigneInfoRH("Téléphone", cible.telephone.ifBlank { "Non renseigné" })
+                                        LigneInfoRH("E-mail", cible.email.ifBlank { "Non renseigné" })
+                                        Divider(color = fondRH)
+                                        Text("Informations professionnelles", color = violetRH, fontWeight = FontWeight.Bold)
+                                        LigneInfoRH("Matricule", cible.matricule)
+                                        LigneInfoRH("Poste", cible.poste.ifBlank { "Non renseigné" })
+                                        LigneInfoRH("Département", cible.departement.ifBlank { "Non affecté" })
+                                        LigneInfoRH("Type de contrat", cible.typeContrat.ifBlank { "Non renseigné" })
+                                        LigneInfoRH("Statut", cible.statut.replaceFirstChar { it.uppercase() })
                                     }
                                 }
-                                Button(onClick = { choisirDocument.launch(arrayOf("*/*")) }) { Text("Ajouter un document") }
                             }
-                            Text("Accès strictement réservé au responsable RH autorisé.", color = Color(0xFF8A5A00), style = MaterialTheme.typography.bodySmall)
-                        } else {
-                            Text("Les documents personnels sont confidentiels et réservés au responsable RH.", color = Color.Gray)
-                        }
-                        if (chargementDocuments) CircularProgressIndicator()
-                        if (documents.isEmpty() && !chargementDocuments) Text(message.ifBlank { "Aucun document enregistré." }, color = Color.Gray)
-                        LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            documents.groupBy { it.categorie.ifBlank { "Autres documents" } }.toSortedMap().forEach { (categorie, docsCategorie) ->
-                                item { Text("${categorie} (${docsCategorie.size})", color = violetRH, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 8.dp, bottom = 2.dp)) }
-                                items(docsCategorie, key = { it.id }) { d ->
-                                val nomInconnu = d.nom.matches(Regex("\\d{7,}")) && !d.nom.contains('.')
-                                Card(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    colors = CardDefaults.cardColors(containerColor = Color.White),
-                                    shape = RoundedCornerShape(14.dp)
-                                ) {
-                                    Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                                        Row(verticalAlignment = Alignment.CenterVertically) {
-                                            Text(if (d.typeMime.contains("pdf", true)) "PDF" else if (d.typeMime.startsWith("image/")) "IMG" else "DOC", color = violetRH, fontWeight = FontWeight.Bold)
-                                            Spacer(Modifier.width(12.dp))
-                                            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                                                Text(if (nomInconnu) "Nom original indisponible" else d.nom, fontWeight = FontWeight.SemiBold)
-                                                Text("${d.categorie} • ${d.date.take(10)}", color = Color.Gray, style = MaterialTheme.typography.bodySmall)
-                                                if (nomInconnu) Text("Ancien fichier importé sans son nom d'origine", color = Color(0xFF9A6700), style = MaterialTheme.typography.labelSmall)
+                            if (estRH) {
+                                item {
+                                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
+                                        Text("Documents du personnel", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                                        Text("${documents.size} fichier(s)", color = Color.Gray, style = MaterialTheme.typography.bodySmall)
+                                    }
+                                }
+                                item {
+                                    var menuCategorie by remember { mutableStateOf(false) }
+                                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                        Box {
+                                            OutlinedButton(onClick = { menuCategorie = true }) { Text(categorieDocument) }
+                                            DropdownMenu(expanded = menuCategorie, onDismissRequest = { menuCategorie = false }) {
+                                                listOf("Contrat", "CV", "Diplôme", "Identité", "Photo", "Certificat", "Autre").forEach { cat ->
+                                                    DropdownMenuItem(text = { Text(cat) }, onClick = { categorieDocument = cat; menuCategorie = false })
+                                                }
                                             }
                                         }
-                                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                            OutlinedButton(onClick = {
-                                                if (!estRH) message = "Accès réservé au responsable RH." else {
-                                                    documentApercu = d; pagesApercu = emptyList(); erreurApercu = ""; chargementApercu = true
-                                                    val accessToken = AuthService.obtenirAccessToken(context)
-                                                    if (accessToken.isNullOrBlank()) { chargementApercu = false; erreurApercu = "Session expirée. Reconnecte-toi." }
-                                                    else {
-                                                        val fileUrl = "${SupabaseConfig.url}/storage/v1/object/rh-prive/${Uri.encode(d.chemin, "/")}"
-                                                        val previewRequest = authHeaders(Request.Builder().url(fileUrl), accessToken).get().build()
-                                                        client.newCall(previewRequest).enqueue(object : Callback {
-                                                            override fun onFailure(call: Call, e: IOException) { mainHandler.post { chargementApercu = false; erreurApercu = "Ouverture impossible : ${e.message}" } }
-                                                            override fun onResponse(call: Call, response: Response) { response.use { res ->
-                                                                if (!res.isSuccessful) { mainHandler.post { chargementApercu = false; erreurApercu = "Document inaccessible (${res.code})." }; return }
-                                                                try {
-                                                                    val bytes = res.body?.bytes() ?: throw IOException("Fichier vide")
-                                                                    val mime = d.typeMime.lowercase()
-                                                                    val pages = if (mime == "application/pdf" || d.nom.endsWith(".pdf", true)) {
-                                                                        val temp = java.io.File(context.cacheDir, "rh_preview_${d.id}.pdf"); temp.writeBytes(bytes)
-                                                                        val fd = ParcelFileDescriptor.open(temp, ParcelFileDescriptor.MODE_READ_ONLY); val renderer = PdfRenderer(fd)
-                                                                        try { (0 until renderer.pageCount.coerceAtMost(10)).map { pageIndex ->
-                                                                            val page = renderer.openPage(pageIndex)
-                                                                            try { val width = 900; val height = (width.toFloat() * page.height / page.width).toInt().coerceAtLeast(1); val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888); bitmap.eraseColor(android.graphics.Color.WHITE); page.render(bitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY); bitmap }
-                                                                            finally { page.close() }
-                                                                        } } finally { renderer.close(); fd.close(); temp.delete() }
-                                                                    } else if (mime.startsWith("image/")) { listOf(BitmapFactory.decodeByteArray(bytes, 0, bytes.size) ?: throw IOException("Image non reconnue")) } else emptyList()
-                                                                    mainHandler.post { pagesApercu = pages; chargementApercu = false; if (pages.isEmpty()) erreurApercu = "Aperçu intégré indisponible pour ce format. Télécharge le fichier pour l'ouvrir." }
-                                                                } catch (e: Exception) { mainHandler.post { chargementApercu = false; erreurApercu = "Impossible de lire le document : ${e.message}" } }
-                                                            } }
-                                                        })
-                                                    }
-                                                }
-                                            }, modifier = Modifier.weight(1f)) { Text("Visualiser") }
-                                            OutlinedButton(onClick = { if (estRH) telechargerDocumentRH(d) else message = "Accès réservé au responsable RH." }, modifier = Modifier.weight(1f)) { Text("Télécharger") }
+                                        Button(onClick = { choisirDocument.launch(arrayOf("*/*")) }, modifier = Modifier.weight(1f)) {
+                                            Icon(Icons.Filled.UploadFile, contentDescription = null)
+                                            Spacer(Modifier.width(6.dp))
+                                            Text("Ajouter un document")
+                                        }
+                                    }
+                                    Text("Documents confidentiels : accès réservé au responsable RH autorisé.", color = Color(0xFF8A5A00), style = MaterialTheme.typography.bodySmall)
+                                }
+                                if (chargementDocuments) item {
+                                    Box(Modifier.fillMaxWidth().padding(20.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
+                                }
+                                if (documents.isEmpty() && !chargementDocuments) item {
+                                    Card(colors = CardDefaults.cardColors(containerColor = Color.White), shape = RoundedCornerShape(14.dp)) {
+                                        Column(Modifier.fillMaxWidth().padding(20.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                            Icon(Icons.Filled.FolderOpen, contentDescription = null, tint = violetRH, modifier = Modifier.size(32.dp))
+                                            Text("Aucun document dans ce dossier", fontWeight = FontWeight.SemiBold)
+                                            Text("Ajoute le CV, le contrat, les diplômes ou les pièces d'identité de cet employé.", color = Color.Gray)
                                         }
                                     }
                                 }
+                                documents.groupBy { it.categorie.ifBlank { "Autres documents" } }.toSortedMap().forEach { (categorie, docsCategorie) ->
+                                    item { Text("${categorie} (${docsCategorie.size})", color = violetRH, fontWeight = FontWeight.Bold) }
+                                    items(docsCategorie, key = { it.id }) { d ->
+                                        val nomInconnu = d.nom.matches(Regex("\\d{7,}")) && !d.nom.contains('.')
+                                        Card(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            colors = CardDefaults.cardColors(containerColor = Color.White),
+                                            shape = RoundedCornerShape(14.dp)
+                                        ) {
+                                            Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                                    Icon(
+                                                        if (d.typeMime.contains("pdf", true)) Icons.Filled.PictureAsPdf else if (d.typeMime.startsWith("image/")) Icons.Filled.Image else Icons.Filled.InsertDriveFile,
+                                                        contentDescription = null,
+                                                        tint = violetRH,
+                                                        modifier = Modifier.size(30.dp)
+                                                    )
+                                                    Spacer(Modifier.width(12.dp))
+                                                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                                                        Text(if (nomInconnu) "Nom original indisponible" else d.nom, fontWeight = FontWeight.SemiBold)
+                                                        Text("${d.categorie} • ${d.date.take(10)}", color = Color.Gray, style = MaterialTheme.typography.bodySmall)
+                                                        if (nomInconnu) Text("Ancien fichier importé sans son nom d'origine", color = Color(0xFF9A6700), style = MaterialTheme.typography.labelSmall)
+                                                    }
+                                                }
+                                                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                                    OutlinedButton(onClick = {
+                                                        documentApercu = d; pagesApercu = emptyList(); erreurApercu = ""; chargementApercu = true
+                                                        val accessToken = AuthService.obtenirAccessToken(context)
+                                                        if (accessToken.isNullOrBlank()) { chargementApercu = false; erreurApercu = "Session expirée. Reconnecte-toi." }
+                                                        else {
+                                                            val fileUrl = "${SupabaseConfig.url}/storage/v1/object/rh-prive/${Uri.encode(d.chemin, "/")}"
+                                                            val previewRequest = authHeaders(Request.Builder().url(fileUrl), accessToken).get().build()
+                                                            client.newCall(previewRequest).enqueue(object : Callback {
+                                                                override fun onFailure(call: Call, e: IOException) { mainHandler.post { chargementApercu = false; erreurApercu = "Ouverture impossible : ${e.message}" } }
+                                                                override fun onResponse(call: Call, response: Response) { response.use { res ->
+                                                                    if (!res.isSuccessful) { mainHandler.post { chargementApercu = false; erreurApercu = "Document inaccessible (${res.code})." }; return }
+                                                                    try {
+                                                                        val bytes = res.body?.bytes() ?: throw IOException("Fichier vide")
+                                                                        val mime = d.typeMime.lowercase()
+                                                                        val pages = if (mime == "application/pdf" || d.nom.endsWith(".pdf", true)) {
+                                                                            val temp = java.io.File(context.cacheDir, "rh_preview_${d.id}.pdf"); temp.writeBytes(bytes)
+                                                                            val fd = ParcelFileDescriptor.open(temp, ParcelFileDescriptor.MODE_READ_ONLY); val renderer = PdfRenderer(fd)
+                                                                            try { (0 until renderer.pageCount.coerceAtMost(10)).map { pageIndex ->
+                                                                                val page = renderer.openPage(pageIndex)
+                                                                                try { val width = 900; val height = (width.toFloat() * page.height / page.width).toInt().coerceAtLeast(1); val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888); bitmap.eraseColor(android.graphics.Color.WHITE); page.render(bitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY); bitmap }
+                                                                                finally { page.close() }
+                                                                            } } finally { renderer.close(); fd.close(); temp.delete() }
+                                                                        } else if (mime.startsWith("image/")) { listOf(BitmapFactory.decodeByteArray(bytes, 0, bytes.size) ?: throw IOException("Image non reconnue")) } else emptyList()
+                                                                        mainHandler.post { pagesApercu = pages; chargementApercu = false; if (pages.isEmpty()) erreurApercu = "Aperçu intégré indisponible pour ce format. Télécharge le fichier pour l'ouvrir." }
+                                                                    } catch (e: Exception) { mainHandler.post { chargementApercu = false; erreurApercu = "Impossible de lire le document : ${e.message}" } }
+                                                                } }
+                                                            })
+                                                        }
+                                                    }, modifier = Modifier.weight(1f)) {
+                                                        Icon(Icons.Filled.Visibility, contentDescription = null)
+                                                        Spacer(Modifier.width(6.dp))
+                                                        Text("Visualiser")
+                                                    }
+                                                    Button(onClick = { telechargerDocumentRH(d) }, modifier = Modifier.weight(1f)) {
+                                                        Icon(Icons.Filled.Download, contentDescription = null)
+                                                        Spacer(Modifier.width(6.dp))
+                                                        Text("Télécharger")
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
                                 }
+                            } else {
+                                item { Text("Les documents personnels sont confidentiels et réservés au responsable RH.", color = Color.Gray) }
                             }
                         }
                     }
