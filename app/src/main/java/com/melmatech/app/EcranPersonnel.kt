@@ -27,6 +27,8 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.lazy.LazyColumn
@@ -134,6 +136,18 @@ fun EcranPersonnel(onRetour: () -> Unit) {
             onglet = "Accueil RH"
         }
         message = ""
+    }
+
+    fun actualiserOnglet() {
+        message = ""
+        when (onglet) {
+            "Accueil RH", "Employés", "Dossiers", "Organisation" -> chargerEmployes()
+            "Présences" -> chargerPresences()
+            "Congés" -> chargerConges()
+            "Paie" -> chargerPaie()
+            "Rapports" -> { chargerPresences(); chargerConges(); chargerPaie() }
+        }
+        if (onglet == "Dossiers") employeSelectionne?.let { chargerDocuments(it) }
     }
     var chargement by remember { mutableStateOf(true) }
     var recherche by remember { mutableStateOf("") }
@@ -383,7 +397,7 @@ fun EcranPersonnel(onRetour: () -> Unit) {
     }
 
     fun chargerEmployes() {
-        chargement = true
+        if (employes.isEmpty()) chargement = true
         message = ""
         AuthService.obtenirProfil(context) { okProfil, texteProfil, p ->
             if (!okProfil || p == null) {
@@ -611,7 +625,12 @@ fun EcranPersonnel(onRetour: () -> Unit) {
                 Text("Espace RH", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
                 Text(profil?.nomComplet.orEmpty(), color = Color.Gray, style = MaterialTheme.typography.bodySmall)
             }
-            OutlinedButton(onClick = onRetour) { Text("Quitter") }
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                IconButton(onClick = { actualiserOnglet() }, enabled = !chargement && !chargementModule && !chargementDocuments) {
+                    Icon(Icons.Filled.Refresh, contentDescription = "Actualiser", tint = violetRH)
+                }
+                TextButton(onClick = onRetour) { Text("Quitter") }
+            }
         }
 
         Card(
@@ -630,19 +649,23 @@ fun EcranPersonnel(onRetour: () -> Unit) {
             }
         }
 
+        Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+            listOf("Accueil RH", "Employés", "Organisation", "Présences", "Congés", "Paie", "Rapports").forEach { destination ->
+                val selectionne = onglet == destination
+                TextButton(onClick = { if (onglet != destination) { historiqueOnglets.add(destination); onglet = destination; message = ""; departementSelectionne = null } }) {
+                    Text(destination, color = if (selectionne) violetRH else Color.Gray, fontWeight = if (selectionne) FontWeight.Bold else FontWeight.Normal, maxLines = 1)
+                }
+            }
+        }
         if (chargement) {
             Box(Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) {
                 CircularProgressIndicator()
             }
         } else {
             if (onglet != "Accueil RH") {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    TextButton(onClick = { historiqueOnglets.clear(); historiqueOnglets.add("Accueil RH"); onglet = "Accueil RH"; message = "" }) { Text("‹ Menu RH") }
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                     Text(onglet, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                    if (onglet == "Dossiers") Spacer(Modifier.weight(1f))
                 }
             }
             when (onglet) {
@@ -974,14 +997,12 @@ fun EcranPersonnel(onRetour: () -> Unit) {
                                 Text("Total des bulletins actuellement chargés, sans extrapolation.", color = Color.Gray, style = MaterialTheme.typography.bodySmall)
                             }
                         } }
-                        item { OutlinedButton(onClick = { chargerPresences(); chargerConges(); chargerPaie() }, modifier = Modifier.fillMaxWidth()) { Icon(Icons.Filled.Refresh, null); Text("  Actualiser les indicateurs") } }
                     }
                 }
             }
         }
 
         if (message.isNotBlank()) Text(message, color = if (message.contains("succès") || message.contains("ajouté")) Color(0xFF16834B) else Color(0xFFB45309), style = MaterialTheme.typography.bodySmall)
-        OutlinedButton(onClick = { chargerEmployes() }, modifier = Modifier.fillMaxWidth(), enabled = !chargement && !enregistrement) { Text("Actualiser les données") }
     }
 
     if (documentApercu != null) {
