@@ -23,6 +23,7 @@ import androidx.compose.ui.window.DialogProperties
 import android.os.Handler
 import android.os.Looper
 import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.compose.BackHandler
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -81,6 +82,24 @@ fun EcranPersonnel(onRetour: () -> Unit) {
     var documents by remember { mutableStateOf(emptyList<DocumentRH>()) }
     var employeSelectionne by remember { mutableStateOf<EmployeListe?>(null) }
     var onglet by remember { mutableStateOf("Accueil RH") }
+    val historiqueOnglets = remember { mutableStateListOf("Accueil RH") }
+
+    fun naviguerVers(destination: String) {
+        if (onglet != destination) {
+            historiqueOnglets.add(destination)
+            onglet = destination
+        }
+    }
+
+    fun revenirOngletPrecedent() {
+        if (historiqueOnglets.size > 1) {
+            historiqueOnglets.removeAt(historiqueOnglets.lastIndex)
+            onglet = historiqueOnglets.last()
+        } else {
+            onglet = "Accueil RH"
+        }
+        message = ""
+    }
     var chargement by remember { mutableStateOf(true) }
     var message by remember { mutableStateOf("") }
     var recherche by remember { mutableStateOf("") }
@@ -329,6 +348,20 @@ fun EcranPersonnel(onRetour: () -> Unit) {
         }
     }
 
+    BackHandler(
+        enabled = documentApercu != null || afficherAjout || onglet != "Accueil RH"
+    ) {
+        when {
+            documentApercu != null -> {
+                documentApercu = null
+                pagesApercu = emptyList()
+                chargementApercu = false
+            }
+            afficherAjout -> afficherAjout = false
+            else -> revenirOngletPrecedent()
+        }
+    }
+
     LaunchedEffect(Unit) { chargerEmployes() }
 
     Column(
@@ -371,7 +404,7 @@ fun EcranPersonnel(onRetour: () -> Unit) {
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    TextButton(onClick = { onglet = "Accueil RH"; message = "" }) { Text("‹ Menu RH") }
+                    TextButton(onClick = { historiqueOnglets.clear(); historiqueOnglets.add("Accueil RH"); onglet = "Accueil RH"; message = "" }) { Text("‹ Menu RH") }
                     Text(onglet, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
                 }
             }
@@ -381,30 +414,30 @@ fun EcranPersonnel(onRetour: () -> Unit) {
                     LazyColumn(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                         item {
                             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                                CarteMenuRH("Employés", "Liste et fiches du personnel", Modifier.weight(1f)) { onglet = "Employés" }
+                                CarteMenuRH("Employés", "Liste et fiches du personnel", Modifier.weight(1f)) { naviguerVers("Employés") }
                                 CarteMenuRH("Dossiers", "CV, contrats et documents", Modifier.weight(1f)) {
                                     if (employes.isNotEmpty()) {
                                         employeSelectionne = employes.first()
                                         chargerDocuments(employes.first())
                                     }
-                                    onglet = "Dossiers"
+                                    naviguerVers("Dossiers")
                                 }
                             }
                         }
                         item {
                             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                                CarteMenuRH("Organisation", "Départements et postes", Modifier.weight(1f)) { onglet = "Organisation" }
-                                CarteMenuRH("Présences", "Pointage et absences", Modifier.weight(1f)) { onglet = "Présences" }
+                                CarteMenuRH("Organisation", "Départements et postes", Modifier.weight(1f)) { naviguerVers("Organisation") }
+                                CarteMenuRH("Présences", "Pointage et absences", Modifier.weight(1f)) { naviguerVers("Présences") }
                             }
                         }
                         item {
                             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                                CarteMenuRH("Congés", "Demandes et validations", Modifier.weight(1f)) { onglet = "Congés" }
-                                CarteMenuRH("Paie", "Salaires et bulletins", Modifier.weight(1f)) { onglet = "Paie" }
+                                CarteMenuRH("Congés", "Demandes et validations", Modifier.weight(1f)) { naviguerVers("Congés") }
+                                CarteMenuRH("Paie", "Salaires et bulletins", Modifier.weight(1f)) { naviguerVers("Paie") }
                             }
                         }
                         item {
-                            CarteMenuRH("Rapports RH", "Effectifs et indicateurs", Modifier.fillMaxWidth()) { onglet = "Rapports" }
+                            CarteMenuRH("Rapports RH", "Effectifs et indicateurs", Modifier.fillMaxWidth()) { naviguerVers("Rapports") }
                         }
                     }
                 }
@@ -419,7 +452,7 @@ fun EcranPersonnel(onRetour: () -> Unit) {
                     } else {
                         LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                             items(filtres, key = { it.id }) { e ->
-                                Card(Modifier.fillMaxWidth().clickable { employeSelectionne = e; onglet = "Dossiers"; chargerDocuments(e) }, colors = CardDefaults.cardColors(containerColor = Color.White)) {
+                                Card(Modifier.fillMaxWidth().clickable { employeSelectionne = e; naviguerVers("Dossiers"); chargerDocuments(e) }, colors = CardDefaults.cardColors(containerColor = Color.White)) {
                                     Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(3.dp)) {
                                         Text(e.nom.ifBlank { "Employé sans nom" }, fontWeight = FontWeight.Bold)
                                         Text("${e.matricule} • ${e.poste}", color = Color.Gray, style = MaterialTheme.typography.bodySmall)
