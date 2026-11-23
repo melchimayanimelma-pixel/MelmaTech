@@ -861,77 +861,7 @@ fun EcranPersonnel(onRetour: () -> Unit) {
                                 items(docsCategorie, key = { it.id }) { d ->
                                 val nomInconnu = d.nom.matches(Regex("\\d{7,}")) && !d.nom.contains('.')
                                 Card(
-                                    modifier = Modifier.fillMaxWidth().clickable {
-                                        if (!estRH) {
-                                            message = "Accès réservé au responsable RH."
-                                        } else {
-                                            documentApercu = d
-                                            pagesApercu = emptyList()
-                                            erreurApercu = ""
-                                            chargementApercu = true
-                                            val accessToken = AuthService.obtenirAccessToken(context)
-                                            if (accessToken.isNullOrBlank()) {
-                                                chargementApercu = false
-                                                erreurApercu = "Session expirée. Reconnecte-toi."
-                                            } else {
-                                                val fileUrl = "${SupabaseConfig.url}/storage/v1/object/rh-prive/${Uri.encode(d.chemin, "/")}"
-                                                val previewRequest = authHeaders(Request.Builder().url(fileUrl), accessToken).get().build()
-                                                client.newCall(previewRequest).enqueue(object : Callback {
-                                                    override fun onFailure(call: Call, e: IOException) {
-                                                        mainHandler.post { chargementApercu = false; erreurApercu = "Ouverture impossible : ${e.message}" }
-                                                    }
-                                                    override fun onResponse(call: Call, response: Response) {
-                                                        response.use { res ->
-                                                            if (!res.isSuccessful) {
-                                                                mainHandler.post { chargementApercu = false; erreurApercu = "Document inaccessible (${res.code}). Vérifie les autorisations RH." }
-                                                                return
-                                                            }
-                                                            try {
-                                                                val bytes = res.body?.bytes() ?: throw IOException("Fichier vide")
-                                                                val mime = d.typeMime.lowercase()
-                                                                val pages = if (mime == "application/pdf" || d.nom.endsWith(".pdf", true)) {
-                                                                    val temp = java.io.File(context.cacheDir, "rh_preview_${d.id}.pdf")
-                                                                    temp.writeBytes(bytes)
-                                                                    val fd = ParcelFileDescriptor.open(temp, ParcelFileDescriptor.MODE_READ_ONLY)
-                                                                    val renderer = PdfRenderer(fd)
-                                                                    try {
-                                                                        val count = renderer.pageCount.coerceAtMost(10)
-                                                                        (0 until count).map { pageIndex ->
-                                                                            val page = renderer.openPage(pageIndex)
-                                                                            try {
-                                                                                val width = 900
-                                                                                val height = (width.toFloat() * page.height / page.width).toInt().coerceAtLeast(1)
-                                                                                val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
-                                                                                bitmap.eraseColor(android.graphics.Color.WHITE)
-                                                                                page.render(bitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
-                                                                                bitmap
-                                                                            } finally { page.close() }
-                                                                        }
-                                                                    } finally {
-                                                                        renderer.close()
-                                                                        fd.close()
-                                                                        temp.delete()
-                                                                    }
-                                                                } else if (mime.startsWith("image/")) {
-                                                                    val bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size) ?: throw IOException("Image non reconnue")
-                                                                    listOf(bitmap)
-                                                                } else {
-                                                                    emptyList()
-                                                                }
-                                                                mainHandler.post {
-                                                                    pagesApercu = pages
-                                                                    chargementApercu = false
-                                                                    if (pages.isEmpty()) erreurApercu = "Aperçu intégré indisponible pour ce format. Télécharge le fichier pour l'ouvrir avec une application compatible."
-                                                                }
-                                                            } catch (e: Exception) {
-                                                                mainHandler.post { chargementApercu = false; erreurApercu = "Impossible de lire le document : ${e.message}" }
-                                                            }
-                                                        }
-                                                    }
-                                                })
-                                            }
-                                        }
-                                    },
+                                    modifier = Modifier.fillMaxWidth(),
                                     colors = CardDefaults.cardColors(containerColor = Color.White),
                                     shape = RoundedCornerShape(14.dp)
                                 ) {
