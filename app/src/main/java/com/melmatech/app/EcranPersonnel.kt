@@ -804,13 +804,109 @@ fun EcranPersonnel(onRetour: () -> Unit) {
                     }
                     Text("Les postes sont associés aux employés et seront administrables dans une prochaine étape.")
                 }
-                "Présences", "Congés", "Paie", "Rapports" -> {
-                    Card(colors = CardDefaults.cardColors(containerColor = Color.White)) {
-                        Column(Modifier.fillMaxWidth().padding(18.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Text(onglet, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-                            Text("Cette rubrique est prévue dans le module RH. Son écran sera activé après la mise en place de ses tables, règles de sécurité et traitements afin de ne pas afficher de fausses données.", color = Color.Gray)
-                            Text("Aucune donnée fictive n'est affichée.", color = violetRH, fontWeight = FontWeight.SemiBold)
+                "Présences" -> {
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                        Column { Text("Pointage du personnel", fontWeight = FontWeight.Bold); Text(java.time.LocalDate.now().toString(), color = Color.Gray, style = MaterialTheme.typography.bodySmall) }
+                        TextButton(onClick = { chargerPresences() }) { Icon(Icons.Filled.Refresh, null); Text("Actualiser") }
+                    }
+                    if (chargementModule) LinearProgressIndicator(Modifier.fillMaxWidth())
+                    Text("Enregistrer une présence", fontWeight = FontWeight.SemiBold)
+                    LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        items(employes, key = { it.id }) { e ->
+                            Card(colors = CardDefaults.cardColors(containerColor = Color.White), shape = RoundedCornerShape(14.dp)) {
+                                Row(Modifier.fillMaxWidth().padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(Icons.Filled.People, null, tint = violetRH, modifier = Modifier.size(24.dp))
+                                    Column(Modifier.weight(1f).padding(start = 10.dp)) { Text(e.nom, fontWeight = FontWeight.SemiBold); Text(e.poste, color = Color.Gray, style = MaterialTheme.typography.bodySmall) }
+                                    Button(onClick = { enregistrerPresence(e) }, contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)) { Text("Présent") }
+                                }
+                            }
                         }
+                        item { Text("Historique des pointages", fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 8.dp)) }
+                        items(presences, key = { it.id }) { p ->
+                            Card(colors = CardDefaults.cardColors(containerColor = Color.White)) {
+                                Row(Modifier.fillMaxWidth().padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(Icons.Filled.EventAvailable, null, tint = violetRH)
+                                    Column(Modifier.weight(1f).padding(start = 10.dp)) { Text(p.employe, fontWeight = FontWeight.SemiBold); Text("${p.date} • Arrivée ${p.arrivee} • Départ ${p.depart}", color = Color.Gray, style = MaterialTheme.typography.bodySmall) }
+                                    Text(p.statut.replaceFirstChar { it.uppercase() }, color = if (p.statut == "present") Color(0xFF16834B) else Color(0xFFB45309), style = MaterialTheme.typography.labelMedium)
+                                }
+                            }
+                        }
+                    }
+                }
+                "Congés" -> {
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                        Text("Demandes et validations", fontWeight = FontWeight.Bold)
+                        Button(onClick = { afficherDemandeConge = true }) { Icon(Icons.Filled.BeachAccess, null); Spacer(Modifier.width(6.dp)); Text("Nouvelle demande") }
+                    }
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        StatCompactRH("En attente", conges.count { it.statut == "en_attente" }.toString())
+                        StatCompactRH("Approuvés", conges.count { it.statut == "approuve" }.toString())
+                        StatCompactRH("Refusés", conges.count { it.statut == "refuse" }.toString())
+                    }
+                    if (chargementModule) LinearProgressIndicator(Modifier.fillMaxWidth())
+                    LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        items(conges, key = { it.id }) { x ->
+                            Card(colors = CardDefaults.cardColors(containerColor = Color.White), shape = RoundedCornerShape(14.dp)) {
+                                Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) { Icon(Icons.Filled.BeachAccess, null, tint = violetRH); Text("  ${x.employe}", fontWeight = FontWeight.Bold); Spacer(Modifier.weight(1f)); Text(x.statut.replace("_", " "), color = if (x.statut == "approuve") Color(0xFF16834B) else Color(0xFF9A6700), style = MaterialTheme.typography.labelMedium) }
+                                    Text("${x.type} • ${x.debut} au ${x.fin}", color = Color.Gray)
+                                    if (x.motif.isNotBlank()) Text(x.motif, style = MaterialTheme.typography.bodySmall)
+                                    if (x.statut == "en_attente") Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                        OutlinedButton(onClick = { deciderConge(x.id, "refuse") }, modifier = Modifier.weight(1f)) { Icon(Icons.Filled.Cancel, null); Text(" Refuser") }
+                                        Button(onClick = { deciderConge(x.id, "approuve") }, modifier = Modifier.weight(1f)) { Icon(Icons.Filled.CheckCircle, null); Text(" Approuver") }
+                                    }
+                                }
+                            }
+                        }
+                        if (conges.isEmpty() && !chargementModule) item { Text("Aucune demande de congé enregistrée.", color = Color.Gray) }
+                    }
+                }
+                "Paie" -> {
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                        Column { Text("Bulletins de salaire", fontWeight = FontWeight.Bold); Text("Montants en devise de l'entreprise", color = Color.Gray, style = MaterialTheme.typography.bodySmall) }
+                        Button(onClick = { afficherBulletin = true }) { Icon(Icons.Filled.Payments, null); Spacer(Modifier.width(5.dp)); Text("Créer") }
+                    }
+                    Card(colors = CardDefaults.cardColors(containerColor = Color.White)) {
+                        Row(Modifier.fillMaxWidth().padding(14.dp), horizontalArrangement = Arrangement.SpaceBetween) {
+                            StatCompactRH("Bulletins", bulletins.size.toString())
+                            StatCompactRH("En brouillon", bulletins.count { it.statut == "brouillon" }.toString())
+                            StatCompactRH("Payés", bulletins.count { it.statut == "paye" }.toString())
+                        }
+                    }
+                    if (chargementModule) LinearProgressIndicator(Modifier.fillMaxWidth())
+                    LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        items(bulletins, key = { it.id }) { b ->
+                            Card(colors = CardDefaults.cardColors(containerColor = Color.White), shape = RoundedCornerShape(14.dp)) {
+                                Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) { Icon(Icons.Filled.Payments, null, tint = violetRH); Text("  ${b.employe}", fontWeight = FontWeight.Bold); Spacer(Modifier.weight(1f)); Text(b.statut, color = if (b.statut == "paye") Color(0xFF16834B) else Color(0xFF9A6700)) }
+                                    Text("Période : ${b.debut} au ${b.fin}", color = Color.Gray, style = MaterialTheme.typography.bodySmall)
+                                    Text("Base : ${"%.2f".format(b.base)}  •  Primes : ${"%.2f".format(b.primes)}  •  Retenues : ${"%.2f".format(b.retenues)}", style = MaterialTheme.typography.bodySmall)
+                                    Text("Net à payer : ${"%.2f".format(b.net)}", color = violetRH, fontWeight = FontWeight.Bold)
+                                }
+                            }
+                        }
+                        if (bulletins.isEmpty() && !chargementModule) item { Text("Aucun bulletin de paie enregistré.", color = Color.Gray) }
+                    }
+                }
+                "Rapports" -> {
+                    Text("Vue d'ensemble des ressources humaines", fontWeight = FontWeight.Bold)
+                    LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        item { Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            CarteIndicateurRH("Effectif", employes.size.toString(), Icons.Filled.People, Modifier.weight(1f))
+                            CarteIndicateurRH("Actifs", employes.count { it.statut == "actif" }.toString(), Icons.Filled.CheckCircle, Modifier.weight(1f))
+                        } }
+                        item { Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            CarteIndicateurRH("Pointages chargés", presences.size.toString(), Icons.Filled.EventAvailable, Modifier.weight(1f))
+                            CarteIndicateurRH("Congés en attente", conges.count { it.statut == "en_attente" }.toString(), Icons.Filled.Schedule, Modifier.weight(1f))
+                        } }
+                        item { Card(colors = CardDefaults.cardColors(containerColor = Color.White)) {
+                            Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Text("Masse salariale enregistrée", fontWeight = FontWeight.Bold)
+                                Text("${"%.2f".format(bulletins.sumOf { it.net })}", color = violetRH, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+                                Text("Total des bulletins actuellement chargés, sans extrapolation.", color = Color.Gray, style = MaterialTheme.typography.bodySmall)
+                            }
+                        } }
+                        item { OutlinedButton(onClick = { chargerPresences(); chargerConges(); chargerPaie() }, modifier = Modifier.fillMaxWidth()) { Icon(Icons.Filled.Refresh, null); Text("  Actualiser les indicateurs") } }
                     }
                 }
             }
@@ -944,19 +1040,36 @@ private fun StatCompactRH(titre: String, valeur: String) {
 
 @Composable
 private fun CarteMenuRH(titre: String, description: String, modifier: Modifier = Modifier, onClick: () -> Unit) {
-    Card(
-        modifier = modifier.heightIn(min = 104.dp).clickable(onClick = onClick),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        shape = RoundedCornerShape(16.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
-    ) {
-        Column(
-            modifier = Modifier.fillMaxWidth().padding(14.dp),
-            verticalArrangement = Arrangement.spacedBy(7.dp)
-        ) {
-            Text(titre, color = violetRH, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-            Text(description, color = Color.Gray, style = MaterialTheme.typography.bodySmall)
-            Text("Ouvrir  ›", color = violetRH, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold)
+    val icone = when (titre) {
+        "Employés" -> Icons.Filled.People
+        "Dossiers" -> Icons.Filled.Folder
+        "Organisation" -> Icons.Filled.AccountTree
+        "Présences" -> Icons.Filled.EventAvailable
+        "Congés" -> Icons.Filled.BeachAccess
+        "Paie" -> Icons.Filled.Payments
+        else -> Icons.Filled.Assessment
+    }
+    Card(modifier = modifier.heightIn(min = 132.dp).clickable(onClick = onClick), colors = CardDefaults.cardColors(containerColor = Color.White), shape = RoundedCornerShape(18.dp), elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)) {
+        Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Box(Modifier.size(42.dp).background(Color(0xFFEDE7FF), RoundedCornerShape(13.dp)), contentAlignment = Alignment.Center) {
+                Icon(icone, contentDescription = titre, tint = violetRH, modifier = Modifier.size(23.dp))
+            }
+            Text(titre, color = Color(0xFF252238), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+            Text(description, color = Color.Gray, style = MaterialTheme.typography.bodySmall, minLines = 2)
+            Row(verticalAlignment = Alignment.CenterVertically) { Text("Ouvrir", color = violetRH, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold); Spacer(Modifier.width(4.dp)); Icon(Icons.Filled.ArrowForward, null, tint = violetRH, modifier = Modifier.size(16.dp)) }
+        }
+    }
+}
+
+@Composable
+private fun CarteIndicateurRH(titre: String, valeur: String, icone: ImageVector, modifier: Modifier = Modifier) {
+    Card(modifier = modifier, colors = CardDefaults.cardColors(containerColor = Color.White), shape = RoundedCornerShape(16.dp)) {
+        Row(Modifier.fillMaxWidth().padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+            Icon(icone, null, tint = violetRH, modifier = Modifier.size(24.dp))
+            Column(Modifier.padding(start = 10.dp)) {
+                Text(valeur, color = violetRH, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleLarge)
+                Text(titre, color = Color.Gray, style = MaterialTheme.typography.bodySmall)
+            }
         }
     }
 }
