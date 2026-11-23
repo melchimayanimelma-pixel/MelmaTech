@@ -12,11 +12,35 @@ android {
         applicationId = "com.melmatech.app"
         minSdk = 24
         targetSdk = 35
-        versionCode = 1
-        versionName = "1.0"
+        // Chaque exécution GitHub Actions reçoit un numéro croissant.
+        val buildNumber = System.getenv("GITHUB_RUN_NUMBER")?.toIntOrNull() ?: 1
+        versionCode = buildNumber
+        versionName = "1.0.$buildNumber"
 
         buildConfigField("String", "SUPABASE_URL", "\"https://yxdwryjdckupdaduajuy.supabase.co\"")
         buildConfigField("String", "SUPABASE_KEY", "\"sb_publishable_PU_7owmDVUa_CFwYGkJlgw_SEFAuIHn\"")
+    }
+
+    // Clé de signature stable fournie par les secrets GitHub Actions.
+    signingConfigs {
+        create("stable") {
+            val keystorePath = System.getenv("ANDROID_KEYSTORE_PATH")
+            if (!keystorePath.isNullOrBlank()) {
+                storeFile = file(keystorePath)
+                storePassword = System.getenv("ANDROID_KEYSTORE_PASSWORD")
+                keyAlias = System.getenv("ANDROID_KEY_ALIAS")
+                keyPassword = System.getenv("ANDROID_KEY_PASSWORD")
+            }
+        }
+    }
+
+    buildTypes {
+        getByName("debug") {
+            // En CI, toutes les APK debug sont signées avec la même clé.
+            if (!System.getenv("ANDROID_KEYSTORE_PATH").isNullOrBlank()) {
+                signingConfig = signingConfigs.getByName("stable")
+            }
+        }
     }
 
     buildFeatures {
