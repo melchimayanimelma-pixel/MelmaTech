@@ -123,6 +123,8 @@ fun EcranPersonnel(onRetour: () -> Unit) {
     var departements by remember { mutableStateOf(emptyList<String>()) }
     var documents by remember { mutableStateOf(emptyList<DocumentRH>()) }
     var employeSelectionne by remember { mutableStateOf<EmployeListe?>(null) }
+    // Sélection indépendante : l’onglet Dossiers commence toujours par l’annuaire.
+    var dossierEmployeOuvert by remember { mutableStateOf<EmployeListe?>(null) }
     var departementSelectionne by remember { mutableStateOf<String?>(null) }
     var onglet by remember { mutableStateOf("Accueil RH") }
     var message by remember { mutableStateOf("") }
@@ -647,14 +649,14 @@ fun EcranPersonnel(onRetour: () -> Unit) {
             "Paie" -> chargerPaie()
             "Rapports" -> { chargerPresences(); chargerConges(); chargerPaie() }
         }
-        if (onglet == "Dossiers") employeSelectionne?.let { chargerDocuments(it) }
+        if (onglet == "Dossiers") dossierEmployeOuvert?.let { chargerDocuments(it) }
     }
 
     LaunchedEffect(Unit) { chargerEmployes() }
     LaunchedEffect(onglet, profil) {
         if (profil != null) when (onglet) {
             "Employés", "Organisation" -> chargerEmployes()
-            "Dossiers" -> employeSelectionne?.let { chargerDocuments(it) }
+            "Dossiers" -> dossierEmployeOuvert?.let { chargerDocuments(it) }
             "Présences" -> chargerPresences()
             "Congés" -> chargerConges()
             "Paie" -> chargerPaie()
@@ -750,11 +752,10 @@ fun EcranPersonnel(onRetour: () -> Unit) {
                         item {
                             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                                 CarteMenuRH("Employés", "Liste et fiches du personnel", Modifier.weight(1f)) { naviguerVers("Employés") }
-                                CarteMenuRH("Dossiers", "CV, contrats et documents", Modifier.weight(1f)) {
-                                    if (employes.isNotEmpty()) {
-                                        employeSelectionne = employes.first()
-                                        chargerDocuments(employes.first())
-                                    }
+                                CarteMenuRH("Dossiers", "Dossiers individuels du personnel", Modifier.weight(1f)) {
+                                    dossierEmployeOuvert = null
+                                    recherche = ""
+                                    departementSelectionne = null
                                     naviguerVers("Dossiers")
                                 }
                             }
@@ -806,7 +807,7 @@ fun EcranPersonnel(onRetour: () -> Unit) {
                     } else {
                         LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                             items(filtres, key = { it.id }) { e ->
-                                Card(Modifier.fillMaxWidth().clickable { employeSelectionne = e; documents = emptyList(); naviguerVers("Dossiers"); chargerDocuments(e) }, colors = CardDefaults.cardColors(containerColor = Color.White), shape = RoundedCornerShape(16.dp)) {
+                                Card(Modifier.fillMaxWidth().clickable { employeSelectionne = e; dossierEmployeOuvert = e; documents = emptyList(); naviguerVers("Dossiers"); chargerDocuments(e) }, colors = CardDefaults.cardColors(containerColor = Color.White), shape = RoundedCornerShape(16.dp)) {
                                     Row(Modifier.fillMaxWidth().padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
                                         Box(Modifier.size(46.dp).background(Color(0xFFEDE7FF), RoundedCornerShape(23.dp)), contentAlignment = Alignment.Center) {
                                             Text(e.nom.split(" ").mapNotNull { it.firstOrNull()?.toString() }.take(2).joinToString("").uppercase().ifBlank { "E" }, color = violetRH, fontWeight = FontWeight.Bold)
@@ -824,19 +825,74 @@ fun EcranPersonnel(onRetour: () -> Unit) {
                     }
                 }
                 "Dossiers" -> {
-                    val cible = employeSelectionne
+                    val cible = dossierEmployeOuvert
                     if (cible == null) {
-                        Text("Choisis un employé pour consulter son dossier.", color = Color.Gray)
-                        LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            items(employes, key = { it.id }) { e ->
-                                Card(Modifier.fillMaxWidth().clickable { employeSelectionne = e; chargerDocuments(e) }, colors = CardDefaults.cardColors(containerColor = Color.White)) {
-                                    Row(Modifier.fillMaxWidth().padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
-                                        Column(Modifier.weight(1f)) {
-                                            Text(e.nom, fontWeight = FontWeight.Bold)
-                                            Text("${e.matricule} • ${e.departement}", color = Color.Gray, style = MaterialTheme.typography.bodySmall)
+                        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                            Text("Sélectionnez un employé pour consulter son dossier.", color = Color.Gray)
+                            OutlinedTextField(
+                                value = recherche,
+                                onValueChange = { recherche = it },
+                                modifier = Modifier.fillMaxWidth(),
+                                singleLine = true,
+                                label = { Text("Rechercher un employé ou un matricule") },
+                                leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) }
+                            )
+                            val depsDossiers = (departements + employes.map { it.departement })
+                                .filter { it.isNotBlank() && it != "null" }.distinct().sorted()
+                            Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                FilterChip(selected = departementSelectionne == null, onClick = { departementSelectionne = null }, label = { Text("Tous (${employes.size})") })
+                                depsDossiers.forEach { dep ->
+                                    FilterChip(
+                                        selected = departementSelectionne.equals(dep, true),
+                                        onClick = { departementSelectionne = if (departementSelectionne.equals(dep, true)) null else dep },
+                                        label = { Text("$dep (${employes.count { it.departement.equals(dep, true) }})") }
+                                    )
+                                }
+                            }
+                            val employesFiltresDossiers = employes.filter { e ->
+                                (departementSelectionne == null || e.departement.equals(departementSelectionne, true)) &&
+                                    (e.nom.contains(recherche, true) || e.matricule.contains(recherche, true) ||
+                                     e.poste.contains(recherche, true) || e.departement.contains(recherche, true))
+                            }
+                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                                Text("Répertoire du personnel", fontWeight = FontWeight.SemiBold)
+                                Text("${employesFiltresDossiers.size} employé(s)", color = Color.Gray, style = MaterialTheme.typography.bodySmall)
+                            }
+                            if (employesFiltresDossiers.isEmpty()) {
+                                Box(Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) {
+                                    Text(if (employes.isEmpty()) "Aucun employé enregistré." else "Aucun employé ne correspond à la recherche.", color = Color.Gray)
+                                }
+                            } else {
+                                LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    employesFiltresDossiers.groupBy { it.departement.ifBlank { "Sans département" } }
+                                        .toSortedMap().forEach { (dep, equipe) ->
+                                            item(key = "dep_$dep") {
+                                                Text("$dep · ${equipe.size}", color = violetRH, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 6.dp))
+                                            }
+                                            items(equipe, key = { it.id }) { e ->
+                                                Card(
+                                                    Modifier.fillMaxWidth().clickable {
+                                                        employeSelectionne = e
+                                                        dossierEmployeOuvert = e
+                                                        documents = emptyList()
+                                                        chargerDocuments(e)
+                                                    },
+                                                    colors = CardDefaults.cardColors(containerColor = Color.White),
+                                                    shape = RoundedCornerShape(14.dp)
+                                                ) {
+                                                    Row(Modifier.fillMaxWidth().padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+                                                        Box(Modifier.size(44.dp).background(Color(0xFFEDE7FF), RoundedCornerShape(22.dp)), contentAlignment = Alignment.Center) {
+                                                            Text(e.nom.split(" ").mapNotNull { it.firstOrNull()?.toString() }.take(2).joinToString("").uppercase().ifBlank { "E" }, color = violetRH, fontWeight = FontWeight.Bold)
+                                                        }
+                                                        Column(Modifier.weight(1f).padding(start = 12.dp), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                                                            Text(e.nom.ifBlank { "Employé sans nom" }, fontWeight = FontWeight.SemiBold)
+                                                            Text("${e.matricule} · ${e.poste.ifBlank { "Poste non défini" }}", color = Color.Gray, style = MaterialTheme.typography.bodySmall)
+                                                        }
+                                                        Icon(Icons.Filled.ChevronRight, contentDescription = "Ouvrir le dossier", tint = violetRH)
+                                                    }
+                                                }
+                                            }
                                         }
-                                        Text("Ouvrir ›", color = violetRH, fontWeight = FontWeight.SemiBold)
-                                    }
                                 }
                             }
                         }
@@ -853,7 +909,7 @@ fun EcranPersonnel(onRetour: () -> Unit) {
                                         Text(cible.nom, color = Color.Gray)
                                         Text("${cible.matricule} • ${cible.departement}", color = violetRH, style = MaterialTheme.typography.bodySmall)
                                     }
-                                    TextButton(onClick = { employeSelectionne = null; documents = emptyList(); naviguerVers("Employés") }) { Text("Liste") }
+                                    TextButton(onClick = { dossierEmployeOuvert = null; employeSelectionne = null; documents = emptyList(); recherche = ""; departementSelectionne = null }) { Text("Tous les employés") }
                                 }
                             }
                             item {
