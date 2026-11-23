@@ -696,21 +696,40 @@ fun EcranPersonnel(onRetour: () -> Unit) {
             }
         }
 
-        // Les dossiers ont leur propre onglet : ne pas les masquer sous « Employés ».
         val sectionsRH = listOf("Accueil RH", "Employés", "Dossiers", "Organisation", "Présences", "Congés", "Paie", "Rapports")
-        val sectionActive = onglet
-        ScrollableTabRow(
-            selectedTabIndex = sectionsRH.indexOf(sectionActive).coerceAtLeast(0),
-            edgePadding = 0.dp,
-            containerColor = fondRH,
-            contentColor = violetRH
+        var menuNavigationOuvert by remember { mutableStateOf(false) }
+        Row(
+            Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            sectionsRH.forEach { destination ->
-                Tab(
-                    selected = sectionActive == destination,
-                    onClick = { if (onglet != destination) { historiqueOnglets.add(destination); onglet = destination; message = ""; departementSelectionne = null } },
-                    text = { Text(destination, maxLines = 1) }
-                )
+            Column(Modifier.weight(1f)) {
+                Text("ESPACE DE TRAVAIL", color = Color.Gray, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.SemiBold)
+                Text(onglet, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+            }
+            Box {
+                OutlinedButton(onClick = { menuNavigationOuvert = true }) {
+                    Text("Navigation RH")
+                    Spacer(Modifier.width(6.dp))
+                    Icon(Icons.Filled.ArrowForward, contentDescription = null)
+                }
+                DropdownMenu(expanded = menuNavigationOuvert, onDismissRequest = { menuNavigationOuvert = false }) {
+                    sectionsRH.forEach { destination ->
+                        DropdownMenuItem(
+                            text = { Text(destination, fontWeight = if (onglet == destination) FontWeight.Bold else FontWeight.Normal) },
+                            leadingIcon = if (onglet == destination) ({ Icon(Icons.Filled.CheckCircle, contentDescription = null, tint = violetRH) }) else null,
+                            onClick = {
+                                if (onglet != destination) {
+                                    historiqueOnglets.add(destination)
+                                    onglet = destination
+                                    message = ""
+                                    departementSelectionne = null
+                                }
+                                menuNavigationOuvert = false
+                            }
+                        )
+                    }
+                }
             }
         }
         if (chargement) {
