@@ -69,7 +69,10 @@ private data class EmployeListe(
     val nom: String,
     val poste: String,
     val departement: String,
-    val statut: String
+    val statut: String,
+    val telephone: String = "",
+    val email: String = "",
+    val typeContrat: String = ""
 )
 
 private data class DocumentRH(
@@ -111,6 +114,7 @@ fun EcranPersonnel(onRetour: () -> Unit) {
     var departements by remember { mutableStateOf(emptyList<String>()) }
     var documents by remember { mutableStateOf(emptyList<DocumentRH>()) }
     var employeSelectionne by remember { mutableStateOf<EmployeListe?>(null) }
+    var departementSelectionne by remember { mutableStateOf<String?>(null) }
     var onglet by remember { mutableStateOf("Accueil RH") }
     var message by remember { mutableStateOf("") }
     val historiqueOnglets = remember { mutableStateListOf("Accueil RH") }
@@ -189,8 +193,10 @@ fun EcranPersonnel(onRetour: () -> Unit) {
             override fun onFailure(call: Call, e: IOException) { mainHandler.post { message = "Création du département impossible : ${e.message}" } }
             override fun onResponse(call: Call, response: Response) { response.use { mainHandler.post {
                 if (it.isSuccessful) {
+                    val nomCree = nouveauDepartement.trim()
                     afficherDepartement = false; nouveauDepartement = ""; descriptionDepartement = ""
-                    departements = (departements + nouveauDepartement.trim()).distinct(); message = "Département ajouté."
+                    departements = (departements + nomCree).filter { nom -> nom.isNotBlank() }.distinct().sorted()
+                    message = "Département ajouté."
                 } else message = "Création refusée (${it.code}) : ${it.body?.string().orEmpty().take(120)}"
             } } }
         })
@@ -392,7 +398,7 @@ fun EcranPersonnel(onRetour: () -> Unit) {
                 message = "Session expirée. Reconnecte-toi."
                 return@obtenirProfil
             }
-            val url = "${SupabaseConfig.url}/rest/v1/employes?entreprise_id=eq.${p.entrepriseId}&select=id,matricule,nom,postnom,prenom,poste,departement,statut&order=nom.asc"
+            val url = "${SupabaseConfig.url}/rest/v1/employes?entreprise_id=eq.${p.entrepriseId}&select=id,matricule,nom,postnom,prenom,poste,departement,statut,telephone,email,type_contrat&order=nom.asc"
             val request = authHeaders(Request.Builder().url(url), token).get().build()
             client.newCall(request).enqueue(object : Callback {
                 override fun onFailure(call: Call, e: IOException) {
@@ -415,7 +421,10 @@ fun EcranPersonnel(onRetour: () -> Unit) {
                                             .filter { part -> part.isNotBlank() && part != "null" }.joinToString(" "),
                                         poste = item.optString("poste").takeUnless { v -> v == "null" }.orEmpty(),
                                         departement = item.optString("departement").takeUnless { v -> v == "null" }.orEmpty(),
-                                        statut = item.optString("statut", "actif")
+                                        statut = item.optString("statut", "actif"),
+                                        telephone = item.optString("telephone").takeUnless { v -> v == "null" }.orEmpty(),
+                                        email = item.optString("email").takeUnless { v -> v == "null" }.orEmpty(),
+                                        typeContrat = item.optString("type_contrat").takeUnless { v -> v == "null" }.orEmpty()
                                     )
                                 }
                                 if (onglet == "Employés" && message.isBlank()) message = ""
@@ -674,7 +683,13 @@ fun EcranPersonnel(onRetour: () -> Unit) {
                         OutlinedTextField(recherche, { recherche = it }, modifier = Modifier.weight(1f), singleLine = true, label = { Text("Rechercher un employé") })
                         Button(onClick = { afficherAjout = true }) { Text("Ajouter") }
                     }
-                    val filtres = employes.filter { it.nom.contains(recherche, true) || it.matricule.contains(recherche, true) || it.poste.contains(recherche, true) }
+                    if (departementSelectionne != null) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text("Département : ${departementSelectionne}", modifier = Modifier.weight(1f), color = violetRH, fontWeight = FontWeight.SemiBold)
+                            TextButton(onClick = { departementSelectionne = null }) { Text("Tous") }
+                        }
+                    }
+                    val filtres = employes.filter { (departementSelectionne == null || it.departement.equals(departementSelectionne, true)) && (it.nom.contains(recherche, true) || it.matricule.contains(recherche, true) || it.poste.contains(recherche, true) || it.departement.contains(recherche, true)) }
                     if (filtres.isEmpty()) {
                         Text(if (employes.isEmpty()) "Aucun employé enregistré pour cette entreprise." else "Aucun résultat.")
                     } else {
@@ -704,6 +719,21 @@ fun EcranPersonnel(onRetour: () -> Unit) {
                             }
                             TextButton(onClick = { employeSelectionne = null; documents = emptyList() }) { Text("Changer") }
                         }
+                        Card(colors = CardDefaults.cardColors(containerColor = Color.White), shape = RoundedCornerShape(14.dp)) {
+                            Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Text("Informations personnelles", color = violetRH, fontWeight = FontWeight.Bold)
+                                LigneInfoRH("Nom complet", cible.nom)
+                                LigneInfoRH("Téléphone", cible.telephone.ifBlank { "Non renseigné" })
+                                LigneInfoRH("E-mail", cible.email.ifBlank { "Non renseigné" })
+                                Divider(color = fondRH)
+                                Text("Informations professionnelles", color = violetRH, fontWeight = FontWeight.Bold)
+                                LigneInfoRH("Matricule", cible.matricule)
+                                LigneInfoRH("Poste", cible.poste.ifBlank { "Non renseigné" })
+                                LigneInfoRH("Département", cible.departement.ifBlank { "Non affecté" })
+                                LigneInfoRH("Type de contrat", cible.typeContrat.ifBlank { "Non renseigné" })
+                                LigneInfoRH("Statut", cible.statut.replaceFirstChar { it.uppercase() })
+                            }
+                        }
                         if (estRH) {
                             var menuCategorie by remember { mutableStateOf(false) }
                             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -724,7 +754,9 @@ fun EcranPersonnel(onRetour: () -> Unit) {
                         if (chargementDocuments) CircularProgressIndicator()
                         if (documents.isEmpty() && !chargementDocuments) Text(message.ifBlank { "Aucun document enregistré." }, color = Color.Gray)
                         LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            items(documents, key = { it.id }) { d ->
+                            documents.groupBy { it.categorie.ifBlank { "Autres documents" } }.toSortedMap().forEach { (categorie, docsCategorie) ->
+                                item { Text("${categorie} (${docsCategorie.size})", color = violetRH, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 8.dp, bottom = 2.dp)) }
+                                items(docsCategorie, key = { it.id }) { d ->
                                 val nomInconnu = d.nom.matches(Regex("\\d{7,}")) && !d.nom.contains('.')
                                 Card(
                                     modifier = Modifier.fillMaxWidth().clickable {
@@ -812,6 +844,7 @@ fun EcranPersonnel(onRetour: () -> Unit) {
                                         Text("Ouvrir  ›", color = violetRH, style = MaterialTheme.typography.labelMedium)
                                     }
                                 }
+                                }
                             }
                         }
                     }
@@ -825,8 +858,16 @@ fun EcranPersonnel(onRetour: () -> Unit) {
                         Card(colors = CardDefaults.cardColors(containerColor = Color.White)) { Column(Modifier.fillMaxWidth().padding(18.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) { Icon(Icons.Filled.AccountTree, null, tint = violetRH, modifier = Modifier.size(30.dp)); Text("Aucun département", fontWeight = FontWeight.Bold); Text("Crée les départements pour structurer les équipes.", color = Color.Gray) } }
                     } else LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         items(departements) { dep ->
-                            Card(colors = CardDefaults.cardColors(containerColor = Color.White), shape = RoundedCornerShape(14.dp)) {
-                                Row(Modifier.fillMaxWidth().padding(14.dp), verticalAlignment = Alignment.CenterVertically) { Icon(Icons.Filled.AccountTree, null, tint = violetRH); Text(dep, Modifier.weight(1f).padding(start = 12.dp), fontWeight = FontWeight.SemiBold); Icon(Icons.Filled.ArrowForward, null, tint = Color.Gray) }
+                            val effectif = employes.count { it.departement.equals(dep, true) }
+                            Card(modifier = Modifier.fillMaxWidth().clickable { departementSelectionne = dep; recherche = ""; naviguerVers("Employés") }, colors = CardDefaults.cardColors(containerColor = Color.White), shape = RoundedCornerShape(14.dp)) {
+                                Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(Icons.Filled.AccountTree, null, tint = violetRH, modifier = Modifier.size(28.dp))
+                                    Column(Modifier.weight(1f).padding(start = 12.dp)) {
+                                        Text(dep, fontWeight = FontWeight.Bold)
+                                        Text("${effectif} employé(s)", color = Color.Gray, style = MaterialTheme.typography.bodySmall)
+                                    }
+                                    Icon(Icons.Filled.ArrowForward, null, tint = violetRH)
+                                }
                             }
                         }
                     }
@@ -1114,6 +1155,15 @@ fun EcranPersonnel(onRetour: () -> Unit) {
             confirmButton = { Button(onClick = { ajouterEmploye() }, enabled = !enregistrement) { Text(if (enregistrement) "Enregistrement…" else "Enregistrer") } },
             dismissButton = { TextButton(onClick = { afficherAjout = false }, enabled = !enregistrement) { Text("Annuler") } }
         )
+    }
+}
+
+
+@Composable
+private fun LigneInfoRH(libelle: String, valeur: String) {
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.Top) {
+        Text(libelle, color = Color.Gray, style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(0.9f))
+        Text(valeur, fontWeight = FontWeight.Medium, style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1.1f))
     }
 }
 
