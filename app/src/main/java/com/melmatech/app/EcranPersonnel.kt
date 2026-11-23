@@ -47,6 +47,7 @@ import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.InsertDriveFile
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material.icons.filled.AccountTree
 import androidx.compose.material.icons.filled.EventAvailable
 import androidx.compose.material.icons.filled.BeachAccess
@@ -162,6 +163,8 @@ fun EcranPersonnel(onRetour: () -> Unit) {
     var typeContrat by remember { mutableStateOf("CDI") }
     var enregistrement by remember { mutableStateOf(false) }
     var chargementDocuments by remember { mutableStateOf(false) }
+    var documentASupprimer by remember { mutableStateOf<DocumentRH?>(null) }
+    var suppressionDocument by remember { mutableStateOf(false) }
     var categorieDocument by remember { mutableStateOf("Contrat") }
     var documentApercu by remember { mutableStateOf<DocumentRH?>(null) }
     var pagesApercu by remember { mutableStateOf<List<Bitmap>>(emptyList()) }
@@ -392,6 +395,79 @@ fun EcranPersonnel(onRetour: () -> Unit) {
                         } catch (_: Exception) { message = "Réponse des dossiers illisible." }
                     }
                 }
+            }
+        })
+    }
+
+    fun supprimerDocumentRH(document: DocumentRH) {
+        val p = profil
+        val token = AuthService.obtenirAccessToken(context)
+        if (p == null || token.isNullOrBlank()) {
+            message = "Session expirée. Reconnecte-toi."
+            return
+        }
+        if (!estRH) {
+            message = "La suppression est réservée au responsable RH autorisé."
+            return
+        }
+        suppressionDocument = true
+        val storageUrl = "${SupabaseConfig.url}/storage/v1/object/rh-prive"
+        val storagePayload = JSONObject().put("prefixes", JSONArray().put(document.chemin))
+        val storageRequest = authHeaders(Request.Builder().url(storageUrl), token)
+            .addHeader("Content-Type", "application/json")
+            .method("DELETE", storagePayload.toString().toRequestBody("application/json; charset=utf-8".toMediaType()))
+            .build()
+        client.newCall(storageRequest).enqueue(object : Callback {
+            override fun onFailure(call: Call, e: IOException) {
+                mainHandler.post {
+                    suppressionDocument = false
+                    message = "Suppression du fichier impossible : ${e.message}"
+                }
+            }
+            override fun onResponse(call: Call, response: Response) {
+                response.use {
+                    if (!it.isSuccessful) {
+                        val detail = it.body?.string().orEmpty()
+                        mainHandler.post {
+                            suppressionDocument = false
+                            message = "Le stockage a refusé la suppression (${it.code}) : ${detail.take(120)}"
+                        }
+                        return
+                    }
+                }
+                val metadataUrl = "${SupabaseConfig.url}/rest/v1/documents_employes?id=eq.${Uri.encode(document.id)}&entreprise_id=eq.${Uri.encode(p.entrepriseId)}"
+                val metadataRequest = authHeaders(Request.Builder().url(metadataUrl), token)
+                    .addHeader("Prefer", "return=minimal")
+                    .delete()
+                    .build()
+                client.newCall(metadataRequest).enqueue(object : Callback {
+                    override fun onFailure(call: Call, e: IOException) {
+                        mainHandler.post {
+                            suppressionDocument = false
+                            message = "Fichier supprimé du stockage, mais la fiche documentaire n'a pas pu être mise à jour. Actualise le dossier."
+                            chargerDocuments(employeSelectionne ?: return@post)
+                        }
+                    }
+                    override fun onResponse(call: Call, response: Response) {
+                        response.use {
+                            mainHandler.post {
+                                suppressionDocument = false
+                                if (it.isSuccessful) {
+                                    if (documentApercu?.id == document.id) {
+                                        documentApercu = null
+                                        pagesApercu = emptyList()
+                                    }
+                                    documentASupprimer = null
+                                    message = "Document supprimé du dossier."
+                                    employeSelectionne?.let { employe -> chargerDocuments(employe) }
+                                } else {
+                                    message = "Fichier supprimé du stockage, mais suppression de sa fiche refusée (${it.code}). Actualise le dossier."
+                                    employeSelectionne?.let { employe -> chargerDocuments(employe) }
+                                }
+                            }
+                        }
+                    }
+                })
             }
         })
     }
@@ -1033,6 +1109,17 @@ fun EcranPersonnel(onRetour: () -> Unit) {
                                                         Text("Télécharger")
                                                     }
                                                 }
+                                                if (estRH) {
+                                                    TextButton(
+                                                        onClick = { documentASupprimer = d },
+                                                        enabled = !suppressionDocument,
+                                                        modifier = Modifier.align(Alignment.End)
+                                                    ) {
+                                                        Icon(Icons.Filled.DeleteOutline, contentDescription = null, tint = Color(0xFFB42318))
+                                                        Spacer(Modifier.width(6.dp))
+                                                        Text("Supprimer", color = Color(0xFFB42318))
+                                                    }
+                                                }
                                             }
                                         }
                                     }
@@ -1174,6 +1261,31 @@ fun EcranPersonnel(onRetour: () -> Unit) {
         }
 
         if (message.isNotBlank()) Text(message, color = if (message.contains("succès") || message.contains("ajouté")) Color(0xFF16834B) else Color(0xFFB45309), style = MaterialTheme.typography.bodySmall)
+    }
+
+    if (documentASupprimer != null) {
+        val selectedForDelete = documentASupprimer!!
+        AlertDialog(
+            onDismissRequest = { if (!suppressionDocument) documentASupprimer = null },
+            title = { Text("Supprimer ce document ?") },
+            text = {
+                Text("« ${selectedForDelete.nom} » sera retiré du dossier de cet employé et du stockage privé. Cette action est définitive.")
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = { supprimerDocumentRH(selectedForDelete) },
+                    enabled = !suppressionDocument
+                ) {
+                    if (suppressionDocument) CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+                    else Text("Supprimer", color = Color(0xFFB42318))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { documentASupprimer = null }, enabled = !suppressionDocument) {
+                    Text("Annuler")
+                }
+            }
+        )
     }
 
     if (documentApercu != null) {
