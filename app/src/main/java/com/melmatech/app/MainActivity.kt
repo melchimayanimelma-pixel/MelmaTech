@@ -18,6 +18,9 @@ import androidx.activity.compose.setContent
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.compose.BackHandler
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -196,11 +199,13 @@ fun MelmaTechApp(context: Context) {
         mutableStateOf(AuthService.estConnecte(context))
     }
 
+    val profilEnCache = remember { AuthService.obtenirProfilCache(context) }
     var roleUtilisateur by remember {
-        mutableStateOf<String?>(null)
+        mutableStateOf(profilEnCache?.role?.lowercase(Locale.ROOT))
     }
-    var nomProfilConnecte by remember { mutableStateOf("") }
-    var photoProfilConnecte by remember { mutableStateOf("") }
+    var nomProfilConnecte by remember { mutableStateOf(profilEnCache?.nomComplet.orEmpty()) }
+    var photoProfilConnecte by remember { mutableStateOf(profilEnCache?.photoUrl.orEmpty()) }
+    var sessionVersion by remember { mutableStateOf(0) }
 
     var page by remember { mutableStateOf("Accueil") }
     var devise by remember {
@@ -302,6 +307,39 @@ val choisirPhotoProfil = rememberLauncherForActivityResult(
     var modeCreation by remember { mutableStateOf(false) }
     var chargement by remember { mutableStateOf(false) }
     var messageConnexion by remember { mutableStateOf("") }
+
+    // Vérifie et renouvelle la session à chaque retour de l'application au premier plan.
+    // Une erreur réseau temporaire ne déconnecte jamais l'utilisateur.
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner, utilisateurConnecte) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_START && utilisateurConnecte) {
+                AuthService.actualiserSessionSiNecessaire(context) { succes, resultat ->
+                    if (succes) {
+                        sessionVersion += 1
+                    } else {
+                        val erreur = resultat.lowercase(Locale.ROOT)
+                        val sessionInvalide = erreur.contains("invalid refresh token") ||
+                            erreur.contains("refresh token not found") ||
+                            erreur.contains("refresh_token_not_found") ||
+                            erreur.contains("invalid_grant")
+                        if (sessionInvalide) {
+                            AuthService.deconnecter(context)
+                            utilisateurConnecte = false
+                            roleUtilisateur = null
+                            nomProfilConnecte = ""
+                            photoProfilConnecte = ""
+                            messageConnexion = "Ta session a expiré. Reconnecte-toi."
+                        } else {
+                            messageConnexion = "Session conservée. Vérification réseau impossible pour le moment."
+                        }
+                    }
+                }
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
 
     var messageProduit by remember { mutableStateOf("") }
     var messageVente by remember { mutableStateOf("") }
@@ -651,12 +689,13 @@ val enregistrerFactureLauncher =
     }
 
     // Chargement du profil de l'utilisateur connecté pour l'en-tête du menu Plus.
-    LaunchedEffect(utilisateurConnecte) {
+    LaunchedEffect(utilisateurConnecte, sessionVersion) {
         if (utilisateurConnecte) {
             AuthService.obtenirProfil(context) { succes, _, profil ->
                 if (succes && profil != null) {
                     nomProfilConnecte = profil.nomComplet.orEmpty()
                     photoProfilConnecte = profil.photoUrl.orEmpty()
+                    roleUtilisateur = profil.role.lowercase(Locale.ROOT)
                 }
             }
         } else {
@@ -666,19 +705,18 @@ val enregistrerFactureLauncher =
     }
 
     // Connexion et chargement des données du compte.
-    LaunchedEffect(utilisateurConnecte) {
+    LaunchedEffect(utilisateurConnecte, sessionVersion) {
         if (utilisateurConnecte) {
 
             AuthService.obtenirRole(context) {
                     succes, message, role ->
 
-                roleUtilisateur = if (succes) {
-                    role?.lowercase(Locale.ROOT)
-                } else {
-                    null
+                if (succes && !role.isNullOrBlank()) {
+                    roleUtilisateur = role.lowercase(Locale.ROOT)
                 }
 
                 if (!succes) {
+                    // Ne pas remplacer le rôle mémorisé par null lors d'une panne réseau.
                     messageConnexion = message
                 }
             }
@@ -3983,7 +4021,7 @@ val enregistrerFactureLauncher =
                                     "comptable" -> "Comptable"
                                     "magasinier" -> "Magasinier"
                                     "vendeur" -> "Vendeur"
-                                    else -> if (estAdministrateur) "Administrateur" else "Vendeur"
+                                    else -> if (roleUtilisateur.isNullOrBlank()) "Vérification du profil…" else "Rôle non défini"
                                 },
                                 color = Color(0xFFBDA6E8),
                                 style = MaterialTheme.typography.bodySmall,
