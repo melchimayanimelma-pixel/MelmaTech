@@ -400,9 +400,8 @@ val enregistrerFactureLauncher =
     }
 
     val estAdministrateur =
-        roleUtilisateur == "administrateur" ||
-        roleUtilisateur == "admin" ||
-        roleUtilisateur == "manager"
+        roleUtilisateur.equals("administrateur", ignoreCase = true) ||
+        roleUtilisateur.equals("admin", ignoreCase = true)
 
     val produits = remember {
         mutableStateListOf<Produit>().apply {
