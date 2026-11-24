@@ -169,7 +169,7 @@ Les advisors Supabase ont remonté les éléments suivants. Ils sont enregistré
 - Aucune donnée métier n'a été supprimée et aucune policy existante n'a été remplacée.
 
 ### Risques restant à traiter — ne pas considérer la Phase 0 terminée
-- `public.employe_compteurs` reste RLS-active sans policy. Il faut confirmer le comportement du trigger après révocation des droits RPC et tester une création d'employé réelle avant de décider de la policy.
+- `public.employe_compteurs` reste RLS-active sans policy, mais ses droits directs ont été révoqués pour `anon` et `authenticated`. La table appartient à `postgres`, n'a pas `FORCE ROW LEVEL SECURITY`, et la fonction trigger `SECURITY DEFINER` reste propriétaire/exécutante côté serveur. Le déclenchement doit encore être validé par le flux réel de création d'employé.
 - Les 17 fonctions `SECURITY DEFINER` exposées aux utilisateurs authentifiés doivent être auditées individuellement; certaines sont probablement nécessaires à la gestion des permissions et ne doivent pas être révoquées en bloc.
 - Les policies permissives en doublon sur les tables RH doivent être évaluées avec des tests de rôles et des données de deux entreprises. Leur combinaison OR peut élargir l'accès.
 - La protection des mots de passe compromis reste désactivée dans Supabase Auth; son activation doit être faite dans la configuration Auth après vérification de l'impact sur les utilisateurs.
@@ -177,3 +177,12 @@ Les advisors Supabase ont remonté les éléments suivants. Ils sont enregistré
 
 ### Prochain jalon
 Tester le cycle de création d'employé (trigger matricule), les accès RH et non-RH aux documents, ainsi que l'isolation entre deux entreprises. Ensuite seulement, démarrer l'édition complète de la fiche employé.
+
+
+## Début de la Phase 1 — Fiche employé (premier incrément)
+
+- Ajout d'une action « Modifier » dans la liste des employés.
+- Le formulaire de modification reprend les valeurs déjà présentes (nom, postnom, prénom, poste, département, téléphone, e-mail et type de contrat).
+- La mise à jour est limitée à l'identifiant employé et à l'entreprise active dans la requête REST; les contrôles RLS existants restent la barrière serveur.
+- Le formulaire conserve le matricule et les documents associés; il n'effectue aucune suppression.
+- Cet incrément ne représente pas encore la fiche complète : adresse, sexe, date de naissance, date d'embauche, salaire, photo, archivage et historique détaillé restent à implémenter après validation du build et des tests d'accès.
