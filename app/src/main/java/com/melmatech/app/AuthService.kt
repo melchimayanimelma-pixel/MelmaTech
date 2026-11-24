@@ -32,6 +32,11 @@ object AuthService {
 
     private val mainHandler = Handler(Looper.getMainLooper())
 
+    // Évite plusieurs renouvellements simultanés du même refresh token (rotation Supabase).
+    private val refreshLock = Any()
+    private var refreshInProgress = false
+    private val refreshWaiters = mutableListOf<(Boolean, String) -> Unit>()
+
     private fun preferences(context: Context) =
         context.applicationContext.getSharedPreferences(
             "melmatech_session",
@@ -39,8 +44,9 @@ object AuthService {
         )
 
     fun estConnecte(context: Context): Boolean {
-        return preferences(context)
-            .getString("access_token", null) != null
+        val prefs = preferences(context)
+        return !prefs.getString("access_token", null).isNullOrBlank() ||
+            !prefs.getString("refresh_token", null).isNullOrBlank()
     }
 
     fun obtenirUtilisateurId(context: Context): String? {
@@ -49,6 +55,33 @@ object AuthService {
 
     fun obtenirAccessToken(context: Context): String? {
         return preferences(context).getString("access_token", null)
+    }
+
+    // Profil mémorisé pour éviter d'afficher un faux compte vendeur pendant le chargement réseau.
+    // Ce cache est strictement associé à l'identifiant de l'utilisateur courant.
+    fun obtenirProfilCache(context: Context): ProfilUtilisateur? {
+        val prefs = preferences(context)
+        val userId = obtenirUtilisateurId(context) ?: return null
+        if (prefs.getString("profil_cache_user_id", null) != userId) return null
+        val role = prefs.getString("profil_cache_role", null) ?: return null
+        val entrepriseId = prefs.getString("profil_cache_entreprise_id", null) ?: return null
+        return ProfilUtilisateur(
+            id = userId,
+            nomComplet = prefs.getString("profil_cache_nom", "").orEmpty(),
+            role = role,
+            entrepriseId = entrepriseId,
+            photoUrl = prefs.getString("profil_cache_photo", null)
+        )
+    }
+
+    private fun memoriserProfil(context: Context, profil: ProfilUtilisateur) {
+        preferences(context).edit()
+            .putString("profil_cache_user_id", profil.id)
+            .putString("profil_cache_nom", profil.nomComplet)
+            .putString("profil_cache_role", profil.role)
+            .putString("profil_cache_entreprise_id", profil.entrepriseId)
+            .putString("profil_cache_photo", profil.photoUrl)
+            .apply()
     }
 
     fun deconnecter(context: Context) {
@@ -138,6 +171,7 @@ object AuthService {
                             }
                         )
 
+                        memoriserProfil(context, profil)
                         mainHandler.post {
                             callback(true, "Profil récupéré.", profil)
                         }
@@ -835,32 +869,66 @@ object AuthService {
         )
     }
 
-    // Renouveler la session.
+    // Renouveler la session. Les appels simultanés sont regroupés pour respecter
+    // la rotation des refresh tokens imposée par Supabase.
     fun actualiserSession(
         context: Context,
         callback: (Boolean, String) -> Unit
     ) {
-        val refreshToken = preferences(context)
-            .getString("refresh_token", null)
-
-        if (refreshToken.isNullOrBlank()) {
-            mainHandler.post {
-                callback(false, "Aucune session à renouveler.")
+        synchronized(refreshLock) {
+            if (refreshInProgress) {
+                refreshWaiters.add(callback)
+                return
             }
+            refreshInProgress = true
+            refreshWaiters.add(callback)
+        }
+
+        val refreshToken = preferences(context).getString("refresh_token", null)
+        if (refreshToken.isNullOrBlank()) {
+            terminerActualisation(false, "Aucun jeton de renouvellement disponible.")
             return
         }
 
-        val donnees = JSONObject().apply {
-            put("refresh_token", refreshToken)
-        }
-
+        val donnees = JSONObject().put("refresh_token", refreshToken)
         envoyerRequete(
             context,
             "/auth/v1/token?grant_type=refresh_token",
             donnees,
-            true,
-            callback
-        )
+            true
+        ) { succes, message -> terminerActualisation(succes, message) }
+    }
+
+    private fun terminerActualisation(succes: Boolean, message: String) {
+        val callbacks = synchronized(refreshLock) {
+            refreshInProgress = false
+            val copie = refreshWaiters.toList()
+            refreshWaiters.clear()
+            copie
+        }
+        callbacks.forEach { it(succes, message) }
+    }
+
+    // Renouvelle au retour au premier plan uniquement si le jeton expire bientôt.
+    // Les anciennes installations sans date d'expiration sont renouvelées une fois.
+    fun actualiserSessionSiNecessaire(
+        context: Context,
+        callback: (Boolean, String) -> Unit
+    ) {
+        val prefs = preferences(context)
+        val accessToken = prefs.getString("access_token", null)
+        val refreshToken = prefs.getString("refresh_token", null)
+        if (refreshToken.isNullOrBlank()) {
+            mainHandler.post { callback(!accessToken.isNullOrBlank(), if (accessToken.isNullOrBlank()) "Aucune session enregistrée." else "Session sans jeton de renouvellement.") }
+            return
+        }
+        val expiration = prefs.getLong("session_expires_at", 0L)
+        val marge = 5 * 60 * 1000L
+        if (!accessToken.isNullOrBlank() && expiration > System.currentTimeMillis() + marge) {
+            mainHandler.post { callback(true, "Session encore valide.") }
+            return
+        }
+        actualiserSession(context, callback)
     }
 
     // Envoyer une requête d'authentification à Supabase.
@@ -937,10 +1005,12 @@ object AuthService {
                                 return
                             }
 
+                            val expiresIn = resultat.optLong("expires_in", 3600L).coerceAtLeast(60L)
                             preferences(context).edit()
                                 .putString("access_token", accessToken)
                                 .putString("refresh_token", refreshToken)
                                 .putString("user_id", utilisateurId)
+                                .putLong("session_expires_at", System.currentTimeMillis() + expiresIn * 1000L)
                                 .apply()
                         }
 
