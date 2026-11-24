@@ -149,3 +149,31 @@ Les advisors Supabase ont remonté les éléments suivants. Ils sont enregistré
 - Un utilisateur d'une entreprise A ne peut ni lister, ni télécharger, ni écraser, ni supprimer les fichiers de l'entreprise B.
 - Les fonctions RPC sensibles refusent les appels anonymes et valident l'utilisateur appelant.
 - Les opérations de mise à jour doivent vérifier la policy SELECT et USING + WITH CHECK afin d'éviter les mises à jour silencieuses ou le changement d'entreprise.
+
+
+## Journal d'exécution — Phase 0 (24/11/2026)
+
+### Changements appliqués
+- Bucket `rh-prive` confirmé privé (`public = false`).
+- Limite de stockage du bucket alignée à 12 MiB (12 582 912 octets), identique à la limite déjà vérifiée dans le sélecteur Android.
+- Exécution anonyme révoquée sur `public.mon_role()`; exécution authentifiée conservée pour compatibilité avec les appels applicatifs/policies.
+- Exécution publique et anonyme révoquée sur `public.generer_matricule_employe()`; exécution authentifiée ensuite révoquée aussi, car la fonction est un trigger `RETURNS trigger`, pas une RPC métier.
+- Fichier de migration SQL ajouté au dépôt pour tracer le dernier changement.
+- Workflow GitHub Actions configuré pour compiler aussi sur les Pull Requests vers `main`, afin de vérifier les branches de travail avant fusion.
+- Policies Storage existantes inspectées : elles vérifient le rôle actif responsable RH, l'entreprise dans le premier dossier et l'identifiant employé dans le deuxième dossier.
+
+### Contrôles effectués
+- Après le premier durcissement, l'advisor ne signale plus d'exécution anonyme pour `mon_role()` et `generer_matricule_employe()`.
+- Le bucket `rh-prive` est privé et accepte déjà PDF, JPEG, PNG, WebP et documents Word.
+- Les politiques RLS de `documents_employes` limitent les opérations au responsable RH actif de la même entreprise.
+- Aucune donnée métier n'a été supprimée et aucune policy existante n'a été remplacée.
+
+### Risques restant à traiter — ne pas considérer la Phase 0 terminée
+- `public.employe_compteurs` reste RLS-active sans policy. Il faut confirmer le comportement du trigger après révocation des droits RPC et tester une création d'employé réelle avant de décider de la policy.
+- Les 17 fonctions `SECURITY DEFINER` exposées aux utilisateurs authentifiés doivent être auditées individuellement; certaines sont probablement nécessaires à la gestion des permissions et ne doivent pas être révoquées en bloc.
+- Les policies permissives en doublon sur les tables RH doivent être évaluées avec des tests de rôles et des données de deux entreprises. Leur combinaison OR peut élargir l'accès.
+- La protection des mots de passe compromis reste désactivée dans Supabase Auth; son activation doit être faite dans la configuration Auth après vérification de l'impact sur les utilisateurs.
+- La compilation de la branche doit être confirmée par le workflow déclenché par la Pull Request. Aucune réussite de build n'est déclarée avant résultat GitHub Actions.
+
+### Prochain jalon
+Tester le cycle de création d'employé (trigger matricule), les accès RH et non-RH aux documents, ainsi que l'isolation entre deux entreprises. Ensuite seulement, démarrer l'édition complète de la fiche employé.
