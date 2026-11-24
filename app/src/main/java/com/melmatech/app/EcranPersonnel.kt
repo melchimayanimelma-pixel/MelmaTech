@@ -84,7 +84,10 @@ private data class EmployeListe(
     val statut: String,
     val telephone: String = "",
     val email: String = "",
-    val typeContrat: String = ""
+    val typeContrat: String = "",
+    val nomFamille: String = "",
+    val postnom: String = "",
+    val prenom: String = ""
 )
 
 private data class DocumentRH(
@@ -153,6 +156,17 @@ fun EcranPersonnel(onRetour: () -> Unit) {
     var chargement by remember { mutableStateOf(true) }
     var recherche by remember { mutableStateOf("") }
     var afficherAjout by remember { mutableStateOf(false) }
+    var afficherModification by remember { mutableStateOf(false) }
+    var employeEnEdition by remember { mutableStateOf<EmployeListe?>(null) }
+    var editNom by remember { mutableStateOf("") }
+    var editPostnom by remember { mutableStateOf("") }
+    var editPrenom by remember { mutableStateOf("") }
+    var editPoste by remember { mutableStateOf("") }
+    var editDepartement by remember { mutableStateOf("") }
+    var editTelephone by remember { mutableStateOf("") }
+    var editEmail by remember { mutableStateOf("") }
+    var editTypeContrat by remember { mutableStateOf("CDI") }
+    var enregistrementModification by remember { mutableStateOf(false) }
     var nom by remember { mutableStateOf("") }
     var postnom by remember { mutableStateOf("") }
     var prenom by remember { mutableStateOf("") }
@@ -551,7 +565,10 @@ fun EcranPersonnel(onRetour: () -> Unit) {
                                         statut = item.optString("statut", "actif"),
                                         telephone = item.optString("telephone").takeUnless { v -> v == "null" }.orEmpty(),
                                         email = item.optString("email").takeUnless { v -> v == "null" }.orEmpty(),
-                                        typeContrat = item.optString("type_contrat").takeUnless { v -> v == "null" }.orEmpty()
+                                        typeContrat = item.optString("type_contrat").takeUnless { v -> v == "null" }.orEmpty(),
+                                        nomFamille = item.optString("nom").takeUnless { v -> v == "null" }.orEmpty(),
+                                        postnom = item.optString("postnom").takeUnless { v -> v == "null" }.orEmpty(),
+                                        prenom = item.optString("prenom").takeUnless { v -> v == "null" }.orEmpty()
                                     )
                                 }
                                 if (onglet == "Employés" && message.isBlank()) message = ""
@@ -619,6 +636,58 @@ fun EcranPersonnel(onRetour: () -> Unit) {
                             chargerEmployes()
                         } else {
                             message = "Échec de l'ajout (${it.code}) : ${it.body?.string().orEmpty().take(180)}"
+                        }
+                    }
+                }
+            }
+        })
+    }
+
+    fun modifierEmploye() {
+        val p = profil
+        val cible = employeEnEdition
+        val token = AuthService.obtenirAccessToken(context)
+        if (p == null || cible == null || token.isNullOrBlank()) {
+            message = "Session invalide. Reconnecte-toi."
+            return
+        }
+        if (editNom.isBlank() || editPoste.isBlank()) {
+            message = "Le nom et le poste sont obligatoires."
+            return
+        }
+        enregistrementModification = true
+        val payload = JSONObject()
+            .put("nom", editNom.trim())
+            .put("postnom", editPostnom.trim().ifBlank { JSONObject.NULL })
+            .put("prenom", editPrenom.trim().ifBlank { JSONObject.NULL })
+            .put("poste", editPoste.trim())
+            .put("departement", editDepartement.trim().ifBlank { JSONObject.NULL })
+            .put("telephone", editTelephone.trim().ifBlank { JSONObject.NULL })
+            .put("email", editEmail.trim().ifBlank { JSONObject.NULL })
+            .put("type_contrat", editTypeContrat)
+        val url = "${SupabaseConfig.url}/rest/v1/employes?id=eq.${Uri.encode(cible.id)}&entreprise_id=eq.${Uri.encode(p.entrepriseId)}"
+        val request = authHeaders(Request.Builder().url(url), token)
+            .addHeader("Content-Type", "application/json")
+            .addHeader("Prefer", "return=minimal")
+            .patch(payload.toString().toRequestBody("application/json; charset=utf-8".toMediaType()))
+            .build()
+        client.newCall(request).enqueue(object : Callback {
+            override fun onFailure(call: Call, e: IOException) {
+                mainHandler.post { enregistrementModification = false; message = "Modification impossible : ${e.message}" }
+            }
+            override fun onResponse(call: Call, response: Response) {
+                response.use {
+                    val code = it.code
+                    val detail = if (it.isSuccessful) "" else it.body?.string().orEmpty().take(160)
+                    mainHandler.post {
+                        enregistrementModification = false
+                        if (code in 200..299) {
+                            afficherModification = false
+                            employeEnEdition = null
+                            message = "Fiche employé mise à jour."
+                            chargerEmployes()
+                        } else {
+                            message = "Modification refusée ($code) : $detail"
                         }
                     }
                 }
@@ -713,6 +782,7 @@ fun EcranPersonnel(onRetour: () -> Unit) {
                 pagesApercu = emptyList()
                 chargementApercu = false
             }
+            afficherModification -> { afficherModification = false; employeEnEdition = null }
             afficherAjout -> afficherAjout = false
             else -> revenirOngletPrecedent()
         }
@@ -895,6 +965,18 @@ fun EcranPersonnel(onRetour: () -> Unit) {
                                             Text("${e.matricule} • ${e.poste.ifBlank { "Poste non défini" }}", color = Color.Gray, style = MaterialTheme.typography.bodySmall)
                                             Text("${e.departement.ifBlank { "Département non défini" }} • ${e.statut}", color = violetRH, style = MaterialTheme.typography.labelMedium)
                                         }
+                                        TextButton(onClick = {
+                                            employeEnEdition = e
+                                            editNom = e.nomFamille
+                                            editPostnom = e.postnom
+                                            editPrenom = e.prenom
+                                            editPoste = e.poste
+                                            editDepartement = e.departement
+                                            editTelephone = e.telephone
+                                            editEmail = e.email
+                                            editTypeContrat = e.typeContrat.ifBlank { "CDI" }
+                                            afficherModification = true
+                                        }) { Text("Modifier") }
                                         Icon(Icons.Filled.ArrowForward, contentDescription = "Ouvrir le dossier", tint = violetRH)
                                     }
                                 }
@@ -1427,6 +1509,45 @@ fun EcranPersonnel(onRetour: () -> Unit) {
             },
             confirmButton = { Button(onClick = { creerBulletin() }) { Text("Créer le bulletin") } },
             dismissButton = { TextButton(onClick = { afficherBulletin = false }) { Text("Annuler") } }
+        )
+    }
+
+    if (afficherModification && employeEnEdition != null) {
+        AlertDialog(
+            onDismissRequest = { if (!enregistrementModification) { afficherModification = false; employeEnEdition = null } },
+            title = { Text("Modifier la fiche employé") },
+            text = {
+                Column(
+                    Modifier.heightIn(max = 500.dp).verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    OutlinedTextField(editNom, { editNom = it }, label = { Text("Nom *") }, singleLine = true)
+                    OutlinedTextField(editPostnom, { editPostnom = it }, label = { Text("Postnom") }, singleLine = true)
+                    OutlinedTextField(editPrenom, { editPrenom = it }, label = { Text("Prénom") }, singleLine = true)
+                    OutlinedTextField(editPoste, { editPoste = it }, label = { Text("Poste *") }, singleLine = true)
+                    OutlinedTextField(editDepartement, { editDepartement = it }, label = { Text("Département") }, singleLine = true)
+                    OutlinedTextField(editTelephone, { editTelephone = it }, label = { Text("Téléphone") }, singleLine = true)
+                    OutlinedTextField(editEmail, { editEmail = it }, label = { Text("E-mail") }, singleLine = true)
+                    var menuContratEdition by remember { mutableStateOf(false) }
+                    Box {
+                        OutlinedButton(onClick = { menuContratEdition = true }) { Text("Contrat : $editTypeContrat") }
+                        DropdownMenu(expanded = menuContratEdition, onDismissRequest = { menuContratEdition = false }) {
+                            listOf("CDI", "CDD", "Journalier", "Stage", "Consultant", "Autre").forEach { type ->
+                                DropdownMenuItem(text = { Text(type) }, onClick = { editTypeContrat = type; menuContratEdition = false })
+                            }
+                        }
+                    }
+                    Text("Le matricule et l'historique documentaire ne sont pas modifiés par ce formulaire.", color = Color.Gray, style = MaterialTheme.typography.bodySmall)
+                }
+            },
+            confirmButton = {
+                Button(onClick = { modifierEmploye() }, enabled = !enregistrementModification) {
+                    Text(if (enregistrementModification) "Enregistrement…" else "Enregistrer")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { afficherModification = false; employeEnEdition = null }, enabled = !enregistrementModification) { Text("Annuler") }
+            }
         )
     }
 
