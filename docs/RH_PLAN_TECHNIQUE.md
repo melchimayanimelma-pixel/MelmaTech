@@ -130,3 +130,22 @@
 
 ## Critères de mise en production
 Une phase n'est terminée que lorsque son interface, sa persistance, ses règles métier, ses permissions, ses erreurs et ses tests sont opérationnels. Une simple présence de bouton ou de table ne constitue pas une fonctionnalité terminée.
+
+## Points de sécurité et de performance relevés pendant l'audit initial (24/11/2026)
+
+Les advisors Supabase ont remonté les éléments suivants. Ils sont enregistrés comme travaux de la Phase 0; aucune policy ni fonction n'a été modifiée pendant cet audit.
+
+- `public.employe_compteurs` a RLS activée sans policy. Vérifier si la table doit être accessible uniquement par une fonction contrôlée; sinon ajouter une policy minimale.
+- Les fonctions `SECURITY DEFINER` `generer_matricule_employe()` et `mon_role()` sont exécutables par `anon`; vérifier leur nécessité puis révoquer l'exécution anonyme si non requise.
+- Plusieurs fonctions `SECURITY DEFINER` sont exécutables par `authenticated`. Auditer le corps, vérifier `auth.uid()`, l'entreprise et les permissions avant de conserver ou restreindre leurs grants. Ne pas les convertir aveuglément en SECURITY INVOKER.
+- Les advisors signalent des policies permissives multiples sur `employes`, `departements`, `postes` et `historique_affectations`. PostgreSQL combine les policies permissives avec OR : vérifier que les policies génériques à permission ne donnent pas plus d'accès que le modèle RH validé.
+- Des clés étrangères RH ne sont pas toutes indexées; prioriser les index utiles après examen des requêtes et des volumes.
+- Le contrôle anti-mot-de-passe compromis de Supabase Auth est désactivé; évaluer son activation dans les paramètres Auth.
+
+### Tests de sécurité bloquants avant livraison Phase 1
+- Un vendeur ne peut ni lire ni modifier les dossiers employés ou leurs documents.
+- Un comptable sans permission RH ne peut pas lire les dossiers ni les documents RH.
+- Un responsable RH actif ne peut accéder qu'aux données de son entreprise.
+- Un utilisateur d'une entreprise A ne peut ni lister, ni télécharger, ni écraser, ni supprimer les fichiers de l'entreprise B.
+- Les fonctions RPC sensibles refusent les appels anonymes et valident l'utilisateur appelant.
+- Les opérations de mise à jour doivent vérifier la policy SELECT et USING + WITH CHECK afin d'éviter les mises à jour silencieuses ou le changement d'entreprise.
