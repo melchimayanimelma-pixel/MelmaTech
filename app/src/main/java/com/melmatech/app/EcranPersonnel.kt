@@ -32,6 +32,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
@@ -1059,8 +1060,13 @@ fun EcranPersonnel(onRetour: () -> Unit) {
                     } else {
                         // Une seule zone défilante pour voir les informations ET les documents sans écran coupé.
                         key(cible.id) {
+                            val etatListeDossier = rememberLazyListState()
+                            LaunchedEffect(onglet, cible.id) {
+                                if (onglet == "Dossiers") etatListeDossier.scrollToItem(0)
+                            }
                             LazyColumn(
-                                Modifier.weight(1f),
+                                state = etatListeDossier,
+                                modifier = Modifier.weight(1f),
                                 verticalArrangement = Arrangement.spacedBy(12.dp)
                             ) {
                             item {
