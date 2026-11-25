@@ -699,7 +699,7 @@ fun EcranPersonnel(onRetour: () -> Unit) {
             message = "La date de naissance doit respecter le format AAAA-MM-JJ."
             return
         }
-        if (editSalaireBase.isNotBlank() && (editSalaireBase.toBigOrNull() == null || editSalaireBase.toBigOrNull()!! < java.math.BigDecimal.ZERO)) {
+        if (editSalaireBase.isNotBlank() && (editSalaireBase.trim().toBigDecimalOrNull() == null || editSalaireBase.trim().toBigDecimalOrNull()!! < java.math.BigDecimal.ZERO)) {
             message = "Le salaire doit être un montant positif ou nul."
             return
         }
