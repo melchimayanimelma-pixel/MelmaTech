@@ -646,10 +646,10 @@ fun EcranPersonnel(onRetour: () -> Unit) {
             .put("sexe", sexe.ifBlank { JSONObject.NULL })
             .put("date_naissance", dateNaissance.trim().ifBlank { JSONObject.NULL })
             .put("adresse", adresse.trim().ifBlank { JSONObject.NULL })
-            .put("date_embauche", dateEmbauche.trim().ifBlank { JSONObject.NULL })
             .put("salaire_base", salaireBase.trim().toBigDecimalOrNull() ?: JSONObject.NULL)
             .put("notes", notesRH.trim().ifBlank { JSONObject.NULL })
             .put("cree_par", p.id)
+        if (dateEmbauche.isNotBlank()) data.put("date_embauche", dateEmbauche.trim())
         val url = "${SupabaseConfig.url}/rest/v1/employes"
         val request = authHeaders(Request.Builder().url(url), token)
             .addHeader("Content-Type", "application/json")
@@ -691,8 +691,8 @@ fun EcranPersonnel(onRetour: () -> Unit) {
             message = "Le nom et le poste sont obligatoires."
             return
         }
-        if (editDateEmbauche.isNotBlank() && !editDateEmbauche.matches(Regex("\\d{4}-\\d{2}-\\d{2}"))) {
-            message = "La date d'embauche doit respecter le format AAAA-MM-JJ."
+        if (editDateEmbauche.isBlank() || !editDateEmbauche.matches(Regex("\\d{4}-\\d{2}-\\d{2}"))) {
+            message = "La date d'embauche est obligatoire et doit respecter le format AAAA-MM-JJ."
             return
         }
         if (editDateNaissance.isNotBlank() && !editDateNaissance.matches(Regex("\\d{4}-\\d{2}-\\d{2}"))) {
