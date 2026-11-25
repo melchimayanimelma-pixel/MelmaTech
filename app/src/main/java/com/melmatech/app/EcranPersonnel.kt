@@ -106,6 +106,13 @@ private data class DocumentRH(
     val typeMime: String
 )
 
+private data class PosteRH(
+    val id: String,
+    val nom: String,
+    val description: String,
+    val actif: Boolean
+)
+
 private data class PresenceRH(
     val id: String, val employe: String, val date: String,
     val arrivee: String, val depart: String, val statut: String
@@ -134,6 +141,7 @@ fun EcranPersonnel(onRetour: () -> Unit) {
     var profil by remember { mutableStateOf<ProfilUtilisateur?>(null) }
     var employes by remember { mutableStateOf(emptyList<EmployeListe>()) }
     var departements by remember { mutableStateOf(emptyList<String>()) }
+    var postes by remember { mutableStateOf(emptyList<PosteRH>()) }
     var documents by remember { mutableStateOf(emptyList<DocumentRH>()) }
     var employeSelectionne by remember { mutableStateOf<EmployeListe?>(null) }
     // Sélection indépendante : l’onglet Dossiers commence toujours par l’annuaire.
@@ -207,6 +215,9 @@ fun EcranPersonnel(onRetour: () -> Unit) {
     var afficherDepartement by remember { mutableStateOf(false) }
     var nouveauDepartement by remember { mutableStateOf("") }
     var descriptionDepartement by remember { mutableStateOf("") }
+    var afficherPoste by remember { mutableStateOf(false) }
+    var nouveauPoste by remember { mutableStateOf("") }
+    var descriptionPoste by remember { mutableStateOf("") }
     var presences by remember { mutableStateOf(emptyList<PresenceRH>()) }
     var conges by remember { mutableStateOf(emptyList<CongeRH>()) }
     var bulletins by remember { mutableStateOf(emptyList<PaieRH>()) }
@@ -543,6 +554,78 @@ fun EcranPersonnel(onRetour: () -> Unit) {
         }
     }
 
+    fun chargerPostes(entrepriseId: String, token: String) {
+        val url = "${SupabaseConfig.url}/rest/v1/postes?entreprise_id=eq.$entrepriseId&actif=eq.true&select=id,nom,description,actif&order=nom.asc"
+        val request = authHeaders(Request.Builder().url(url), token).get().build()
+        client.newCall(request).enqueue(object : Callback {
+            override fun onFailure(call: Call, e: IOException) {
+                mainHandler.post { message = "Impossible de charger les postes : ${e.message}" }
+            }
+            override fun onResponse(call: Call, response: Response) {
+                response.use {
+                    val body = it.body?.string().orEmpty()
+                    if (!it.isSuccessful) {
+                        mainHandler.post { message = "Chargement des postes refusé (${it.code})." }
+                        return
+                    }
+                    try {
+                        val array = JSONArray(body)
+                        val resultat = (0 until array.length()).map { index ->
+                            val item = array.getJSONObject(index)
+                            PosteRH(
+                                id = item.optString("id"),
+                                nom = item.optString("nom"),
+                                description = item.optString("description").takeUnless { value -> value == "null" }.orEmpty(),
+                                actif = item.optBoolean("actif", true)
+                            )
+                        }
+                        mainHandler.post { postes = resultat }
+                    } catch (_: Exception) {
+                        mainHandler.post { message = "La liste des postes reçue est illisible." }
+                    }
+                }
+            }
+        })
+    }
+
+    fun ajouterPoste() {
+        val p = profil ?: return
+        val token = AuthService.obtenirAccessToken(context)
+        if (token.isNullOrBlank()) { message = "Session expirée. Reconnecte-toi."; return }
+        if (nouveauPoste.isBlank()) { message = "Le nom du poste est obligatoire."; return }
+        val payload = JSONObject()
+            .put("entreprise_id", p.entrepriseId)
+            .put("nom", nouveauPoste.trim())
+            .put("description", descriptionPoste.trim().ifBlank { JSONObject.NULL })
+        val request = authHeaders(Request.Builder().url("${SupabaseConfig.url}/rest/v1/postes"), token)
+            .addHeader("Content-Type", "application/json")
+            .addHeader("Prefer", "return=minimal")
+            .post(payload.toString().toRequestBody("application/json; charset=utf-8".toMediaType()))
+            .build()
+        client.newCall(request).enqueue(object : Callback {
+            override fun onFailure(call: Call, e: IOException) {
+                mainHandler.post { message = "Création du poste impossible : ${e.message}" }
+            }
+            override fun onResponse(call: Call, response: Response) {
+                response.use {
+                    val code = it.code
+                    val detail = if (it.isSuccessful) "" else it.body?.string().orEmpty().take(140)
+                    mainHandler.post {
+                        if (code in 200..299) {
+                            afficherPoste = false
+                            nouveauPoste = ""
+                            descriptionPoste = ""
+                            message = "Poste ajouté avec succès."
+                            chargerPostes(p.entrepriseId, token)
+                        } else {
+                            message = "Création du poste refusée ($code) : $detail"
+                        }
+                    }
+                }
+            }
+        })
+    }
+
     fun chargerEmployes() {
         if (employes.isEmpty()) chargement = true
         message = ""
@@ -604,6 +687,7 @@ fun EcranPersonnel(onRetour: () -> Unit) {
                 }
             })
 
+            chargerPostes(p.entrepriseId, token)
             val urlDepartements = "${SupabaseConfig.url}/rest/v1/departements?entreprise_id=eq.${p.entrepriseId}&actif=eq.true&select=nom&order=nom.asc"
             val reqDep = authHeaders(Request.Builder().url(urlDepartements), token).get().build()
             client.newCall(reqDep).enqueue(object : Callback {
@@ -830,7 +914,7 @@ fun EcranPersonnel(onRetour: () -> Unit) {
     }
 
     BackHandler(
-        enabled = documentApercu != null || afficherAjout || onglet != "Accueil RH"
+        enabled = documentApercu != null || afficherAjout || afficherPoste || afficherDepartement || onglet != "Accueil RH"
     ) {
         when {
             documentApercu != null -> {
@@ -840,6 +924,8 @@ fun EcranPersonnel(onRetour: () -> Unit) {
             }
             afficherModification -> { afficherModification = false; employeEnEdition = null }
             afficherAjout -> afficherAjout = false
+            afficherPoste -> afficherPoste = false
+            afficherDepartement -> afficherDepartement = false
             else -> revenirOngletPrecedent()
         }
     }
@@ -1293,14 +1379,28 @@ fun EcranPersonnel(onRetour: () -> Unit) {
                     }
                 }
                 "Organisation" -> {
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                        Column { Text("Structure de l'entreprise", fontWeight = FontWeight.Bold); Text("${departements.size} département(s)", color = Color.Gray, style = MaterialTheme.typography.bodySmall) }
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Column(Modifier.weight(1f)) {
+                            Text("Structure de l'entreprise", fontWeight = FontWeight.Bold)
+                            Text("${departements.size} département(s) • ${postes.size} poste(s)", color = Color.Gray, style = MaterialTheme.typography.bodySmall)
+                        }
+                        OutlinedButton(onClick = { afficherPoste = true }) { Text("Poste +") }
                         Button(onClick = { afficherDepartement = true }) { Icon(Icons.Filled.AccountTree, null); Text(" Ajouter") }
                     }
-                    if (departements.isEmpty()) {
-                        Card(colors = CardDefaults.cardColors(containerColor = Color.White)) { Column(Modifier.fillMaxWidth().padding(18.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) { Icon(Icons.Filled.AccountTree, null, tint = violetRH, modifier = Modifier.size(30.dp)); Text("Aucun département", fontWeight = FontWeight.Bold); Text("Crée les départements pour structurer les équipes.", color = Color.Gray) } }
-                    } else LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        items(departements) { dep ->
+                    LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        item {
+                            Text("DÉPARTEMENTS", color = violetRH, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelLarge)
+                        }
+                        if (departements.isEmpty()) item {
+                            Card(colors = CardDefaults.cardColors(containerColor = Color.White)) {
+                                Column(Modifier.fillMaxWidth().padding(18.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                    Icon(Icons.Filled.AccountTree, null, tint = violetRH, modifier = Modifier.size(30.dp))
+                                    Text("Aucun département", fontWeight = FontWeight.Bold)
+                                    Text("Crée les départements pour structurer les équipes.", color = Color.Gray)
+                                }
+                            }
+                        }
+                        items(departements, key = { "dep_$it" }) { dep ->
                             val effectif = employes.count { it.departement.equals(dep, true) }
                             Card(modifier = Modifier.fillMaxWidth().clickable { departementSelectionne = dep; recherche = ""; naviguerVers("Employés") }, colors = CardDefaults.cardColors(containerColor = Color.White), shape = RoundedCornerShape(14.dp)) {
                                 Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -1310,6 +1410,31 @@ fun EcranPersonnel(onRetour: () -> Unit) {
                                         Text("${effectif} employé(s)", color = Color.Gray, style = MaterialTheme.typography.bodySmall)
                                     }
                                     Icon(Icons.Filled.ArrowForward, null, tint = violetRH)
+                                }
+                            }
+                        }
+                        item {
+                            Spacer(Modifier.height(8.dp))
+                            Text("POSTES", color = violetRH, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelLarge)
+                        }
+                        if (postes.isEmpty()) item {
+                            Card(colors = CardDefaults.cardColors(containerColor = Color.White)) {
+                                Column(Modifier.fillMaxWidth().padding(18.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                    Icon(Icons.Filled.Work, null, tint = violetRH, modifier = Modifier.size(28.dp))
+                                    Text("Aucun poste défini", fontWeight = FontWeight.Bold)
+                                    Text("Ajoute les fonctions de l'entreprise : comptable, vendeur, responsable RH, etc.", color = Color.Gray)
+                                }
+                            }
+                        }
+                        items(postes, key = { "poste_${it.id}" }) { posteRH ->
+                            Card(colors = CardDefaults.cardColors(containerColor = Color.White), shape = RoundedCornerShape(14.dp)) {
+                                Row(Modifier.fillMaxWidth().padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(Icons.Filled.Work, null, tint = violetRH, modifier = Modifier.size(26.dp))
+                                    Column(Modifier.weight(1f).padding(start = 12.dp)) {
+                                        Text(posteRH.nom, fontWeight = FontWeight.SemiBold)
+                                        if (posteRH.description.isNotBlank()) Text(posteRH.description, color = Color.Gray, style = MaterialTheme.typography.bodySmall)
+                                    }
+                                    Text("${employes.count { it.poste.equals(posteRH.nom, true) }} salarié(s)", color = Color.Gray, style = MaterialTheme.typography.labelSmall)
                                 }
                             }
                         }
@@ -1525,6 +1650,32 @@ fun EcranPersonnel(onRetour: () -> Unit) {
             } },
             confirmButton = { Button(onClick = { ajouterDepartement() }) { Text("Enregistrer") } },
             dismissButton = { TextButton(onClick = { afficherDepartement = false }) { Text("Annuler") } }
+        )
+    }
+
+    if (afficherPoste) {
+        AlertDialog(
+            onDismissRequest = { afficherPoste = false },
+            title = { Text("Ajouter un poste") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedTextField(
+                        value = nouveauPoste,
+                        onValueChange = { nouveauPoste = it },
+                        label = { Text("Intitulé du poste *") },
+                        singleLine = true
+                    )
+                    OutlinedTextField(
+                        value = descriptionPoste,
+                        onValueChange = { descriptionPoste = it },
+                        label = { Text("Description (facultative)") },
+                        minLines = 2
+                    )
+                    Text("Le poste sera enregistré pour cette entreprise uniquement.", color = Color.Gray, style = MaterialTheme.typography.bodySmall)
+                }
+            },
+            confirmButton = { Button(onClick = { ajouterPoste() }) { Text("Enregistrer") } },
+            dismissButton = { TextButton(onClick = { afficherPoste = false }) { Text("Annuler") } }
         )
     }
 
