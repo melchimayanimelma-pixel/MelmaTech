@@ -220,6 +220,7 @@ fun EcranPersonnel(onRetour: () -> Unit) {
     var descriptionPoste by remember { mutableStateOf("") }
     var presences by remember { mutableStateOf(emptyList<PresenceRH>()) }
     var conges by remember { mutableStateOf(emptyList<CongeRH>()) }
+    var filtreConges by remember { mutableStateOf("Tous") }
     var bulletins by remember { mutableStateOf(emptyList<PaieRH>()) }
     var chargementModule by remember { mutableStateOf(false) }
     var afficherDemandeConge by remember { mutableStateOf(false) }
@@ -1562,9 +1563,36 @@ fun EcranPersonnel(onRetour: () -> Unit) {
                         StatCompactRH("Approuvés", conges.count { it.statut == "approuve" }.toString())
                         StatCompactRH("Refusés", conges.count { it.statut == "refuse" }.toString())
                     }
+                    Row(
+                        Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        listOf("Tous", "En attente", "Approuvés", "Refusés").forEach { filtre ->
+                            val statutFiltre = when (filtre) {
+                                "En attente" -> "en_attente"
+                                "Approuvés" -> "approuve"
+                                "Refusés" -> "refuse"
+                                else -> ""
+                            }
+                            val nombre = if (statutFiltre.isBlank()) conges.size else conges.count { it.statut == statutFiltre }
+                            FilterChip(
+                                selected = filtreConges == filtre,
+                                onClick = { filtreConges = filtre },
+                                label = { Text("$filtre ($nombre)") }
+                            )
+                        }
+                    }
                     if (chargementModule) LinearProgressIndicator(Modifier.fillMaxWidth())
+                    val congesFiltres = conges.filter { demande ->
+                        when (filtreConges) {
+                            "En attente" -> demande.statut == "en_attente"
+                            "Approuvés" -> demande.statut == "approuve"
+                            "Refusés" -> demande.statut == "refuse"
+                            else -> true
+                        }
+                    }
                     LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        items(conges, key = { it.id }) { x ->
+                        items(congesFiltres, key = { it.id }) { x ->
                             Card(colors = CardDefaults.cardColors(containerColor = Color.White), shape = RoundedCornerShape(14.dp)) {
                                 Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                                     Row(verticalAlignment = Alignment.CenterVertically) { Icon(Icons.Filled.BeachAccess, null, tint = violetRH); Text("  ${x.employe}", fontWeight = FontWeight.Bold); Spacer(Modifier.weight(1f)); Text(x.statut.replace("_", " "), color = if (x.statut == "approuve") Color(0xFF16834B) else Color(0xFF9A6700), style = MaterialTheme.typography.labelMedium) }
@@ -1577,7 +1605,13 @@ fun EcranPersonnel(onRetour: () -> Unit) {
                                 }
                             }
                         }
-                        if (conges.isEmpty() && !chargementModule) item { Text("Aucune demande de congé enregistrée.", color = Color.Gray) }
+                        if (congesFiltres.isEmpty() && !chargementModule) item {
+                            Text(
+                                if (conges.isEmpty()) "Aucune demande de congé enregistrée."
+                                else "Aucune demande dans ce filtre.",
+                                color = Color.Gray
+                            )
+                        }
                     }
                 }
                 "Paie" -> {
