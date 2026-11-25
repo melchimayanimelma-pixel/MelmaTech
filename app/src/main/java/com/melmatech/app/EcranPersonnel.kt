@@ -189,6 +189,12 @@ fun EcranPersonnel(onRetour: () -> Unit) {
     var telephone by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
     var typeContrat by remember { mutableStateOf("CDI") }
+    var sexe by remember { mutableStateOf("") }
+    var dateNaissance by remember { mutableStateOf("") }
+    var adresse by remember { mutableStateOf("") }
+    var dateEmbauche by remember { mutableStateOf("") }
+    var salaireBase by remember { mutableStateOf("") }
+    var notesRH by remember { mutableStateOf("") }
     var enregistrement by remember { mutableStateOf(false) }
     var chargementDocuments by remember { mutableStateOf(false) }
     var documentASupprimer by remember { mutableStateOf<DocumentRH?>(null) }
@@ -621,6 +627,9 @@ fun EcranPersonnel(onRetour: () -> Unit) {
         val token = AuthService.obtenirAccessToken(context)
         if (p == null || token.isNullOrBlank()) { message = "Session invalide. Reconnecte-toi."; return }
         if (nom.isBlank() || poste.isBlank()) { message = "Le nom et le poste sont obligatoires."; return }
+        if (dateNaissance.isNotBlank() && !dateNaissance.matches(Regex("\\d{4}-\\d{2}-\\d{2}"))) { message = "Date de naissance invalide (AAAA-MM-JJ)."; return }
+        if (dateEmbauche.isNotBlank() && !dateEmbauche.matches(Regex("\\d{4}-\\d{2}-\\d{2}"))) { message = "Date d'embauche invalide (AAAA-MM-JJ)."; return }
+        if (salaireBase.isNotBlank() && (salaireBase.toBigDecimalOrNull() == null || salaireBase.toBigDecimalOrNull()!! < java.math.BigDecimal.ZERO)) { message = "Le salaire doit être un montant positif ou nul."; return }
         enregistrement = true
         val matricule = "EMP-" + UUID.randomUUID().toString().take(8).uppercase()
         val data = JSONObject()
@@ -634,6 +643,12 @@ fun EcranPersonnel(onRetour: () -> Unit) {
             .put("telephone", telephone.trim().ifBlank { JSONObject.NULL })
             .put("email", email.trim().ifBlank { JSONObject.NULL })
             .put("type_contrat", typeContrat)
+            .put("sexe", sexe.ifBlank { JSONObject.NULL })
+            .put("date_naissance", dateNaissance.trim().ifBlank { JSONObject.NULL })
+            .put("adresse", adresse.trim().ifBlank { JSONObject.NULL })
+            .put("date_embauche", dateEmbauche.trim().ifBlank { JSONObject.NULL })
+            .put("salaire_base", salaireBase.trim().toBigDecimalOrNull() ?: JSONObject.NULL)
+            .put("notes", notesRH.trim().ifBlank { JSONObject.NULL })
             .put("cree_par", p.id)
         val url = "${SupabaseConfig.url}/rest/v1/employes"
         val request = authHeaders(Request.Builder().url(url), token)
@@ -652,6 +667,7 @@ fun EcranPersonnel(onRetour: () -> Unit) {
                         if (it.isSuccessful) {
                             afficherAjout = false
                             nom = ""; postnom = ""; prenom = ""; poste = ""; departement = ""; telephone = ""; email = ""
+                            sexe = ""; dateNaissance = ""; adresse = ""; dateEmbauche = ""; salaireBase = ""; notesRH = ""
                             message = "Employé ajouté avec succès."
                             chargerEmployes()
                         } else {
@@ -1130,15 +1146,21 @@ fun EcranPersonnel(onRetour: () -> Unit) {
                                     Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                                         Text("Informations personnelles", color = violetRH, fontWeight = FontWeight.Bold)
                                         LigneInfoRH("Nom complet", cible.nom)
+                                        LigneInfoRH("Sexe", cible.sexe.ifBlank { "Non renseigné" }.replaceFirstChar { it.uppercase() })
+                                        LigneInfoRH("Date de naissance", cible.dateNaissance.ifBlank { "Non renseignée" })
                                         LigneInfoRH("Téléphone", cible.telephone.ifBlank { "Non renseigné" })
                                         LigneInfoRH("E-mail", cible.email.ifBlank { "Non renseigné" })
+                                        LigneInfoRH("Adresse", cible.adresse.ifBlank { "Non renseignée" })
                                         Divider(color = fondRH)
                                         Text("Informations professionnelles", color = violetRH, fontWeight = FontWeight.Bold)
                                         LigneInfoRH("Matricule", cible.matricule)
                                         LigneInfoRH("Poste", cible.poste.ifBlank { "Non renseigné" })
                                         LigneInfoRH("Département", cible.departement.ifBlank { "Non affecté" })
                                         LigneInfoRH("Type de contrat", cible.typeContrat.ifBlank { "Non renseigné" })
+                                        LigneInfoRH("Date d'embauche", cible.dateEmbauche.ifBlank { "Non renseignée" })
+                                        LigneInfoRH("Salaire de base", cible.salaireBase.ifBlank { "Non renseigné" })
                                         LigneInfoRH("Statut", cible.statut.replaceFirstChar { it.uppercase() })
+                                        if (cible.notes.isNotBlank()) LigneInfoRH("Notes RH", cible.notes)
                                     }
                                 }
                             }
@@ -1646,6 +1668,20 @@ fun EcranPersonnel(onRetour: () -> Unit) {
                         OutlinedTextField(departement, { departement = it }, label = { Text("Département") }, singleLine = true)
                         OutlinedTextField(telephone, { telephone = it }, label = { Text("Téléphone") }, singleLine = true)
                         OutlinedTextField(email, { email = it }, label = { Text("E-mail") }, singleLine = true)
+                        var menuSexeCreation by remember { mutableStateOf(false) }
+                        Box {
+                            OutlinedButton(onClick = { menuSexeCreation = true }) { Text("Sexe : " + (sexe.ifBlank { "Non renseigné" })) }
+                            DropdownMenu(expanded = menuSexeCreation, onDismissRequest = { menuSexeCreation = false }) {
+                                listOf("homme", "femme", "autre", "").forEach { valeur ->
+                                    DropdownMenuItem(text = { Text(valeur.ifBlank { "Non renseigné" }) }, onClick = { sexe = valeur; menuSexeCreation = false })
+                                }
+                            }
+                        }
+                        OutlinedTextField(dateNaissance, { dateNaissance = it }, label = { Text("Date de naissance (AAAA-MM-JJ)") }, singleLine = true)
+                        OutlinedTextField(adresse, { adresse = it }, label = { Text("Adresse") })
+                        OutlinedTextField(dateEmbauche, { dateEmbauche = it }, label = { Text("Date d'embauche (AAAA-MM-JJ, facultatif)") }, singleLine = true)
+                        OutlinedTextField(salaireBase, { salaireBase = it }, label = { Text("Salaire de base") }, singleLine = true)
+                        OutlinedTextField(notesRH, { notesRH = it }, label = { Text("Notes RH") }, minLines = 2)
                         var menuContrat by remember { mutableStateOf(false) }
                         Box {
                             OutlinedButton(onClick = { menuContrat = true }) { Text("Contrat : $typeContrat") }
