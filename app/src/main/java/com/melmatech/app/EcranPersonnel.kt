@@ -1379,13 +1379,43 @@ fun EcranPersonnel(onRetour: () -> Unit) {
                     }
                 }
                 "Organisation" -> {
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Column(Modifier.weight(1f)) {
-                            Text("Structure de l'entreprise", fontWeight = FontWeight.Bold)
-                            Text("${departements.size} département(s) • ${postes.size} poste(s)", color = Color.Gray, style = MaterialTheme.typography.bodySmall)
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                            Text(
+                                "Structure de l'entreprise",
+                                fontWeight = FontWeight.Bold,
+                                style = MaterialTheme.typography.titleMedium
+                            )
+                            Text(
+                                "${departements.size} département(s) • ${postes.size} poste(s)",
+                                color = Color.Gray,
+                                style = MaterialTheme.typography.bodySmall
+                            )
                         }
-                        OutlinedButton(onClick = { afficherPoste = true }) { Text("Poste +") }
-                        Button(onClick = { afficherDepartement = true }) { Icon(Icons.Filled.AccountTree, null); Text(" Ajouter") }
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            OutlinedButton(
+                                onClick = { afficherPoste = true },
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Icon(Icons.Filled.Work, contentDescription = null)
+                                Spacer(Modifier.width(6.dp))
+                                Text("Nouveau poste", maxLines = 1)
+                            }
+                            Button(
+                                onClick = { afficherDepartement = true },
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Icon(Icons.Filled.AccountTree, contentDescription = null)
+                                Spacer(Modifier.width(6.dp))
+                                Text("Département", maxLines = 1)
+                            }
+                        }
                     }
                     LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         item {
