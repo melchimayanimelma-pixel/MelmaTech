@@ -1180,15 +1180,19 @@ fun EcranPersonnel(onRetour: () -> Unit) {
                                                                 } }
                                                             })
                                                         }
-                                                    }, modifier = Modifier.weight(1f)) {
-                                                        Icon(Icons.Filled.Visibility, contentDescription = null)
-                                                        Spacer(Modifier.width(6.dp))
-                                                        Text("Visualiser")
+                                                    }, modifier = Modifier.weight(1f), contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp)) {
+                                                        Icon(Icons.Filled.Visibility, contentDescription = null, modifier = Modifier.size(18.dp))
+                                                        Spacer(Modifier.width(4.dp))
+                                                        Text("Visualiser", maxLines = 1, softWrap = false)
                                                     }
-                                                    Button(onClick = { telechargerDocumentRH(d) }, modifier = Modifier.weight(1f)) {
-                                                        Icon(Icons.Filled.Download, contentDescription = null)
-                                                        Spacer(Modifier.width(6.dp))
-                                                        Text("Télécharger")
+                                                    Button(
+                                                        onClick = { telechargerDocumentRH(d) },
+                                                        modifier = Modifier.weight(1f),
+                                                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp)
+                                                    ) {
+                                                        Icon(Icons.Filled.Download, contentDescription = null, modifier = Modifier.size(18.dp))
+                                                        Spacer(Modifier.width(4.dp))
+                                                        Text("Télécharger", maxLines = 1, softWrap = false)
                                                     }
                                                 }
                                                 if (estRH) {
