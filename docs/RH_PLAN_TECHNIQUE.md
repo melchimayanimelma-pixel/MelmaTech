@@ -186,3 +186,18 @@ Tester le cycle de création d'employé (trigger matricule), les accès RH et no
 - La mise à jour est limitée à l'identifiant employé et à l'entreprise active dans la requête REST; les contrôles RLS existants restent la barrière serveur.
 - Le formulaire conserve le matricule et les documents associés; il n'effectue aucune suppression.
 - Cet incrément ne représente pas encore la fiche complète : adresse, sexe, date de naissance, date d'embauche, salaire, photo, archivage et historique détaillé restent à implémenter après validation du build et des tests d'accès.
+
+
+## Journal d'exécution — Phase 1, incrément 2 (25/11/2026)
+
+### Changements Android ajoutés
+- Le modèle local de l'employé récupère maintenant les colonnes déjà présentes en base : sexe, date de naissance, adresse, date d'embauche, salaire de base et notes RH.
+- Le formulaire de création expose ces informations, avec validations de format de date et de montant non négatif.
+- Le formulaire de modification permet de mettre à jour ces champs ainsi que le statut (actif, suspendu, licencié), sans toucher au matricule ni aux documents.
+- La fiche consultée affiche désormais les informations personnelles et professionnelles complètes.
+- Les dates facultatives ne sont pas envoyées à la base lorsqu'elles sont absentes; la date d'embauche conserve son défaut SQL à la création et reste obligatoire lors d'une modification.
+
+### Limites encore ouvertes
+- Photo de profil privée, archivage avec journal d'audit, historique complet des changements et validation des dates calendaires restent à développer.
+- Les tests d'accès RLS et Storage par rôles et par entreprise n'ont pas encore été exécutés dans cette incrémentation.
+- Le build GitHub Actions doit être vérifié sur le dernier commit avant de déclarer cette livraison compilée.
