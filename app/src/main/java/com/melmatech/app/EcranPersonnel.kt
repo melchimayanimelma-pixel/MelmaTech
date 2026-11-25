@@ -88,7 +88,13 @@ private data class EmployeListe(
     val typeContrat: String = "",
     val nomFamille: String = "",
     val postnom: String = "",
-    val prenom: String = ""
+    val prenom: String = "",
+    val sexe: String = "",
+    val dateNaissance: String = "",
+    val adresse: String = "",
+    val dateEmbauche: String = "",
+    val salaireBase: String = "",
+    val notes: String = ""
 )
 
 private data class DocumentRH(
@@ -167,6 +173,13 @@ fun EcranPersonnel(onRetour: () -> Unit) {
     var editTelephone by remember { mutableStateOf("") }
     var editEmail by remember { mutableStateOf("") }
     var editTypeContrat by remember { mutableStateOf("CDI") }
+    var editSexe by remember { mutableStateOf("") }
+    var editDateNaissance by remember { mutableStateOf("") }
+    var editAdresse by remember { mutableStateOf("") }
+    var editDateEmbauche by remember { mutableStateOf("") }
+    var editSalaireBase by remember { mutableStateOf("") }
+    var editNotes by remember { mutableStateOf("") }
+    var editStatut by remember { mutableStateOf("actif") }
     var enregistrementModification by remember { mutableStateOf(false) }
     var nom by remember { mutableStateOf("") }
     var postnom by remember { mutableStateOf("") }
@@ -540,7 +553,7 @@ fun EcranPersonnel(onRetour: () -> Unit) {
                 message = "Session expirée. Reconnecte-toi."
                 return@obtenirProfil
             }
-            val url = "${SupabaseConfig.url}/rest/v1/employes?entreprise_id=eq.${p.entrepriseId}&select=id,matricule,nom,postnom,prenom,poste,departement,statut,telephone,email,type_contrat&order=nom.asc"
+            val url = "${SupabaseConfig.url}/rest/v1/employes?entreprise_id=eq.${p.entrepriseId}&select=id,matricule,nom,postnom,prenom,sexe,date_naissance,adresse,photo_url,poste,departement,date_embauche,type_contrat,salaire_base,statut,notes&order=nom.asc"
             val request = authHeaders(Request.Builder().url(url), token).get().build()
             client.newCall(request).enqueue(object : Callback {
                 override fun onFailure(call: Call, e: IOException) {
@@ -569,7 +582,13 @@ fun EcranPersonnel(onRetour: () -> Unit) {
                                         typeContrat = item.optString("type_contrat").takeUnless { v -> v == "null" }.orEmpty(),
                                         nomFamille = item.optString("nom").takeUnless { v -> v == "null" }.orEmpty(),
                                         postnom = item.optString("postnom").takeUnless { v -> v == "null" }.orEmpty(),
-                                        prenom = item.optString("prenom").takeUnless { v -> v == "null" }.orEmpty()
+                                        prenom = item.optString("prenom").takeUnless { v -> v == "null" }.orEmpty(),
+                                        sexe = item.optString("sexe").takeUnless { v -> v == "null" }.orEmpty(),
+                                        dateNaissance = item.optString("date_naissance").takeUnless { v -> v == "null" }.orEmpty(),
+                                        adresse = item.optString("adresse").takeUnless { v -> v == "null" }.orEmpty(),
+                                        dateEmbauche = item.optString("date_embauche").takeUnless { v -> v == "null" }.orEmpty(),
+                                        salaireBase = if (item.isNull("salaire_base")) "" else item.optString("salaire_base"),
+                                        notes = item.optString("notes").takeUnless { v -> v == "null" }.orEmpty()
                                     )
                                 }
                                 if (onglet == "Employés" && message.isBlank()) message = ""
@@ -656,6 +675,18 @@ fun EcranPersonnel(onRetour: () -> Unit) {
             message = "Le nom et le poste sont obligatoires."
             return
         }
+        if (editDateEmbauche.isNotBlank() && !editDateEmbauche.matches(Regex("\\d{4}-\\d{2}-\\d{2}"))) {
+            message = "La date d'embauche doit respecter le format AAAA-MM-JJ."
+            return
+        }
+        if (editDateNaissance.isNotBlank() && !editDateNaissance.matches(Regex("\\d{4}-\\d{2}-\\d{2}"))) {
+            message = "La date de naissance doit respecter le format AAAA-MM-JJ."
+            return
+        }
+        if (editSalaireBase.isNotBlank() && (editSalaireBase.toBigOrNull() == null || editSalaireBase.toBigOrNull()!! < java.math.BigDecimal.ZERO)) {
+            message = "Le salaire doit être un montant positif ou nul."
+            return
+        }
         enregistrementModification = true
         val payload = JSONObject()
             .put("nom", editNom.trim())
@@ -666,6 +697,14 @@ fun EcranPersonnel(onRetour: () -> Unit) {
             .put("telephone", editTelephone.trim().ifBlank { JSONObject.NULL })
             .put("email", editEmail.trim().ifBlank { JSONObject.NULL })
             .put("type_contrat", editTypeContrat)
+            .put("sexe", editSexe.trim().ifBlank { JSONObject.NULL })
+            .put("date_naissance", editDateNaissance.trim().ifBlank { JSONObject.NULL })
+            .put("adresse", editAdresse.trim().ifBlank { JSONObject.NULL })
+            .put("date_embauche", editDateEmbauche.trim())
+            .put("salaire_base", editSalaireBase.trim().toBigOrNull() ?: JSONObject.NULL)
+            .put("notes", editNotes.trim().ifBlank { JSONObject.NULL })
+            .put("statut", editStatut)
+            .put("modifie_le", java.time.Instant.now().toString())
         val url = "${SupabaseConfig.url}/rest/v1/employes?id=eq.${Uri.encode(cible.id)}&entreprise_id=eq.${Uri.encode(p.entrepriseId)}"
         val request = authHeaders(Request.Builder().url(url), token)
             .addHeader("Content-Type", "application/json")
@@ -976,6 +1015,13 @@ fun EcranPersonnel(onRetour: () -> Unit) {
                                             editTelephone = e.telephone
                                             editEmail = e.email
                                             editTypeContrat = e.typeContrat.ifBlank { "CDI" }
+                                            editSexe = e.sexe
+                                            editDateNaissance = e.dateNaissance
+                                            editAdresse = e.adresse
+                                            editDateEmbauche = e.dateEmbauche
+                                            editSalaireBase = e.salaireBase
+                                            editNotes = e.notes
+                                            editStatut = e.statut.ifBlank { "actif" }
                                             afficherModification = true
                                         }) { Text("Modifier") }
                                         Icon(Icons.Filled.ArrowForward, contentDescription = "Ouvrir le dossier", tint = violetRH)
@@ -1540,6 +1586,29 @@ fun EcranPersonnel(onRetour: () -> Unit) {
                     OutlinedTextField(editDepartement, { editDepartement = it }, label = { Text("Département") }, singleLine = true)
                     OutlinedTextField(editTelephone, { editTelephone = it }, label = { Text("Téléphone") }, singleLine = true)
                     OutlinedTextField(editEmail, { editEmail = it }, label = { Text("E-mail") }, singleLine = true)
+                    var menuSexeEdition by remember { mutableStateOf(false) }
+                    Box {
+                        OutlinedButton(onClick = { menuSexeEdition = true }) { Text("Sexe : " + (editSexe.ifBlank { "Non renseigné" })) }
+                        DropdownMenu(expanded = menuSexeEdition, onDismissRequest = { menuSexeEdition = false }) {
+                            listOf("homme", "femme", "autre", "").forEach { valeur ->
+                                DropdownMenuItem(text = { Text(valeur.ifBlank { "Non renseigné" }) }, onClick = { editSexe = valeur; menuSexeEdition = false })
+                            }
+                        }
+                    }
+                    OutlinedTextField(editDateNaissance, { editDateNaissance = it }, label = { Text("Date de naissance (AAAA-MM-JJ)") }, singleLine = true)
+                    OutlinedTextField(editAdresse, { editAdresse = it }, label = { Text("Adresse") })
+                    OutlinedTextField(editDateEmbauche, { editDateEmbauche = it }, label = { Text("Date d'embauche (AAAA-MM-JJ)") }, singleLine = true)
+                    OutlinedTextField(editSalaireBase, { editSalaireBase = it }, label = { Text("Salaire de base") }, singleLine = true)
+                    OutlinedTextField(editNotes, { editNotes = it }, label = { Text("Notes RH") }, minLines = 2)
+                    var menuStatutEdition by remember { mutableStateOf(false) }
+                    Box {
+                        OutlinedButton(onClick = { menuStatutEdition = true }) { Text("Statut : $editStatut") }
+                        DropdownMenu(expanded = menuStatutEdition, onDismissRequest = { menuStatutEdition = false }) {
+                            listOf("actif", "suspendu", "licencie").forEach { valeur ->
+                                DropdownMenuItem(text = { Text(valeur.replaceFirstChar { it.uppercase() }) }, onClick = { editStatut = valeur; menuStatutEdition = false })
+                            }
+                        }
+                    }
                     var menuContratEdition by remember { mutableStateOf(false) }
                     Box {
                         OutlinedButton(onClick = { menuContratEdition = true }) { Text("Contrat : $editTypeContrat") }
