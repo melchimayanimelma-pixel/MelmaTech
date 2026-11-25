@@ -1058,10 +1058,11 @@ fun EcranPersonnel(onRetour: () -> Unit) {
                         }
                     } else {
                         // Une seule zone défilante pour voir les informations ET les documents sans écran coupé.
-                        LazyColumn(
-                            Modifier.weight(1f),
-                            verticalArrangement = Arrangement.spacedBy(12.dp)
-                        ) {
+                        key(cible.id) {
+                            LazyColumn(
+                                Modifier.weight(1f),
+                                verticalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
                             item {
                                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                                     Column(Modifier.weight(1f)) {
@@ -1212,6 +1213,7 @@ fun EcranPersonnel(onRetour: () -> Unit) {
                                 }
                             } else {
                                 item { Text("Les documents personnels sont confidentiels et réservés au responsable RH.", color = Color.Gray) }
+                            }
                             }
                         }
                     }
