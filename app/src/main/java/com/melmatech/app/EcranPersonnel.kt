@@ -701,7 +701,7 @@ fun EcranPersonnel(onRetour: () -> Unit) {
             .put("date_naissance", editDateNaissance.trim().ifBlank { JSONObject.NULL })
             .put("adresse", editAdresse.trim().ifBlank { JSONObject.NULL })
             .put("date_embauche", editDateEmbauche.trim())
-            .put("salaire_base", editSalaireBase.trim().toBigOrNull() ?: JSONObject.NULL)
+            .put("salaire_base", editSalaireBase.trim().toBigDecimalOrNull() ?: JSONObject.NULL)
             .put("notes", editNotes.trim().ifBlank { JSONObject.NULL })
             .put("statut", editStatut)
             .put("modifie_le", java.time.Instant.now().toString())
