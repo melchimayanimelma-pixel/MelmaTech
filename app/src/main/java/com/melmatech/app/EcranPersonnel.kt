@@ -1476,14 +1476,67 @@ fun EcranPersonnel(onRetour: () -> Unit) {
                         TextButton(onClick = { chargerPresences() }) { Icon(Icons.Filled.Refresh, null); Text("Actualiser") }
                     }
                     if (chargementModule) LinearProgressIndicator(Modifier.fillMaxWidth())
-                    Text("Enregistrer une présence", fontWeight = FontWeight.SemiBold)
+                    val pointagesDuJour = presences.filter { it.date == java.time.LocalDate.now().toString() }
+                    Card(colors = CardDefaults.cardColors(containerColor = Color.White), shape = RoundedCornerShape(16.dp)) {
+                        Row(
+                            Modifier.fillMaxWidth().padding(vertical = 14.dp, horizontal = 8.dp),
+                            horizontalArrangement = Arrangement.SpaceEvenly
+                        ) {
+                            StatCompactRH("Présents", pointagesDuJour.count { it.statut == "present" }.toString())
+                            StatCompactRH("En retard", pointagesDuJour.count { it.statut == "retard" }.toString())
+                            StatCompactRH("Absents", pointagesDuJour.count { it.statut == "absent" }.toString())
+                        }
+                    }
+                    Text("Pointer le personnel", fontWeight = FontWeight.SemiBold)
                     LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         items(employes, key = { it.id }) { e ->
+                            val pointageExistant = pointagesDuJour.firstOrNull { it.employe == e.nom }
                             Card(colors = CardDefaults.cardColors(containerColor = Color.White), shape = RoundedCornerShape(14.dp)) {
-                                Row(Modifier.fillMaxWidth().padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                                    Icon(Icons.Filled.People, null, tint = violetRH, modifier = Modifier.size(24.dp))
-                                    Column(Modifier.weight(1f).padding(start = 10.dp)) { Text(e.nom, fontWeight = FontWeight.SemiBold); Text(e.poste, color = Color.Gray, style = MaterialTheme.typography.bodySmall) }
-                                    Button(onClick = { enregistrerPresence(e) }, contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)) { Text("Présent") }
+                                Column(
+                                    Modifier.fillMaxWidth().padding(12.dp),
+                                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Icon(Icons.Filled.People, null, tint = violetRH, modifier = Modifier.size(24.dp))
+                                        Column(Modifier.weight(1f).padding(start = 10.dp)) {
+                                            Text(e.nom, fontWeight = FontWeight.SemiBold)
+                                            Text(e.poste.ifBlank { "Poste non défini" }, color = Color.Gray, style = MaterialTheme.typography.bodySmall)
+                                        }
+                                        if (pointageExistant != null) {
+                                            Text(
+                                                pointageExistant.statut.replaceFirstChar { it.uppercase() },
+                                                color = when (pointageExistant.statut) {
+                                                    "present" -> Color(0xFF16834B)
+                                                    "retard" -> Color(0xFFB7791F)
+                                                    else -> Color(0xFFB42318)
+                                                },
+                                                style = MaterialTheme.typography.labelMedium,
+                                                fontWeight = FontWeight.SemiBold
+                                            )
+                                        } else {
+                                            Text("Non pointé", color = Color.Gray, style = MaterialTheme.typography.labelSmall)
+                                        }
+                                    }
+                                    Row(
+                                        Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                    ) {
+                                        Button(
+                                            onClick = { enregistrerPresence(e, "present") },
+                                            modifier = Modifier.weight(1f),
+                                            contentPadding = PaddingValues(horizontal = 4.dp, vertical = 6.dp)
+                                        ) { Text("Présent", maxLines = 1) }
+                                        OutlinedButton(
+                                            onClick = { enregistrerPresence(e, "retard") },
+                                            modifier = Modifier.weight(1f),
+                                            contentPadding = PaddingValues(horizontal = 4.dp, vertical = 6.dp)
+                                        ) { Text("Retard", maxLines = 1) }
+                                        OutlinedButton(
+                                            onClick = { enregistrerPresence(e, "absent") },
+                                            modifier = Modifier.weight(1f),
+                                            contentPadding = PaddingValues(horizontal = 4.dp, vertical = 6.dp)
+                                        ) { Text("Absent", maxLines = 1) }
+                                    }
                                 }
                             }
                         }
