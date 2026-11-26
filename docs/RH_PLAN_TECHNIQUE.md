@@ -245,3 +245,10 @@ Tester le cycle de création d'employé (trigger matricule), les accès RH et no
 ### Vérification
 - Les changements réutilisent le schéma existant; aucune migration ni policy Supabase nouvelle n'a été exécutée.
 - GitHub Actions exécute la compilation release signée sur la branche d'intégration. Résultat à confirmer avant livraison.
+
+
+## Compléments RH — 26/11/2026
+- Le tableau de bord calcule les anniversaires des 30 prochains jours à partir de `employes.date_naissance`, avec nom, département/poste et nombre de jours restants. Les dates absentes ou non conformes sont ignorées.
+- Le tableau de bord présente une répartition des effectifs par `type_contrat`, uniquement pour les contrats renseignés.
+- Ces deux indicateurs sont calculés à partir des employés déjà chargés pour l'entreprise active; aucune nouvelle table ni migration n'est requise.
+- Correctif Compose : le champ de recherche de l'historique de pointage est encapsulé dans un `item { }` de LazyColumn. La compilation de la version précédente avait échoué sur un appel composable hors contexte; la validation du nouveau workflow reste en attente.
