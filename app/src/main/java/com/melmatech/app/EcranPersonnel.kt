@@ -129,6 +129,7 @@ fun EcranPersonnel(onRetour: () -> Unit) {
     // Sélection indépendante : l’onglet Dossiers commence toujours par l’annuaire.
     var dossierEmployeOuvert by remember { mutableStateOf<EmployeListe?>(null) }
     var departementSelectionne by remember { mutableStateOf<String?>(null) }
+    var filtreStatut by remember { mutableStateOf("Tous") }
     var onglet by remember { mutableStateOf("Accueil RH") }
     var message by remember { mutableStateOf("") }
     val historiqueOnglets = remember { mutableStateListOf("Accueil RH") }
@@ -869,7 +870,29 @@ fun EcranPersonnel(onRetour: () -> Unit) {
                             FilterChip(selected = departementSelectionne.equals(dep, true), onClick = { departementSelectionne = if (departementSelectionne.equals(dep, true)) null else dep }, label = { Text("$dep ($nombre)") })
                         }
                     }
-                    val filtres = employes.filter { (departementSelectionne == null || it.departement.equals(departementSelectionne, true)) && (it.nom.contains(recherche, true) || it.matricule.contains(recherche, true) || it.poste.contains(recherche, true) || it.departement.contains(recherche, true)) }
+                    // Filtre complémentaire par statut : il s'ajoute au filtre département et à la recherche.
+                    Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        val statuts = listOf("Tous", "Actifs", "Inactifs")
+                        statuts.forEach { statut ->
+                            val nombre = when (statut) {
+                                "Actifs" -> employes.count { it.statut.equals("actif", true) }
+                                "Inactifs" -> employes.count { !it.statut.equals("actif", true) }
+                                else -> employes.size
+                            }
+                            FilterChip(
+                                selected = filtreStatut == statut,
+                                onClick = { filtreStatut = statut },
+                                label = { Text("$statut ($nombre)") }
+                            )
+                        }
+                    }
+                    val filtres = employes.filter {
+                        (departementSelectionne == null || it.departement.equals(departementSelectionne, true)) &&
+                        (filtreStatut == "Tous" ||
+                            (filtreStatut == "Actifs" && it.statut.equals("actif", true)) ||
+                            (filtreStatut == "Inactifs" && !it.statut.equals("actif", true))) &&
+                        (it.nom.contains(recherche, true) || it.matricule.contains(recherche, true) || it.poste.contains(recherche, true) || it.departement.contains(recherche, true))
+                    }
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                         Text(if (departementSelectionne == null) "Tous les employés" else departementSelectionne!!, fontWeight = FontWeight.SemiBold)
                         Text("${filtres.size} résultat(s)", color = Color.Gray, style = MaterialTheme.typography.bodySmall)
