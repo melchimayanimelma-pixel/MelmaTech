@@ -68,6 +68,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import okhttp3.*
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.RequestBody.Companion.toRequestBody
@@ -1398,19 +1399,19 @@ fun EcranPersonnel(onRetour: () -> Unit) {
                                                                 } }
                                                             })
                                                         }
-                                                    }, modifier = Modifier.weight(1f), contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp)) {
+                                                    }, modifier = Modifier.weight(1f).heightIn(min = 48.dp), contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp)) {
                                                         Icon(Icons.Filled.Visibility, contentDescription = null, modifier = Modifier.size(18.dp))
                                                         Spacer(Modifier.width(4.dp))
-                                                        Text("Visualiser", maxLines = 1, softWrap = false)
+                                                        Text("Visualiser", fontSize = 13.sp, maxLines = 1, softWrap = false)
                                                     }
                                                     Button(
                                                         onClick = { telechargerDocumentRH(d) },
-                                                        modifier = Modifier.weight(1f),
-                                                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp)
+                                                        modifier = Modifier.weight(1f).heightIn(min = 48.dp),
+                                                        contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp)
                                                     ) {
                                                         Icon(Icons.Filled.Download, contentDescription = null, modifier = Modifier.size(18.dp))
                                                         Spacer(Modifier.width(4.dp))
-                                                        Text("Télécharger", maxLines = 1, softWrap = false)
+                                                        Text("Télécharger", fontSize = 13.sp, maxLines = 1, softWrap = false)
                                                     }
                                                 }
                                                 if (estRH) {
