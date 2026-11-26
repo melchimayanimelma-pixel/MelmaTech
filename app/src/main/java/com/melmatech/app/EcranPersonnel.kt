@@ -222,6 +222,7 @@ fun EcranPersonnel(onRetour: () -> Unit) {
     var conges by remember { mutableStateOf(emptyList<CongeRH>()) }
     var filtreConges by remember { mutableStateOf("Tous") }
     var bulletins by remember { mutableStateOf(emptyList<PaieRH>()) }
+    var filtrePaie by remember { mutableStateOf("Tous") }
     var chargementModule by remember { mutableStateOf(false) }
     var afficherDemandeConge by remember { mutableStateOf(false) }
     var employeConge by remember { mutableStateOf("") }
@@ -392,6 +393,36 @@ fun EcranPersonnel(onRetour: () -> Unit) {
                     } catch (_: Exception) { message = "Format des bulletins illisible." }
                 }
             } }
+        })
+    }
+
+    fun marquerBulletinPaye(bulletin: PaieRH) {
+        val p = profil ?: return
+        if (!estRH) { message = "Action réservée au responsable RH autorisé."; return }
+        val token = AuthService.obtenirAccessToken(context) ?: return
+        val payload = JSONObject().put("statut", "paye")
+        val url = "${SupabaseConfig.url}/rest/v1/bulletins_paie?id=eq.${bulletin.id}&entreprise_id=eq.${p.entrepriseId}&statut=eq.brouillon"
+        val req = authHeaders(Request.Builder().url(url), token)
+            .addHeader("Content-Type", "application/json")
+            .addHeader("Prefer", "return=minimal")
+            .patch(payload.toString().toRequestBody("application/json; charset=utf-8".toMediaType()))
+            .build()
+        client.newCall(req).enqueue(object : Callback {
+            override fun onFailure(call: Call, e: IOException) {
+                mainHandler.post { message = "Mise à jour du paiement impossible : ${e.message}" }
+            }
+            override fun onResponse(call: Call, response: Response) {
+                response.use {
+                    mainHandler.post {
+                        if (it.isSuccessful) {
+                            message = "Bulletin marqué comme payé."
+                            chargerPaie()
+                        } else {
+                            message = "Modification du bulletin refusée (${it.code})."
+                        }
+                    }
+                }
+            }
         })
     }
 
@@ -1626,19 +1657,58 @@ fun EcranPersonnel(onRetour: () -> Unit) {
                             StatCompactRH("Payés", bulletins.count { it.statut == "paye" }.toString())
                         }
                     }
+                    Row(
+                        Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        listOf("Tous", "Brouillons", "Payés").forEach { filtre ->
+                            val nombre = when (filtre) {
+                                "Brouillons" -> bulletins.count { it.statut == "brouillon" }
+                                "Payés" -> bulletins.count { it.statut == "paye" }
+                                else -> bulletins.size
+                            }
+                            FilterChip(
+                                selected = filtrePaie == filtre,
+                                onClick = { filtrePaie = filtre },
+                                label = { Text("$filtre ($nombre)") }
+                            )
+                        }
+                    }
                     if (chargementModule) LinearProgressIndicator(Modifier.fillMaxWidth())
+                    val bulletinsFiltres = bulletins.filter {
+                        when (filtrePaie) {
+                            "Brouillons" -> it.statut == "brouillon"
+                            "Payés" -> it.statut == "paye"
+                            else -> true
+                        }
+                    }
                     LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        items(bulletins, key = { it.id }) { b ->
+                        items(bulletinsFiltres, key = { it.id }) { b ->
                             Card(colors = CardDefaults.cardColors(containerColor = Color.White), shape = RoundedCornerShape(14.dp)) {
                                 Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
                                     Row(verticalAlignment = Alignment.CenterVertically) { Icon(Icons.Filled.Payments, null, tint = violetRH); Text("  ${b.employe}", fontWeight = FontWeight.Bold); Spacer(Modifier.weight(1f)); Text(b.statut, color = if (b.statut == "paye") Color(0xFF16834B) else Color(0xFF9A6700)) }
                                     Text("Période : ${b.debut} au ${b.fin}", color = Color.Gray, style = MaterialTheme.typography.bodySmall)
                                     Text("Base : ${"%.2f".format(b.base)}  •  Primes : ${"%.2f".format(b.primes)}  •  Retenues : ${"%.2f".format(b.retenues)}", style = MaterialTheme.typography.bodySmall)
                                     Text("Net à payer : ${"%.2f".format(b.net)}", color = violetRH, fontWeight = FontWeight.Bold)
+                                    if (b.statut == "brouillon" && estRH) {
+                                        Button(
+                                            onClick = { marquerBulletinPaye(b) },
+                                            modifier = Modifier.fillMaxWidth()
+                                        ) {
+                                            Icon(Icons.Filled.CheckCircle, contentDescription = null)
+                                            Spacer(Modifier.width(6.dp))
+                                            Text("Confirmer le paiement")
+                                        }
+                                    }
                                 }
                             }
                         }
-                        if (bulletins.isEmpty() && !chargementModule) item { Text("Aucun bulletin de paie enregistré.", color = Color.Gray) }
+                        if (bulletinsFiltres.isEmpty() && !chargementModule) item {
+                            Text(
+                                if (bulletins.isEmpty()) "Aucun bulletin de paie enregistré." else "Aucun bulletin dans ce filtre.",
+                                color = Color.Gray
+                            )
+                        }
                     }
                 }
                 "Rapports" -> {
