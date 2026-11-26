@@ -115,7 +115,7 @@ private data class PosteRH(
 )
 
 private data class PresenceRH(
-    val id: String, val employe: String, val date: String,
+    val id: String, val employeId: String, val employe: String, val date: String,
     val arrivee: String, val depart: String, val statut: String
 )
 private data class CongeRH(
@@ -293,7 +293,7 @@ fun EcranPersonnel(onRetour: () -> Unit) {
                         val a = JSONArray(body)
                         presences = (0 until a.length()).map { i ->
                             val x = a.getJSONObject(i); val e = x.optJSONObject("employes")
-                            PresenceRH(x.optString("id"), listOf(e?.optString("prenom"), e?.optString("nom"), e?.optString("postnom")).filterNotNull().filter { n -> n.isNotBlank() && n != "null" }.joinToString(" ").ifBlank { "Employé" }, x.optString("date_presence"), x.optString("heure_arrivee").take(5).let { v -> if (v == "null") "—" else v }, x.optString("heure_depart").take(5).let { v -> if (v == "null") "—" else v }, x.optString("statut"))
+                            PresenceRH(x.optString("id"), x.optString("employe_id"), listOf(e?.optString("prenom"), e?.optString("nom"), e?.optString("postnom")).filterNotNull().filter { n -> n.isNotBlank() && n != "null" }.joinToString(" ").ifBlank { "Employé" }, x.optString("date_presence"), x.optString("heure_arrivee").take(5).let { v -> if (v == "null") "—" else v }, x.optString("heure_depart").take(5).let { v -> if (v == "null") "—" else v }, x.optString("statut"))
                         }
                     } catch (_: Exception) { message = "Format des présences illisible." }
                 }
@@ -1636,7 +1636,7 @@ fun EcranPersonnel(onRetour: () -> Unit) {
                     Text("Pointer le personnel", fontWeight = FontWeight.SemiBold)
                     LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         items(employes, key = { it.id }) { e ->
-                            val pointageExistant = pointagesDuJour.firstOrNull { it.employe == e.nom }
+                            val pointageExistant = pointagesDuJour.firstOrNull { it.employeId == e.id }
                             Card(colors = CardDefaults.cardColors(containerColor = Color.White), shape = RoundedCornerShape(14.dp)) {
                                 Column(
                                     Modifier.fillMaxWidth().padding(12.dp),
