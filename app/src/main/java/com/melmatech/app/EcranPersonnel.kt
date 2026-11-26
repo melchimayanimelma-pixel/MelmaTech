@@ -121,7 +121,7 @@ private data class PresenceRH(
 private data class CongeRH(
     val id: String, val employeId: String, val employe: String,
     val type: String, val debut: String, val fin: String,
-    val motif: String, val statut: String
+    val motif: String, val statut: String, val commentaireDecision: String = ""
 )
 private data class PaieRH(
     val id: String, val employe: String, val debut: String,
@@ -227,6 +227,10 @@ fun EcranPersonnel(onRetour: () -> Unit) {
     var filtreStatutEmploye by remember { mutableStateOf("Tous") }
     var filtreContratEmploye by remember { mutableStateOf("Tous") }
     var filtreHistoriquePresence by remember { mutableStateOf("Aujourd'hui") }
+    var recherchePresence by remember { mutableStateOf("") }
+    var congeEnDecision by remember { mutableStateOf<CongeRH?>(null) }
+    var statutDecisionConge by remember { mutableStateOf("approuve") }
+    var commentaireDecisionConge by remember { mutableStateOf("") }
     var chargementModule by remember { mutableStateOf(false) }
     var afficherDemandeConge by remember { mutableStateOf(false) }
     var employeConge by remember { mutableStateOf("") }
@@ -320,7 +324,7 @@ fun EcranPersonnel(onRetour: () -> Unit) {
         val p = profil ?: return
         val token = AuthService.obtenirAccessToken(context) ?: return
         chargementModule = true
-        val url = "${SupabaseConfig.url}/rest/v1/demandes_conges?entreprise_id=eq.${p.entrepriseId}&select=id,employe_id,type_conge,date_debut,date_fin,motif,statut,employes(nom,postnom,prenom)&order=cree_le.desc"
+        val url = "${SupabaseConfig.url}/rest/v1/demandes_conges?entreprise_id=eq.${p.entrepriseId}&select=id,employe_id,type_conge,date_debut,date_fin,motif,statut,commentaire_decision,employes(nom,postnom,prenom)&order=cree_le.desc"
         val req = authHeaders(Request.Builder().url(url), token).get().build()
         client.newCall(req).enqueue(object : Callback {
             override fun onFailure(call: Call, e: IOException) { mainHandler.post { chargementModule = false; message = "Erreur de chargement des congés : ${e.message}" } }
@@ -333,7 +337,7 @@ fun EcranPersonnel(onRetour: () -> Unit) {
                         val a = JSONArray(body)
                         conges = (0 until a.length()).map { i ->
                             val x = a.getJSONObject(i); val e = x.optJSONObject("employes")
-                            CongeRH(x.optString("id"), x.optString("employe_id"), listOf(e?.optString("prenom"), e?.optString("nom"), e?.optString("postnom")).filterNotNull().filter { n -> n.isNotBlank() && n != "null" }.joinToString(" ").ifBlank { "Employé" }, x.optString("type_conge"), x.optString("date_debut"), x.optString("date_fin"), x.optString("motif").takeUnless { v -> v == "null" }.orEmpty(), x.optString("statut"))
+                            CongeRH(x.optString("id"), x.optString("employe_id"), listOf(e?.optString("prenom"), e?.optString("nom"), e?.optString("postnom")).filterNotNull().filter { n -> n.isNotBlank() && n != "null" }.joinToString(" ").ifBlank { "Employé" }, x.optString("type_conge"), x.optString("date_debut"), x.optString("date_fin"), x.optString("motif").takeUnless { v -> v == "null" }.orEmpty(), x.optString("statut"), x.optString("commentaire_decision").takeUnless { v -> v == "null" }.orEmpty())
                         }
                     } catch (_: Exception) { message = "Format des congés illisible." }
                 }
@@ -360,18 +364,19 @@ fun EcranPersonnel(onRetour: () -> Unit) {
         })
     }
 
-    fun deciderConge(id: String, statut: String) {
+    fun deciderConge(id: String, statut: String, commentaire: String = "") {
         val p = profil ?: return
         val token = AuthService.obtenirAccessToken(context) ?: return
         val payload = JSONObject().put("statut", statut).put("decision_par", p.id)
             .put("decision_le", java.time.OffsetDateTime.now().toString())
+            .put("commentaire_decision", commentaire.trim().ifBlank { JSONObject.NULL })
         val req = authHeaders(Request.Builder().url("${SupabaseConfig.url}/rest/v1/demandes_conges?id=eq.$id&entreprise_id=eq.${p.entrepriseId}"), token)
             .addHeader("Content-Type", "application/json").addHeader("Prefer", "return=minimal")
             .patch(payload.toString().toRequestBody("application/json; charset=utf-8".toMediaType())).build()
         client.newCall(req).enqueue(object : Callback {
             override fun onFailure(call: Call, e: IOException) { mainHandler.post { message = "Décision non enregistrée : ${e.message}" } }
             override fun onResponse(call: Call, response: Response) { response.use { mainHandler.post {
-                if (it.isSuccessful) { message = if (statut == "approuve") "Congé approuvé." else "Congé refusé."; chargerConges() }
+                if (it.isSuccessful) { congeEnDecision = null; commentaireDecisionConge = ""; message = if (statut == "approuve") "Congé approuvé." else "Congé refusé."; chargerConges() }
                 else message = "Modification refusée (${it.code})."
             } } }
         })
@@ -1631,15 +1636,40 @@ fun EcranPersonnel(onRetour: () -> Unit) {
                                         label = { Text("Aujourd'hui") }
                                     )
                                     FilterChip(
+                                        selected = filtreHistoriquePresence == "7 jours",
+                                        onClick = { filtreHistoriquePresence = "7 jours" },
+                                        label = { Text("7 jours") }
+                                    )
+                                    FilterChip(
+                                        selected = filtreHistoriquePresence == "30 jours",
+                                        onClick = { filtreHistoriquePresence = "30 jours" },
+                                        label = { Text("30 jours") }
+                                    )
+                                    FilterChip(
                                         selected = filtreHistoriquePresence == "Tous",
                                         onClick = { filtreHistoriquePresence = "Tous" },
-                                        label = { Text("Tout l'historique") }
+                                        label = { Text("Tout") }
                                     )
                                 }
                             }
                         }
-                        val historiqueFiltre = presences.filter {
-                            filtreHistoriquePresence == "Tous" || it.date == java.time.LocalDate.now().toString()
+                        OutlinedTextField(
+                            value = recherchePresence,
+                            onValueChange = { recherchePresence = it },
+                            modifier = Modifier.fillMaxWidth(),
+                            singleLine = true,
+                            label = { Text("Rechercher un employé dans les pointages") }
+                        )
+                        val aujourdHui = java.time.LocalDate.now()
+                        val historiqueFiltre = presences.filter { presence ->
+                            val date = runCatching { java.time.LocalDate.parse(presence.date) }.getOrNull()
+                            val dansPeriode = when (filtreHistoriquePresence) {
+                                "Aujourd'hui" -> date == aujourdHui
+                                "7 jours" -> date != null && !date.isBefore(aujourdHui.minusDays(6)) && !date.isAfter(aujourdHui)
+                                "30 jours" -> date != null && !date.isBefore(aujourdHui.minusDays(29)) && !date.isAfter(aujourdHui)
+                                else -> true
+                            }
+                            dansPeriode && (recherchePresence.isBlank() || presence.employe.contains(recherchePresence, true))
                         }
                         items(historiqueFiltre, key = { it.id }) { p ->
                             Card(colors = CardDefaults.cardColors(containerColor = Color.White)) {
@@ -1699,10 +1729,11 @@ fun EcranPersonnel(onRetour: () -> Unit) {
                                 Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                                     Row(verticalAlignment = Alignment.CenterVertically) { Icon(Icons.Filled.BeachAccess, null, tint = violetRH); Text("  ${x.employe}", fontWeight = FontWeight.Bold); Spacer(Modifier.weight(1f)); Text(x.statut.replace("_", " "), color = if (x.statut == "approuve") Color(0xFF16834B) else Color(0xFF9A6700), style = MaterialTheme.typography.labelMedium) }
                                     Text("${x.type} • ${x.debut} au ${x.fin}", color = Color.Gray)
-                                    if (x.motif.isNotBlank()) Text(x.motif, style = MaterialTheme.typography.bodySmall)
-                                    if (x.statut == "en_attente") Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                        OutlinedButton(onClick = { deciderConge(x.id, "refuse") }, modifier = Modifier.weight(1f)) { Icon(Icons.Filled.Cancel, null); Text(" Refuser") }
-                                        Button(onClick = { deciderConge(x.id, "approuve") }, modifier = Modifier.weight(1f)) { Icon(Icons.Filled.CheckCircle, null); Text(" Approuver") }
+                                    if (x.motif.isNotBlank()) Text("Motif : ${x.motif}", style = MaterialTheme.typography.bodySmall)
+                                    if (x.commentaireDecision.isNotBlank()) Text("Décision RH : ${x.commentaireDecision}", color = Color.Gray, style = MaterialTheme.typography.bodySmall)
+                                    if (x.statut == "en_attente" && estRH) Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                        OutlinedButton(onClick = { congeEnDecision = x; statutDecisionConge = "refuse"; commentaireDecisionConge = "" }, modifier = Modifier.weight(1f)) { Icon(Icons.Filled.Cancel, null); Text(" Refuser") }
+                                        Button(onClick = { congeEnDecision = x; statutDecisionConge = "approuve"; commentaireDecisionConge = "" }, modifier = Modifier.weight(1f)) { Icon(Icons.Filled.CheckCircle, null); Text(" Approuver") }
                                     }
                                 }
                             }
@@ -1806,6 +1837,35 @@ fun EcranPersonnel(onRetour: () -> Unit) {
         }
 
         if (message.isNotBlank()) Text(message, color = if (message.contains("succès") || message.contains("ajouté")) Color(0xFF16834B) else Color(0xFFB45309), style = MaterialTheme.typography.bodySmall)
+    }
+
+    if (congeEnDecision != null) {
+        val demande = congeEnDecision!!
+        AlertDialog(
+            onDismissRequest = { congeEnDecision = null; commentaireDecisionConge = "" },
+            title = { Text(if (statutDecisionConge == "approuve") "Approuver le congé" else "Refuser le congé") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("${demande.employe} • ${demande.type}\n${demande.debut} au ${demande.fin}")
+                    OutlinedTextField(
+                        value = commentaireDecisionConge,
+                        onValueChange = { commentaireDecisionConge = it },
+                        modifier = Modifier.fillMaxWidth(),
+                        minLines = 2,
+                        label = { Text(if (statutDecisionConge == "refuse") "Motif du refus *" else "Commentaire RH (facultatif)") }
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = { deciderConge(demande.id, statutDecisionConge, commentaireDecisionConge) },
+                    enabled = statutDecisionConge != "refuse" || commentaireDecisionConge.isNotBlank()
+                ) { Text(if (statutDecisionConge == "approuve") "Confirmer" else "Confirmer le refus") }
+            },
+            dismissButton = {
+                TextButton(onClick = { congeEnDecision = null; commentaireDecisionConge = "" }) { Text("Annuler") }
+            }
+        )
     }
 
     if (documentASupprimer != null) {
