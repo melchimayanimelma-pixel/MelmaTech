@@ -1120,17 +1120,17 @@ fun EcranPersonnel(onRetour: () -> Unit) {
                                 StatCompactRH("Absents", presences.count { it.date == java.time.LocalDate.now().toString() && it.statut == "absent" }.toString())
                             }
                             Divider(color = fondRH)
-                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                                Column(Modifier.weight(1f)) {
-                                    Text("Congés à traiter", color = Color.Gray, style = MaterialTheme.typography.bodySmall)
+                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                    Text("Congés à traiter", color = Color.Gray, style = MaterialTheme.typography.labelSmall, minLines = 2)
                                     Text(conges.count { it.statut == "en_attente" }.toString(), color = violetRH, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
                                 }
-                                Column(Modifier.weight(1f)) {
-                                    Text("Paies en brouillon", color = Color.Gray, style = MaterialTheme.typography.bodySmall)
+                                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                    Text("Paies en brouillon", color = Color.Gray, style = MaterialTheme.typography.labelSmall, minLines = 2)
                                     Text(bulletins.count { it.statut == "brouillon" }.toString(), color = violetRH, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
                                 }
-                                Column(Modifier.weight(1f)) {
-                                    Text("Effectif actif", color = Color.Gray, style = MaterialTheme.typography.bodySmall)
+                                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                    Text("Effectif actif", color = Color.Gray, style = MaterialTheme.typography.labelSmall, minLines = 2)
                                     Text(employes.count { it.statut == "actif" }.toString(), color = violetRH, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
                                 }
                             }
@@ -1594,23 +1594,25 @@ fun EcranPersonnel(onRetour: () -> Unit) {
                         }
                         Row(
                             modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             OutlinedButton(
                                 onClick = { afficherPoste = true },
-                                modifier = Modifier.weight(1f)
+                                modifier = Modifier.weight(1f),
+                                contentPadding = PaddingValues(horizontal = 6.dp, vertical = 10.dp)
                             ) {
-                                Icon(Icons.Filled.Work, contentDescription = null)
-                                Spacer(Modifier.width(6.dp))
-                                Text("Nouveau poste", maxLines = 1)
+                                Icon(Icons.Filled.Work, contentDescription = null, modifier = Modifier.size(18.dp))
+                                Spacer(Modifier.width(4.dp))
+                                Text("Nouveau poste", maxLines = 1, fontSize = 12.sp)
                             }
                             Button(
                                 onClick = { afficherDepartement = true },
-                                modifier = Modifier.weight(1f)
+                                modifier = Modifier.weight(1f),
+                                contentPadding = PaddingValues(horizontal = 6.dp, vertical = 10.dp)
                             ) {
-                                Icon(Icons.Filled.AccountTree, contentDescription = null)
-                                Spacer(Modifier.width(6.dp))
-                                Text("Département", maxLines = 1)
+                                Icon(Icons.Filled.AccountTree, contentDescription = null, modifier = Modifier.size(18.dp))
+                                Spacer(Modifier.width(4.dp))
+                                Text("Départements", maxLines = 1, fontSize = 12.sp)
                             }
                         }
                     }
@@ -1685,7 +1687,11 @@ fun EcranPersonnel(onRetour: () -> Unit) {
                         }
                     }
                     Text("Pointer le personnel", fontWeight = FontWeight.SemiBold)
-                    LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    LazyColumn(
+                        modifier = Modifier.weight(1f),
+                        contentPadding = PaddingValues(bottom = 32.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
                         items(employes, key = { it.id }) { e ->
                             val pointageExistant = pointagesDuJour.firstOrNull { it.employeId == e.id }
                             Card(colors = CardDefaults.cardColors(containerColor = Color.White), shape = RoundedCornerShape(14.dp)) {
@@ -1757,7 +1763,7 @@ fun EcranPersonnel(onRetour: () -> Unit) {
                         item {
                             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                                 Text("Historique des pointages", fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 8.dp))
-                                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                     FilterChip(
                                         selected = filtreHistoriquePresence == "Aujourd'hui",
                                         onClick = { filtreHistoriquePresence = "Aujourd'hui" },
@@ -1987,6 +1993,57 @@ fun EcranPersonnel(onRetour: () -> Unit) {
                                             }
                                         }
                                     }
+                                }
+                            }
+                        }
+                        item {
+                            val aujourdHuiAnalyse = java.time.LocalDate.now()
+                            val repartitionSexe = employes
+                                .map { it.sexe.trim().lowercase() }
+                                .filter { it.isNotBlank() && it != "null" }
+                                .groupingBy { sexe ->
+                                    when (sexe) {
+                                        "m", "masculin", "homme" -> "Hommes"
+                                        "f", "feminin", "féminin", "femme" -> "Femmes"
+                                        else -> "Non précisé / autre"
+                                    }
+                                }.eachCount()
+                            val repartitionAge = employes.mapNotNull { employe ->
+                                val naissance = runCatching { java.time.LocalDate.parse(employe.dateNaissance.take(10)) }.getOrNull()
+                                    ?: return@mapNotNull null
+                                if (naissance.isAfter(aujourdHuiAnalyse)) return@mapNotNull null
+                                val age = java.time.Period.between(naissance, aujourdHuiAnalyse).years
+                                when {
+                                    age < 25 -> "Moins de 25 ans"
+                                    age < 35 -> "25 à 34 ans"
+                                    age < 45 -> "35 à 44 ans"
+                                    age < 55 -> "45 à 54 ans"
+                                    else -> "55 ans et plus"
+                                }
+                            }.groupingBy { it }.eachCount()
+                            Card(colors = CardDefaults.cardColors(containerColor = Color.White)) {
+                                Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                                    Text("Profil démographique du personnel", fontWeight = FontWeight.Bold)
+                                    Text("Répartition par sexe", color = violetRH, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold)
+                                    if (repartitionSexe.isEmpty()) {
+                                        Text("Données de sexe non renseignées.", color = Color.Gray, style = MaterialTheme.typography.bodySmall)
+                                    } else {
+                                        repartitionSexe.forEach { (categorie, total) ->
+                                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                                Text(categorie)
+                                                Text(total.toString(), color = violetRH, fontWeight = FontWeight.SemiBold)
+                                            }
+                                        }
+                                    }
+                                    Divider(color = fondRH)
+                                    Text("Tranches d'âge", color = violetRH, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold)
+                                    listOf("Moins de 25 ans", "25 à 34 ans", "35 à 44 ans", "45 à 54 ans", "55 ans et plus").forEach { tranche ->
+                                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                            Text(tranche)
+                                            Text((repartitionAge[tranche] ?: 0).toString(), color = violetRH, fontWeight = FontWeight.SemiBold)
+                                        }
+                                    }
+                                    Text("Analyse calculée uniquement à partir des dates de naissance et informations renseignées.", color = Color.Gray, style = MaterialTheme.typography.bodySmall)
                                 }
                             }
                         }
