@@ -225,6 +225,7 @@ fun EcranPersonnel(onRetour: () -> Unit) {
     var bulletins by remember { mutableStateOf(emptyList<PaieRH>()) }
     var filtrePaie by remember { mutableStateOf("Tous") }
     var filtreStatutEmploye by remember { mutableStateOf("Tous") }
+    var filtreContratEmploye by remember { mutableStateOf("Tous") }
     var filtreHistoriquePresence by remember { mutableStateOf("Aujourd'hui") }
     var chargementModule by remember { mutableStateOf(false) }
     var afficherDemandeConge by remember { mutableStateOf(false) }
@@ -1104,7 +1105,7 @@ fun EcranPersonnel(onRetour: () -> Unit) {
                 }
                 "Employés" -> {
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                        OutlinedTextField(recherche, { recherche = it }, modifier = Modifier.weight(1f), singleLine = true, label = { Text("Rechercher par nom, matricule ou poste") })
+                        OutlinedTextField(recherche, { recherche = it }, modifier = Modifier.weight(1f), singleLine = true, label = { Text("Rechercher : nom, matricule, poste, téléphone ou e-mail") })
                         Button(onClick = { afficherAjout = true }) { Text("Ajouter") }
                     }
                     val departementsDisponibles = (departements + employes.map { it.departement })
@@ -1133,12 +1134,32 @@ fun EcranPersonnel(onRetour: () -> Unit) {
                             )
                         }
                     }
+                    val contratsDisponibles = employes.map { it.typeContrat }.filter { it.isNotBlank() && it != "null" }.distinct().sorted()
+                    Row(
+                        Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        FilterChip(
+                            selected = filtreContratEmploye == "Tous",
+                            onClick = { filtreContratEmploye = "Tous" },
+                            label = { Text("Tous contrats") }
+                        )
+                        contratsDisponibles.forEach { contrat ->
+                            val nombre = employes.count { it.typeContrat.equals(contrat, true) }
+                            FilterChip(
+                                selected = filtreContratEmploye.equals(contrat, true),
+                                onClick = { filtreContratEmploye = if (filtreContratEmploye.equals(contrat, true)) "Tous" else contrat },
+                                label = { Text("$contrat ($nombre)") }
+                            )
+                        }
+                    }
                     val filtres = employes.filter {
                         (departementSelectionne == null || it.departement.equals(departementSelectionne, true)) &&
                         (filtreStatutEmploye == "Tous" ||
                             (filtreStatutEmploye == "Actifs" && it.statut.equals("actif", true)) ||
                             (filtreStatutEmploye == "Inactifs" && !it.statut.equals("actif", true))) &&
-                        (it.nom.contains(recherche, true) || it.matricule.contains(recherche, true) || it.poste.contains(recherche, true) || it.departement.contains(recherche, true))
+                        (filtreContratEmploye == "Tous" || it.typeContrat.equals(filtreContratEmploye, true)) &&
+                        (it.nom.contains(recherche, true) || it.matricule.contains(recherche, true) || it.poste.contains(recherche, true) || it.departement.contains(recherche, true) || it.telephone.contains(recherche, true) || it.email.contains(recherche, true))
                     }
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                         Text(if (departementSelectionne == null) "Tous les employés" else departementSelectionne!!, fontWeight = FontWeight.SemiBold)
