@@ -223,6 +223,8 @@ fun EcranPersonnel(onRetour: () -> Unit) {
     var filtreConges by remember { mutableStateOf("Tous") }
     var bulletins by remember { mutableStateOf(emptyList<PaieRH>()) }
     var filtrePaie by remember { mutableStateOf("Tous") }
+    var filtreStatutEmploye by remember { mutableStateOf("Tous") }
+    var filtreHistoriquePresence by remember { mutableStateOf("Aujourd'hui") }
     var chargementModule by remember { mutableStateOf(false) }
     var afficherDemandeConge by remember { mutableStateOf(false) }
     var employeConge by remember { mutableStateOf("") }
@@ -1113,7 +1115,30 @@ fun EcranPersonnel(onRetour: () -> Unit) {
                             FilterChip(selected = departementSelectionne.equals(dep, true), onClick = { departementSelectionne = if (departementSelectionne.equals(dep, true)) null else dep }, label = { Text("$dep ($nombre)") })
                         }
                     }
-                    val filtres = employes.filter { (departementSelectionne == null || it.departement.equals(departementSelectionne, true)) && (it.nom.contains(recherche, true) || it.matricule.contains(recherche, true) || it.poste.contains(recherche, true) || it.departement.contains(recherche, true)) }
+                    Row(
+                        Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        listOf("Tous", "Actifs", "Inactifs").forEach { filtre ->
+                            val nombre = when (filtre) {
+                                "Actifs" -> employes.count { it.statut.equals("actif", true) }
+                                "Inactifs" -> employes.count { !it.statut.equals("actif", true) }
+                                else -> employes.size
+                            }
+                            FilterChip(
+                                selected = filtreStatutEmploye == filtre,
+                                onClick = { filtreStatutEmploye = filtre },
+                                label = { Text("$filtre ($nombre)") }
+                            )
+                        }
+                    }
+                    val filtres = employes.filter {
+                        (departementSelectionne == null || it.departement.equals(departementSelectionne, true)) &&
+                        (filtreStatutEmploye == "Tous" ||
+                            (filtreStatutEmploye == "Actifs" && it.statut.equals("actif", true)) ||
+                            (filtreStatutEmploye == "Inactifs" && !it.statut.equals("actif", true))) &&
+                        (it.nom.contains(recherche, true) || it.matricule.contains(recherche, true) || it.poste.contains(recherche, true) || it.departement.contains(recherche, true))
+                    }
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                         Text(if (departementSelectionne == null) "Tous les employés" else departementSelectionne!!, fontWeight = FontWeight.SemiBold)
                         Text("${filtres.size} résultat(s)", color = Color.Gray, style = MaterialTheme.typography.bodySmall)
@@ -1572,8 +1597,27 @@ fun EcranPersonnel(onRetour: () -> Unit) {
                                 }
                             }
                         }
-                        item { Text("Historique des pointages", fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 8.dp)) }
-                        items(presences, key = { it.id }) { p ->
+                        item {
+                            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Text("Historique des pointages", fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 8.dp))
+                                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    FilterChip(
+                                        selected = filtreHistoriquePresence == "Aujourd'hui",
+                                        onClick = { filtreHistoriquePresence = "Aujourd'hui" },
+                                        label = { Text("Aujourd'hui") }
+                                    )
+                                    FilterChip(
+                                        selected = filtreHistoriquePresence == "Tous",
+                                        onClick = { filtreHistoriquePresence = "Tous" },
+                                        label = { Text("Tout l'historique") }
+                                    )
+                                }
+                            }
+                        }
+                        val historiqueFiltre = presences.filter {
+                            filtreHistoriquePresence == "Tous" || it.date == java.time.LocalDate.now().toString()
+                        }
+                        items(historiqueFiltre, key = { it.id }) { p ->
                             Card(colors = CardDefaults.cardColors(containerColor = Color.White)) {
                                 Row(Modifier.fillMaxWidth().padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
                                     Icon(Icons.Filled.EventAvailable, null, tint = violetRH)
@@ -1581,6 +1625,9 @@ fun EcranPersonnel(onRetour: () -> Unit) {
                                     Text(p.statut.replaceFirstChar { it.uppercase() }, color = if (p.statut == "present") Color(0xFF16834B) else Color(0xFFB45309), style = MaterialTheme.typography.labelMedium)
                                 }
                             }
+                        }
+                        if (historiqueFiltre.isEmpty()) item {
+                            Text("Aucun pointage pour cette période.", color = Color.Gray)
                         }
                     }
                 }
