@@ -1003,7 +1003,8 @@ fun EcranPersonnel(onRetour: () -> Unit) {
     fun actualiserOnglet() {
         message = ""
         when (onglet) {
-            "Accueil RH", "Employés", "Dossiers", "Organisation" -> chargerEmployes()
+            "Accueil RH" -> { chargerEmployes(); chargerPresences(); chargerConges(); chargerPaie() }
+            "Employés", "Dossiers", "Organisation" -> chargerEmployes()
             "Présences" -> chargerPresences()
             "Congés" -> chargerConges()
             "Paie" -> chargerPaie()
@@ -1015,6 +1016,7 @@ fun EcranPersonnel(onRetour: () -> Unit) {
     LaunchedEffect(Unit) { chargerEmployes() }
     LaunchedEffect(onglet, profil) {
         if (profil != null) when (onglet) {
+            "Accueil RH" -> { chargerEmployes(); chargerPresences(); chargerConges(); chargerPaie() }
             "Employés", "Organisation" -> chargerEmployes()
             "Dossiers" -> dossierEmployeOuvert?.let { chargerDocuments(it) }
             "Présences" -> chargerPresences()
@@ -1107,7 +1109,38 @@ fun EcranPersonnel(onRetour: () -> Unit) {
             }
             when (onglet) {
                 "Accueil RH" -> {
-                    Text("Que souhaitez-vous gérer ?", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                    Text("Centre de pilotage RH", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                    Card(colors = CardDefaults.cardColors(containerColor = Color.White), shape = RoundedCornerShape(18.dp)) {
+                        Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                            Text("Activité du jour", fontWeight = FontWeight.Bold)
+                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                StatCompactRH("Présents", presences.count { it.date == java.time.LocalDate.now().toString() && it.statut == "present" }.toString())
+                                StatCompactRH("Retards", presences.count { it.date == java.time.LocalDate.now().toString() && it.statut == "retard" }.toString())
+                                StatCompactRH("Absents", presences.count { it.date == java.time.LocalDate.now().toString() && it.statut == "absent" }.toString())
+                            }
+                            Divider(color = fondRH)
+                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                Column(Modifier.weight(1f)) {
+                                    Text("Congés à traiter", color = Color.Gray, style = MaterialTheme.typography.bodySmall)
+                                    Text(conges.count { it.statut == "en_attente" }.toString(), color = violetRH, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+                                }
+                                Column(Modifier.weight(1f)) {
+                                    Text("Paies en brouillon", color = Color.Gray, style = MaterialTheme.typography.bodySmall)
+                                    Text(bulletins.count { it.statut == "brouillon" }.toString(), color = violetRH, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+                                }
+                                Column(Modifier.weight(1f)) {
+                                    Text("Effectif actif", color = Color.Gray, style = MaterialTheme.typography.bodySmall)
+                                    Text(employes.count { it.statut == "actif" }.toString(), color = violetRH, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+                                }
+                            }
+                            if (conges.any { it.statut == "en_attente" } || bulletins.any { it.statut == "brouillon" }) {
+                                Text("Des validations RH nécessitent votre attention.", color = Color(0xFF9A6700), style = MaterialTheme.typography.bodySmall)
+                            } else {
+                                Text("Aucune validation en attente parmi les données chargées.", color = Color(0xFF16834B), style = MaterialTheme.typography.bodySmall)
+                            }
+                        }
+                    }
+                    Text("Modules de gestion", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                     LazyColumn(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                         item {
                             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
