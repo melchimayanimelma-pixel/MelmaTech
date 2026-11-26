@@ -320,6 +320,33 @@ fun EcranPersonnel(onRetour: () -> Unit) {
         })
     }
 
+    fun enregistrerDepart(presence: PresenceRH) {
+        val p = profil ?: return
+        if (!estRH) { message = "Action réservée au responsable RH autorisé."; return }
+        if (presence.depart != "—") { message = "L'heure de départ est déjà enregistrée."; return }
+        val token = AuthService.obtenirAccessToken(context) ?: return
+        val now = java.text.SimpleDateFormat("HH:mm:ss", java.util.Locale.getDefault()).format(java.util.Date())
+        val payload = JSONObject().put("heure_depart", now)
+        val req = authHeaders(
+            Request.Builder().url("${SupabaseConfig.url}/rest/v1/presences_employes?id=eq.${presence.id}&entreprise_id=eq.${p.entrepriseId}"),
+            token
+        ).addHeader("Content-Type", "application/json")
+            .addHeader("Prefer", "return=minimal")
+            .patch(payload.toString().toRequestBody("application/json; charset=utf-8".toMediaType()))
+            .build()
+        client.newCall(req).enqueue(object : Callback {
+            override fun onFailure(call: Call, e: IOException) {
+                mainHandler.post { message = "Départ non enregistré : ${e.message}" }
+            }
+            override fun onResponse(call: Call, response: Response) { response.use {
+                mainHandler.post {
+                    if (it.isSuccessful) { message = "Heure de départ enregistrée."; chargerPresences() }
+                    else message = "Enregistrement du départ refusé (${it.code})."
+                }
+            } }
+        })
+    }
+
     fun chargerConges() {
         val p = profil ?: return
         val token = AuthService.obtenirAccessToken(context) ?: return
@@ -1603,25 +1630,42 @@ fun EcranPersonnel(onRetour: () -> Unit) {
                                             Text("Non pointé", color = Color.Gray, style = MaterialTheme.typography.labelSmall)
                                         }
                                     }
-                                    Row(
-                                        Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.spacedBy(6.dp)
-                                    ) {
-                                        Button(
-                                            onClick = { enregistrerPresence(e, "present") },
-                                            modifier = Modifier.weight(1f),
-                                            contentPadding = PaddingValues(horizontal = 4.dp, vertical = 6.dp)
-                                        ) { Text("Présent", maxLines = 1) }
+                                    if (pointageExistant == null) {
+                                        Row(
+                                            Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                        ) {
+                                            Button(
+                                                onClick = { enregistrerPresence(e, "present") },
+                                                modifier = Modifier.weight(1f),
+                                                contentPadding = PaddingValues(horizontal = 4.dp, vertical = 6.dp)
+                                            ) { Text("Présent", maxLines = 1) }
+                                            OutlinedButton(
+                                                onClick = { enregistrerPresence(e, "retard") },
+                                                modifier = Modifier.weight(1f),
+                                                contentPadding = PaddingValues(horizontal = 4.dp, vertical = 6.dp)
+                                            ) { Text("Retard", maxLines = 1) }
+                                            OutlinedButton(
+                                                onClick = { enregistrerPresence(e, "absent") },
+                                                modifier = Modifier.weight(1f),
+                                                contentPadding = PaddingValues(horizontal = 4.dp, vertical = 6.dp)
+                                            ) { Text("Absent", maxLines = 1) }
+                                        }
+                                    } else if (pointageExistant.arrivee != "—" && pointageExistant.depart == "—") {
                                         OutlinedButton(
-                                            onClick = { enregistrerPresence(e, "retard") },
-                                            modifier = Modifier.weight(1f),
-                                            contentPadding = PaddingValues(horizontal = 4.dp, vertical = 6.dp)
-                                        ) { Text("Retard", maxLines = 1) }
-                                        OutlinedButton(
-                                            onClick = { enregistrerPresence(e, "absent") },
-                                            modifier = Modifier.weight(1f),
-                                            contentPadding = PaddingValues(horizontal = 4.dp, vertical = 6.dp)
-                                        ) { Text("Absent", maxLines = 1) }
+                                            onClick = { enregistrerDepart(pointageExistant) },
+                                            modifier = Modifier.fillMaxWidth()
+                                        ) {
+                                            Icon(Icons.Filled.Logout, null)
+                                            Spacer(Modifier.width(6.dp))
+                                            Text("Enregistrer l'heure de départ")
+                                        }
+                                    } else {
+                                        Text(
+                                            if (pointageExistant.statut == "absent") "Absence déjà enregistrée" else "Journée pointée et clôturée",
+                                            color = Color.Gray,
+                                            style = MaterialTheme.typography.bodySmall
+                                        )
                                     }
                                 }
                             }
