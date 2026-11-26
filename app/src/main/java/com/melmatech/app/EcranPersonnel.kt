@@ -191,6 +191,10 @@ fun EcranPersonnel(onRetour: () -> Unit) {
     var retenuesPaie by remember { mutableStateOf("0") }
     var debutPaie by remember { mutableStateOf("") }
     var finPaie by remember { mutableStateOf("") }
+    val scrollAjoutEmploye = rememberScrollState()
+    LaunchedEffect(afficherAjout) {
+        if (afficherAjout) scrollAjoutEmploye.scrollTo(0)
+    }
 
     val estRH = profil?.role?.trim()?.lowercase() == "responsable_rh"
 
@@ -1394,7 +1398,7 @@ fun EcranPersonnel(onRetour: () -> Unit) {
             onDismissRequest = { afficherDemandeConge = false },
             title = { Text("Nouvelle demande de congé") },
             text = {
-                Column(Modifier.heightIn(max = 480.dp).verticalScroll(androidx.compose.foundation.rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Column(Modifier.heightIn(max = 480.dp).verticalScroll(scrollAjoutEmploye), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     var menuEmployeConge by remember { mutableStateOf(false) }
                     Box {
                         OutlinedButton(onClick = { menuEmployeConge = true }, modifier = Modifier.fillMaxWidth()) {
