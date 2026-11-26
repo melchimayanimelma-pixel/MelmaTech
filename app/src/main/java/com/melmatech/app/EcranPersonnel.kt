@@ -1028,27 +1028,39 @@ fun EcranPersonnel(onRetour: () -> Unit) {
     }
 
     Column(
-        modifier = Modifier.fillMaxSize().background(fondRH).padding(horizontal = 16.dp, vertical = 12.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+        modifier = Modifier.fillMaxSize().background(fondRH).padding(horizontal = 18.dp, vertical = 14.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-            Column(Modifier.weight(1f)) {
-                Text("MELMATECH RH", color = violetRH, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
-                Text("Espace RH", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
-                Text(profil?.nomComplet.orEmpty(), color = Color.Gray, style = MaterialTheme.typography.bodySmall)
-            }
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                IconButton(onClick = { actualiserOnglet() }, enabled = !chargement && !chargementModule && !chargementDocuments) {
-                    Icon(Icons.Filled.Refresh, contentDescription = "Actualiser", tint = violetRH)
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(containerColor = violetRH),
+            shape = RoundedCornerShape(22.dp),
+            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        ) {
+            Row(
+                Modifier.fillMaxWidth().padding(start = 18.dp, end = 10.dp, top = 16.dp, bottom = 16.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                    Text("MELMATECH  /  RESSOURCES HUMAINES", color = Color.White.copy(alpha = 0.82f), style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
+                    Text("Espace RH", color = Color.White, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+                    Text(profil?.nomComplet.orEmpty(), color = Color.White.copy(alpha = 0.88f), style = MaterialTheme.typography.bodySmall, maxLines = 1)
                 }
-                TextButton(onClick = onRetour) { Text("Quitter") }
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    IconButton(onClick = { actualiserOnglet() }, enabled = !chargement && !chargementModule && !chargementDocuments) {
+                        Icon(Icons.Filled.Refresh, contentDescription = "Actualiser", tint = Color.White)
+                    }
+                    TextButton(onClick = onRetour) { Text("Quitter", color = Color.White, fontWeight = FontWeight.SemiBold) }
+                }
             }
         }
 
         Card(
             modifier = Modifier.fillMaxWidth(),
             colors = CardDefaults.cardColors(containerColor = Color.White),
-            shape = RoundedCornerShape(16.dp)
+            shape = RoundedCornerShape(20.dp),
+            elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 12.dp),
@@ -1068,15 +1080,21 @@ fun EcranPersonnel(onRetour: () -> Unit) {
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Column(Modifier.weight(1f)) {
-                Text("ESPACE DE TRAVAIL", color = Color.Gray, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.SemiBold)
-                Text(onglet, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text("VOTRE ESPACE DE TRAVAIL", color = violetRH, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
+                Text(onglet, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
             }
             Box {
-                OutlinedButton(onClick = { menuNavigationOuvert = true }) {
-                    Text("Navigation RH")
+                OutlinedButton(
+                    onClick = { menuNavigationOuvert = true },
+                    shape = RoundedCornerShape(14.dp),
+                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 9.dp)
+                ) {
+                    Icon(Icons.Filled.Menu, contentDescription = null, modifier = Modifier.size(18.dp))
                     Spacer(Modifier.width(6.dp))
-                    Icon(Icons.Filled.ArrowForward, contentDescription = null)
+                    Text("Modules", fontWeight = FontWeight.SemiBold)
+                    Spacer(Modifier.width(4.dp))
+                    Icon(Icons.Filled.ArrowForward, contentDescription = null, modifier = Modifier.size(16.dp))
                 }
                 DropdownMenu(expanded = menuNavigationOuvert, onDismissRequest = { menuNavigationOuvert = false }) {
                     sectionsRH.forEach { destination ->
