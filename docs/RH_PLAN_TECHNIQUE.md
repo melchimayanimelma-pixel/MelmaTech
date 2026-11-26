@@ -222,3 +222,26 @@ Tester le cycle de création d'employé (trigger matricule), les accès RH et no
 - Aucun schéma ni policy Supabase n'a été modifié pour cet incrément.
 - Les nouvelles opérations réutilisent les tables et colonnes déjà présentes : `presences_employes.heure_depart` et `demandes_conges.commentaire_decision`.
 - La compilation Android et les tests sur appareil doivent être confirmés avant fusion.
+
+
+## Journal d'exécution — incrément RH opérationnel (26/11/2026)
+
+### Centre de pilotage RH
+- La page d'accueil RH présente maintenant les indicateurs du jour (présents, retards, absents), les congés en attente, les bulletins en brouillon et l'effectif actif.
+- Les modules présences, congés et paie sont chargés à l'ouverture de l'accueil afin que les indicateurs utilisent les données Supabase existantes.
+
+### Présences
+- Recherche de l'historique par nom.
+- Filtres Aujourd'hui, 7 jours, 30 jours et Tout.
+- Enregistrement de l'heure de départ sur la ligne de pointage existante, sans créer un second pointage.
+- Après un pointage, les actions de création du même employé sont remplacées par l'action de départ lorsque celle-ci est applicable.
+
+### Congés
+- Le champ existant `commentaire_decision` est chargé et affiché.
+- Une boîte de dialogue confirme l'approbation ou le refus.
+- Le motif de refus est obligatoire; le commentaire d'approbation est facultatif.
+- Les décisions sont limitées au responsable RH dans l'interface et restent protégées par RLS.
+
+### Vérification
+- Les changements réutilisent le schéma existant; aucune migration ni policy Supabase nouvelle n'a été exécutée.
+- GitHub Actions exécute la compilation release signée sur la branche d'intégration. Résultat à confirmer avant livraison.
