@@ -858,7 +858,7 @@ fun EcranPersonnel(onRetour: () -> Unit) {
                 }
                 "Employés" -> {
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                        OutlinedTextField(recherche, { recherche = it }, modifier = Modifier.weight(1f), singleLine = true, label = { Text("Rechercher par nom, matricule ou poste") })
+                        OutlinedTextField(recherche, { recherche = it }, modifier = Modifier.weight(1f), singleLine = true, label = { Text("Rechercher : nom, matricule, poste, téléphone ou e-mail") })
                         Button(onClick = { afficherAjout = true }) { Text("Ajouter") }
                     }
                     val departementsDisponibles = (departements + employes.map { it.departement })
@@ -891,7 +891,7 @@ fun EcranPersonnel(onRetour: () -> Unit) {
                         (filtreStatut == "Tous" ||
                             (filtreStatut == "Actifs" && it.statut.equals("actif", true)) ||
                             (filtreStatut == "Inactifs" && !it.statut.equals("actif", true))) &&
-                        (it.nom.contains(recherche, true) || it.matricule.contains(recherche, true) || it.poste.contains(recherche, true) || it.departement.contains(recherche, true))
+                        (it.nom.contains(recherche, true) || it.matricule.contains(recherche, true) || it.poste.contains(recherche, true) || it.departement.contains(recherche, true) || it.telephone.contains(recherche, true) || it.email.contains(recherche, true))
                     }
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                         Text(if (departementSelectionne == null) "Tous les employés" else departementSelectionne!!, fontWeight = FontWeight.SemiBold)
@@ -1530,7 +1530,7 @@ private fun CarteMenuRH(titre: String, description: String, modifier: Modifier =
         "Paie" -> Icons.Filled.Payments
         else -> Icons.Filled.Assessment
     }
-    Card(modifier = modifier.heightIn(min = 132.dp).clickable(onClick = onClick), colors = CardDefaults.cardColors(containerColor = Color.White), shape = RoundedCornerShape(18.dp), elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)) {
+    Card(modifier = modifier.heightIn(min = 146.dp).clickable(onClick = onClick), colors = CardDefaults.cardColors(containerColor = Color.White), shape = RoundedCornerShape(20.dp), elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)) {
         Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Box(Modifier.size(42.dp).background(Color(0xFFEDE7FF), RoundedCornerShape(13.dp)), contentAlignment = Alignment.Center) {
                 Icon(icone, contentDescription = titre, tint = violetRH, modifier = Modifier.size(23.dp))
