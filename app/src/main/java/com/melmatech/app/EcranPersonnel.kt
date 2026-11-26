@@ -1961,6 +1961,64 @@ fun EcranPersonnel(onRetour: () -> Unit) {
                                 Text("Total des bulletins actuellement chargés, sans extrapolation.", color = Color.Gray, style = MaterialTheme.typography.bodySmall)
                             }
                         } }
+                        item {
+                            val repartitionDepartements = employes
+                                .filter { it.departement.isNotBlank() && it.departement != "null" }
+                                .groupingBy { it.departement.trim() }.eachCount()
+                                .toList().sortedByDescending { it.second }
+                            Card(colors = CardDefaults.cardColors(containerColor = Color.White)) {
+                                Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                                    Text("Effectifs par département", fontWeight = FontWeight.Bold)
+                                    if (repartitionDepartements.isEmpty()) {
+                                        Text("Aucun département renseigné pour les employés chargés.", color = Color.Gray, style = MaterialTheme.typography.bodySmall)
+                                    } else {
+                                        repartitionDepartements.forEach { (nomDepartement, total) ->
+                                            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                                    Text(nomDepartement, style = MaterialTheme.typography.bodyMedium)
+                                                    Text("$total / ${employes.size}", color = violetRH, fontWeight = FontWeight.SemiBold)
+                                                }
+                                                LinearProgressIndicator(
+                                                    progress = { if (employes.isEmpty()) 0f else total.toFloat() / employes.size.toFloat() },
+                                                    modifier = Modifier.fillMaxWidth().height(6.dp),
+                                                    color = violetRH,
+                                                    trackColor = fondRH
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        item {
+                            val aujourdHuiRapport = java.time.LocalDate.now()
+                            val anciennete = employes.mapNotNull { employe ->
+                                val embauche = runCatching { java.time.LocalDate.parse(employe.dateEmbauche.take(10)) }.getOrNull()
+                                    ?: return@mapNotNull null
+                                if (embauche.isAfter(aujourdHuiRapport)) return@mapNotNull null
+                                val annees = java.time.Period.between(embauche, aujourdHuiRapport).years
+                                when {
+                                    annees < 1 -> "Moins d'un an"
+                                    annees < 3 -> "1 à 2 ans"
+                                    annees < 5 -> "3 à 4 ans"
+                                    else -> "5 ans et plus"
+                                }
+                            }.groupingBy { it }.eachCount()
+                            val ordreAnciennete = listOf("Moins d'un an", "1 à 2 ans", "3 à 4 ans", "5 ans et plus")
+                            Card(colors = CardDefaults.cardColors(containerColor = Color.White)) {
+                                Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    Text("Ancienneté du personnel", fontWeight = FontWeight.Bold)
+                                    ordreAnciennete.forEach { tranche ->
+                                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                            Text(tranche, style = MaterialTheme.typography.bodyMedium)
+                                            Text((anciennete[tranche] ?: 0).toString(), color = violetRH, fontWeight = FontWeight.SemiBold)
+                                        }
+                                    }
+                                    Text("Calcul basé sur les dates d'embauche renseignées et les employés chargés.", color = Color.Gray, style = MaterialTheme.typography.bodySmall)
+                                }
+                            }
+                        }
+
                     }
                 }
             }
