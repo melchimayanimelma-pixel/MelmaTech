@@ -59,6 +59,7 @@ import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Cancel
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Cake
 import androidx.compose.material.icons.filled.Work
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.runtime.*
@@ -1137,6 +1138,56 @@ fun EcranPersonnel(onRetour: () -> Unit) {
                                 Text("Des validations RH nécessitent votre attention.", color = Color(0xFF9A6700), style = MaterialTheme.typography.bodySmall)
                             } else {
                                 Text("Aucune validation en attente parmi les données chargées.", color = Color(0xFF16834B), style = MaterialTheme.typography.bodySmall)
+                            }
+                        }
+                    }
+                    val aujourdhuiRH = java.time.LocalDate.now()
+                    val anniversairesProches = employes.mapNotNull { employe ->
+                        val naissance = runCatching { java.time.LocalDate.parse(employe.dateNaissance.take(10)) }.getOrNull()
+                            ?: return@mapNotNull null
+                        val anniversaireCetteAnnee = naissance.withYear(aujourdhuiRH.year)
+                        val prochain = if (anniversaireCetteAnnee.isBefore(aujourdhuiRH)) anniversaireCetteAnnee.plusYears(1) else anniversaireCetteAnnee
+                        val jours = java.time.temporal.ChronoUnit.DAYS.between(aujourdhuiRH, prochain)
+                        if (jours in 0..30) employe to jours else null
+                    }.sortedBy { it.second }
+                    Card(colors = CardDefaults.cardColors(containerColor = Color.White), shape = RoundedCornerShape(16.dp)) {
+                        Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Filled.Cake, contentDescription = null, tint = violetRH)
+                                Spacer(Modifier.width(8.dp))
+                                Text("Anniversaires à venir", fontWeight = FontWeight.Bold)
+                                Spacer(Modifier.weight(1f))
+                                Text("${anniversairesProches.size}", color = violetRH, fontWeight = FontWeight.Bold)
+                            }
+                            if (anniversairesProches.isEmpty()) {
+                                Text("Aucun anniversaire renseigné dans les 30 prochains jours.", color = Color.Gray, style = MaterialTheme.typography.bodySmall)
+                            } else {
+                                anniversairesProches.take(5).forEach { (employe, jours) ->
+                                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                                        Column(Modifier.weight(1f)) {
+                                            Text(employe.nom, fontWeight = FontWeight.Medium)
+                                            Text(employe.departement.ifBlank { employe.poste }, color = Color.Gray, style = MaterialTheme.typography.bodySmall)
+                                        }
+                                        Text(if (jours == 0L) "Aujourd'hui" else "Dans ${jours} j", color = violetRH, style = MaterialTheme.typography.labelMedium)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    val repartitionContrats = employes.filter { it.typeContrat.isNotBlank() && it.typeContrat != "null" }
+                        .groupingBy { it.typeContrat }.eachCount().toList().sortedByDescending { it.second }
+                    Card(colors = CardDefaults.cardColors(containerColor = Color.White), shape = RoundedCornerShape(16.dp)) {
+                        Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Text("Répartition des contrats", fontWeight = FontWeight.Bold)
+                            if (repartitionContrats.isEmpty()) {
+                                Text("Aucun type de contrat renseigné.", color = Color.Gray, style = MaterialTheme.typography.bodySmall)
+                            } else {
+                                repartitionContrats.take(4).forEach { (type, nombre) ->
+                                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                        Text(type)
+                                        Text(nombre.toString(), color = violetRH, fontWeight = FontWeight.SemiBold)
+                                    }
+                                }
                             }
                         }
                     }
