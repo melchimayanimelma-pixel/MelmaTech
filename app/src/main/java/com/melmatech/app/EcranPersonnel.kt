@@ -1964,7 +1964,12 @@ fun EcranPersonnel(onRetour: () -> Unit) {
                             Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                                 Text("Masse salariale enregistrée", fontWeight = FontWeight.Bold)
                                 Text("${"%.2f".format(bulletins.sumOf { it.net })}", color = violetRH, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
-                                Text("Total des bulletins actuellement chargés, sans extrapolation.", color = Color.Gray, style = MaterialTheme.typography.bodySmall)
+                                Text(
+                                    if (bulletins.isEmpty()) "Aucun bulletin de paie n'est actuellement chargé. Le montant affiché est nul faute de données."
+                                    else "Total des ${bulletins.size} bulletin(s) actuellement chargés, sans extrapolation.",
+                                    color = Color.Gray,
+                                    style = MaterialTheme.typography.bodySmall
+                                )
                             }
                         } }
                         item {
@@ -2037,10 +2042,14 @@ fun EcranPersonnel(onRetour: () -> Unit) {
                                     }
                                     Divider(color = fondRH)
                                     Text("Tranches d'âge", color = violetRH, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold)
-                                    listOf("Moins de 25 ans", "25 à 34 ans", "35 à 44 ans", "45 à 54 ans", "55 ans et plus").forEach { tranche ->
-                                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                                            Text(tranche)
-                                            Text((repartitionAge[tranche] ?: 0).toString(), color = violetRH, fontWeight = FontWeight.SemiBold)
+                                    if (repartitionAge.isEmpty()) {
+                                        Text("Aucune date de naissance exploitable : renseigne les dates dans les fiches employés pour obtenir cette analyse.", color = Color.Gray, style = MaterialTheme.typography.bodySmall)
+                                    } else {
+                                        listOf("Moins de 25 ans", "25 à 34 ans", "35 à 44 ans", "45 à 54 ans", "55 ans et plus").forEach { tranche ->
+                                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                                Text(tranche)
+                                                Text((repartitionAge[tranche] ?: 0).toString(), color = violetRH, fontWeight = FontWeight.SemiBold)
+                                            }
                                         }
                                     }
                                     Text("Analyse calculée uniquement à partir des dates de naissance et informations renseignées.", color = Color.Gray, style = MaterialTheme.typography.bodySmall)
