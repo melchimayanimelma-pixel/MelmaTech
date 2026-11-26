@@ -32,6 +32,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
@@ -84,7 +85,16 @@ private data class EmployeListe(
     val statut: String,
     val telephone: String = "",
     val email: String = "",
-    val typeContrat: String = ""
+    val typeContrat: String = "",
+    val nomFamille: String = "",
+    val postnom: String = "",
+    val prenom: String = "",
+    val sexe: String = "",
+    val dateNaissance: String = "",
+    val adresse: String = "",
+    val dateEmbauche: String = "",
+    val salaireBase: String = "",
+    val notes: String = ""
 )
 
 private data class DocumentRH(
@@ -94,6 +104,13 @@ private data class DocumentRH(
     val chemin: String,
     val date: String,
     val typeMime: String
+)
+
+private data class PosteRH(
+    val id: String,
+    val nom: String,
+    val description: String,
+    val actif: Boolean
 )
 
 private data class PresenceRH(
@@ -124,6 +141,7 @@ fun EcranPersonnel(onRetour: () -> Unit) {
     var profil by remember { mutableStateOf<ProfilUtilisateur?>(null) }
     var employes by remember { mutableStateOf(emptyList<EmployeListe>()) }
     var departements by remember { mutableStateOf(emptyList<String>()) }
+    var postes by remember { mutableStateOf(emptyList<PosteRH>()) }
     var documents by remember { mutableStateOf(emptyList<DocumentRH>()) }
     var employeSelectionne by remember { mutableStateOf<EmployeListe?>(null) }
     // Sélection indépendante : l’onglet Dossiers commence toujours par l’annuaire.
@@ -153,6 +171,24 @@ fun EcranPersonnel(onRetour: () -> Unit) {
     var chargement by remember { mutableStateOf(true) }
     var recherche by remember { mutableStateOf("") }
     var afficherAjout by remember { mutableStateOf(false) }
+    var afficherModification by remember { mutableStateOf(false) }
+    var employeEnEdition by remember { mutableStateOf<EmployeListe?>(null) }
+    var editNom by remember { mutableStateOf("") }
+    var editPostnom by remember { mutableStateOf("") }
+    var editPrenom by remember { mutableStateOf("") }
+    var editPoste by remember { mutableStateOf("") }
+    var editDepartement by remember { mutableStateOf("") }
+    var editTelephone by remember { mutableStateOf("") }
+    var editEmail by remember { mutableStateOf("") }
+    var editTypeContrat by remember { mutableStateOf("CDI") }
+    var editSexe by remember { mutableStateOf("") }
+    var editDateNaissance by remember { mutableStateOf("") }
+    var editAdresse by remember { mutableStateOf("") }
+    var editDateEmbauche by remember { mutableStateOf("") }
+    var editSalaireBase by remember { mutableStateOf("") }
+    var editNotes by remember { mutableStateOf("") }
+    var editStatut by remember { mutableStateOf("actif") }
+    var enregistrementModification by remember { mutableStateOf(false) }
     var nom by remember { mutableStateOf("") }
     var postnom by remember { mutableStateOf("") }
     var prenom by remember { mutableStateOf("") }
@@ -161,6 +197,12 @@ fun EcranPersonnel(onRetour: () -> Unit) {
     var telephone by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
     var typeContrat by remember { mutableStateOf("CDI") }
+    var sexe by remember { mutableStateOf("") }
+    var dateNaissance by remember { mutableStateOf("") }
+    var adresse by remember { mutableStateOf("") }
+    var dateEmbauche by remember { mutableStateOf("") }
+    var salaireBase by remember { mutableStateOf("") }
+    var notesRH by remember { mutableStateOf("") }
     var enregistrement by remember { mutableStateOf(false) }
     var chargementDocuments by remember { mutableStateOf(false) }
     var documentASupprimer by remember { mutableStateOf<DocumentRH?>(null) }
@@ -173,9 +215,16 @@ fun EcranPersonnel(onRetour: () -> Unit) {
     var afficherDepartement by remember { mutableStateOf(false) }
     var nouveauDepartement by remember { mutableStateOf("") }
     var descriptionDepartement by remember { mutableStateOf("") }
+    var afficherPoste by remember { mutableStateOf(false) }
+    var nouveauPoste by remember { mutableStateOf("") }
+    var descriptionPoste by remember { mutableStateOf("") }
     var presences by remember { mutableStateOf(emptyList<PresenceRH>()) }
     var conges by remember { mutableStateOf(emptyList<CongeRH>()) }
+    var filtreConges by remember { mutableStateOf("Tous") }
     var bulletins by remember { mutableStateOf(emptyList<PaieRH>()) }
+    var filtrePaie by remember { mutableStateOf("Tous") }
+    var filtreStatutEmploye by remember { mutableStateOf("Tous") }
+    var filtreHistoriquePresence by remember { mutableStateOf("Aujourd'hui") }
     var chargementModule by remember { mutableStateOf(false) }
     var afficherDemandeConge by remember { mutableStateOf(false) }
     var employeConge by remember { mutableStateOf("") }
@@ -349,6 +398,36 @@ fun EcranPersonnel(onRetour: () -> Unit) {
         })
     }
 
+    fun marquerBulletinPaye(bulletin: PaieRH) {
+        val p = profil ?: return
+        if (!estRH) { message = "Action réservée au responsable RH autorisé."; return }
+        val token = AuthService.obtenirAccessToken(context) ?: return
+        val payload = JSONObject().put("statut", "paye")
+        val url = "${SupabaseConfig.url}/rest/v1/bulletins_paie?id=eq.${bulletin.id}&entreprise_id=eq.${p.entrepriseId}&statut=eq.brouillon"
+        val req = authHeaders(Request.Builder().url(url), token)
+            .addHeader("Content-Type", "application/json")
+            .addHeader("Prefer", "return=minimal")
+            .patch(payload.toString().toRequestBody("application/json; charset=utf-8".toMediaType()))
+            .build()
+        client.newCall(req).enqueue(object : Callback {
+            override fun onFailure(call: Call, e: IOException) {
+                mainHandler.post { message = "Mise à jour du paiement impossible : ${e.message}" }
+            }
+            override fun onResponse(call: Call, response: Response) {
+                response.use {
+                    mainHandler.post {
+                        if (it.isSuccessful) {
+                            message = "Bulletin marqué comme payé."
+                            chargerPaie()
+                        } else {
+                            message = "Modification du bulletin refusée (${it.code})."
+                        }
+                    }
+                }
+            }
+        })
+    }
+
     fun creerBulletin() {
         val p = profil ?: return
         val token = AuthService.obtenirAccessToken(context) ?: return
@@ -509,6 +588,78 @@ fun EcranPersonnel(onRetour: () -> Unit) {
         }
     }
 
+    fun chargerPostes(entrepriseId: String, token: String) {
+        val url = "${SupabaseConfig.url}/rest/v1/postes?entreprise_id=eq.$entrepriseId&actif=eq.true&select=id,nom,description,actif&order=nom.asc"
+        val request = authHeaders(Request.Builder().url(url), token).get().build()
+        client.newCall(request).enqueue(object : Callback {
+            override fun onFailure(call: Call, e: IOException) {
+                mainHandler.post { message = "Impossible de charger les postes : ${e.message}" }
+            }
+            override fun onResponse(call: Call, response: Response) {
+                response.use {
+                    val body = it.body?.string().orEmpty()
+                    if (!it.isSuccessful) {
+                        mainHandler.post { message = "Chargement des postes refusé (${it.code})." }
+                        return
+                    }
+                    try {
+                        val array = JSONArray(body)
+                        val resultat = (0 until array.length()).map { index ->
+                            val item = array.getJSONObject(index)
+                            PosteRH(
+                                id = item.optString("id"),
+                                nom = item.optString("nom"),
+                                description = item.optString("description").takeUnless { value -> value == "null" }.orEmpty(),
+                                actif = item.optBoolean("actif", true)
+                            )
+                        }
+                        mainHandler.post { postes = resultat }
+                    } catch (_: Exception) {
+                        mainHandler.post { message = "La liste des postes reçue est illisible." }
+                    }
+                }
+            }
+        })
+    }
+
+    fun ajouterPoste() {
+        val p = profil ?: return
+        val token = AuthService.obtenirAccessToken(context)
+        if (token.isNullOrBlank()) { message = "Session expirée. Reconnecte-toi."; return }
+        if (nouveauPoste.isBlank()) { message = "Le nom du poste est obligatoire."; return }
+        val payload = JSONObject()
+            .put("entreprise_id", p.entrepriseId)
+            .put("nom", nouveauPoste.trim())
+            .put("description", descriptionPoste.trim().ifBlank { JSONObject.NULL })
+        val request = authHeaders(Request.Builder().url("${SupabaseConfig.url}/rest/v1/postes"), token)
+            .addHeader("Content-Type", "application/json")
+            .addHeader("Prefer", "return=minimal")
+            .post(payload.toString().toRequestBody("application/json; charset=utf-8".toMediaType()))
+            .build()
+        client.newCall(request).enqueue(object : Callback {
+            override fun onFailure(call: Call, e: IOException) {
+                mainHandler.post { message = "Création du poste impossible : ${e.message}" }
+            }
+            override fun onResponse(call: Call, response: Response) {
+                response.use {
+                    val code = it.code
+                    val detail = if (it.isSuccessful) "" else it.body?.string().orEmpty().take(140)
+                    mainHandler.post {
+                        if (code in 200..299) {
+                            afficherPoste = false
+                            nouveauPoste = ""
+                            descriptionPoste = ""
+                            message = "Poste ajouté avec succès."
+                            chargerPostes(p.entrepriseId, token)
+                        } else {
+                            message = "Création du poste refusée ($code) : $detail"
+                        }
+                    }
+                }
+            }
+        })
+    }
+
     fun chargerEmployes() {
         if (employes.isEmpty()) chargement = true
         message = ""
@@ -525,7 +676,7 @@ fun EcranPersonnel(onRetour: () -> Unit) {
                 message = "Session expirée. Reconnecte-toi."
                 return@obtenirProfil
             }
-            val url = "${SupabaseConfig.url}/rest/v1/employes?entreprise_id=eq.${p.entrepriseId}&select=id,matricule,nom,postnom,prenom,poste,departement,statut,telephone,email,type_contrat&order=nom.asc"
+            val url = "${SupabaseConfig.url}/rest/v1/employes?entreprise_id=eq.${p.entrepriseId}&select=id,matricule,nom,postnom,prenom,sexe,date_naissance,adresse,photo_url,poste,departement,date_embauche,type_contrat,salaire_base,statut,notes&order=nom.asc"
             val request = authHeaders(Request.Builder().url(url), token).get().build()
             client.newCall(request).enqueue(object : Callback {
                 override fun onFailure(call: Call, e: IOException) {
@@ -551,7 +702,16 @@ fun EcranPersonnel(onRetour: () -> Unit) {
                                         statut = item.optString("statut", "actif"),
                                         telephone = item.optString("telephone").takeUnless { v -> v == "null" }.orEmpty(),
                                         email = item.optString("email").takeUnless { v -> v == "null" }.orEmpty(),
-                                        typeContrat = item.optString("type_contrat").takeUnless { v -> v == "null" }.orEmpty()
+                                        typeContrat = item.optString("type_contrat").takeUnless { v -> v == "null" }.orEmpty(),
+                                        nomFamille = item.optString("nom").takeUnless { v -> v == "null" }.orEmpty(),
+                                        postnom = item.optString("postnom").takeUnless { v -> v == "null" }.orEmpty(),
+                                        prenom = item.optString("prenom").takeUnless { v -> v == "null" }.orEmpty(),
+                                        sexe = item.optString("sexe").takeUnless { v -> v == "null" }.orEmpty(),
+                                        dateNaissance = item.optString("date_naissance").takeUnless { v -> v == "null" }.orEmpty(),
+                                        adresse = item.optString("adresse").takeUnless { v -> v == "null" }.orEmpty(),
+                                        dateEmbauche = item.optString("date_embauche").takeUnless { v -> v == "null" }.orEmpty(),
+                                        salaireBase = if (item.isNull("salaire_base")) "" else item.optString("salaire_base"),
+                                        notes = item.optString("notes").takeUnless { v -> v == "null" }.orEmpty()
                                     )
                                 }
                                 if (onglet == "Employés" && message.isBlank()) message = ""
@@ -561,6 +721,7 @@ fun EcranPersonnel(onRetour: () -> Unit) {
                 }
             })
 
+            chargerPostes(p.entrepriseId, token)
             val urlDepartements = "${SupabaseConfig.url}/rest/v1/departements?entreprise_id=eq.${p.entrepriseId}&actif=eq.true&select=nom&order=nom.asc"
             val reqDep = authHeaders(Request.Builder().url(urlDepartements), token).get().build()
             client.newCall(reqDep).enqueue(object : Callback {
@@ -584,6 +745,9 @@ fun EcranPersonnel(onRetour: () -> Unit) {
         val token = AuthService.obtenirAccessToken(context)
         if (p == null || token.isNullOrBlank()) { message = "Session invalide. Reconnecte-toi."; return }
         if (nom.isBlank() || poste.isBlank()) { message = "Le nom et le poste sont obligatoires."; return }
+        if (dateNaissance.isNotBlank() && !dateNaissance.matches(Regex("\\d{4}-\\d{2}-\\d{2}"))) { message = "Date de naissance invalide (AAAA-MM-JJ)."; return }
+        if (dateEmbauche.isNotBlank() && !dateEmbauche.matches(Regex("\\d{4}-\\d{2}-\\d{2}"))) { message = "Date d'embauche invalide (AAAA-MM-JJ)."; return }
+        if (salaireBase.isNotBlank() && (salaireBase.toBigDecimalOrNull() == null || salaireBase.toBigDecimalOrNull()!! < java.math.BigDecimal.ZERO)) { message = "Le salaire doit être un montant positif ou nul."; return }
         enregistrement = true
         val matricule = "EMP-" + UUID.randomUUID().toString().take(8).uppercase()
         val data = JSONObject()
@@ -597,7 +761,13 @@ fun EcranPersonnel(onRetour: () -> Unit) {
             .put("telephone", telephone.trim().ifBlank { JSONObject.NULL })
             .put("email", email.trim().ifBlank { JSONObject.NULL })
             .put("type_contrat", typeContrat)
+            .put("sexe", sexe.ifBlank { JSONObject.NULL })
+            .put("date_naissance", dateNaissance.trim().ifBlank { JSONObject.NULL })
+            .put("adresse", adresse.trim().ifBlank { JSONObject.NULL })
+            .put("salaire_base", salaireBase.trim().toBigDecimalOrNull() ?: JSONObject.NULL)
+            .put("notes", notesRH.trim().ifBlank { JSONObject.NULL })
             .put("cree_par", p.id)
+        if (dateEmbauche.isNotBlank()) data.put("date_embauche", dateEmbauche.trim())
         val url = "${SupabaseConfig.url}/rest/v1/employes"
         val request = authHeaders(Request.Builder().url(url), token)
             .addHeader("Content-Type", "application/json")
@@ -615,10 +785,83 @@ fun EcranPersonnel(onRetour: () -> Unit) {
                         if (it.isSuccessful) {
                             afficherAjout = false
                             nom = ""; postnom = ""; prenom = ""; poste = ""; departement = ""; telephone = ""; email = ""
+                            sexe = ""; dateNaissance = ""; adresse = ""; dateEmbauche = ""; salaireBase = ""; notesRH = ""
                             message = "Employé ajouté avec succès."
                             chargerEmployes()
                         } else {
                             message = "Échec de l'ajout (${it.code}) : ${it.body?.string().orEmpty().take(180)}"
+                        }
+                    }
+                }
+            }
+        })
+    }
+
+    fun modifierEmploye() {
+        val p = profil
+        val cible = employeEnEdition
+        val token = AuthService.obtenirAccessToken(context)
+        if (p == null || cible == null || token.isNullOrBlank()) {
+            message = "Session invalide. Reconnecte-toi."
+            return
+        }
+        if (editNom.isBlank() || editPoste.isBlank()) {
+            message = "Le nom et le poste sont obligatoires."
+            return
+        }
+        if (editDateEmbauche.isBlank() || !editDateEmbauche.matches(Regex("\\d{4}-\\d{2}-\\d{2}"))) {
+            message = "La date d'embauche est obligatoire et doit respecter le format AAAA-MM-JJ."
+            return
+        }
+        if (editDateNaissance.isNotBlank() && !editDateNaissance.matches(Regex("\\d{4}-\\d{2}-\\d{2}"))) {
+            message = "La date de naissance doit respecter le format AAAA-MM-JJ."
+            return
+        }
+        if (editSalaireBase.isNotBlank() && (editSalaireBase.trim().toBigDecimalOrNull() == null || editSalaireBase.trim().toBigDecimalOrNull()!! < java.math.BigDecimal.ZERO)) {
+            message = "Le salaire doit être un montant positif ou nul."
+            return
+        }
+        enregistrementModification = true
+        val payload = JSONObject()
+            .put("nom", editNom.trim())
+            .put("postnom", editPostnom.trim().ifBlank { JSONObject.NULL })
+            .put("prenom", editPrenom.trim().ifBlank { JSONObject.NULL })
+            .put("poste", editPoste.trim())
+            .put("departement", editDepartement.trim().ifBlank { JSONObject.NULL })
+            .put("telephone", editTelephone.trim().ifBlank { JSONObject.NULL })
+            .put("email", editEmail.trim().ifBlank { JSONObject.NULL })
+            .put("type_contrat", editTypeContrat)
+            .put("sexe", editSexe.trim().ifBlank { JSONObject.NULL })
+            .put("date_naissance", editDateNaissance.trim().ifBlank { JSONObject.NULL })
+            .put("adresse", editAdresse.trim().ifBlank { JSONObject.NULL })
+            .put("date_embauche", editDateEmbauche.trim())
+            .put("salaire_base", editSalaireBase.trim().toBigDecimalOrNull() ?: JSONObject.NULL)
+            .put("notes", editNotes.trim().ifBlank { JSONObject.NULL })
+            .put("statut", editStatut)
+            .put("modifie_le", java.time.Instant.now().toString())
+        val url = "${SupabaseConfig.url}/rest/v1/employes?id=eq.${Uri.encode(cible.id)}&entreprise_id=eq.${Uri.encode(p.entrepriseId)}"
+        val request = authHeaders(Request.Builder().url(url), token)
+            .addHeader("Content-Type", "application/json")
+            .addHeader("Prefer", "return=minimal")
+            .patch(payload.toString().toRequestBody("application/json; charset=utf-8".toMediaType()))
+            .build()
+        client.newCall(request).enqueue(object : Callback {
+            override fun onFailure(call: Call, e: IOException) {
+                mainHandler.post { enregistrementModification = false; message = "Modification impossible : ${e.message}" }
+            }
+            override fun onResponse(call: Call, response: Response) {
+                response.use {
+                    val code = it.code
+                    val detail = if (it.isSuccessful) "" else it.body?.string().orEmpty().take(160)
+                    mainHandler.post {
+                        enregistrementModification = false
+                        if (code in 200..299) {
+                            afficherModification = false
+                            employeEnEdition = null
+                            message = "Fiche employé mise à jour."
+                            chargerEmployes()
+                        } else {
+                            message = "Modification refusée ($code) : $detail"
                         }
                     }
                 }
@@ -705,7 +948,7 @@ fun EcranPersonnel(onRetour: () -> Unit) {
     }
 
     BackHandler(
-        enabled = documentApercu != null || afficherAjout || onglet != "Accueil RH"
+        enabled = documentApercu != null || afficherAjout || afficherPoste || afficherDepartement || onglet != "Accueil RH"
     ) {
         when {
             documentApercu != null -> {
@@ -713,7 +956,10 @@ fun EcranPersonnel(onRetour: () -> Unit) {
                 pagesApercu = emptyList()
                 chargementApercu = false
             }
+            afficherModification -> { afficherModification = false; employeEnEdition = null }
             afficherAjout -> afficherAjout = false
+            afficherPoste -> afficherPoste = false
+            afficherDepartement -> afficherDepartement = false
             else -> revenirOngletPrecedent()
         }
     }
@@ -869,7 +1115,30 @@ fun EcranPersonnel(onRetour: () -> Unit) {
                             FilterChip(selected = departementSelectionne.equals(dep, true), onClick = { departementSelectionne = if (departementSelectionne.equals(dep, true)) null else dep }, label = { Text("$dep ($nombre)") })
                         }
                     }
-                    val filtres = employes.filter { (departementSelectionne == null || it.departement.equals(departementSelectionne, true)) && (it.nom.contains(recherche, true) || it.matricule.contains(recherche, true) || it.poste.contains(recherche, true) || it.departement.contains(recherche, true)) }
+                    Row(
+                        Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        listOf("Tous", "Actifs", "Inactifs").forEach { filtre ->
+                            val nombre = when (filtre) {
+                                "Actifs" -> employes.count { it.statut.equals("actif", true) }
+                                "Inactifs" -> employes.count { !it.statut.equals("actif", true) }
+                                else -> employes.size
+                            }
+                            FilterChip(
+                                selected = filtreStatutEmploye == filtre,
+                                onClick = { filtreStatutEmploye = filtre },
+                                label = { Text("$filtre ($nombre)") }
+                            )
+                        }
+                    }
+                    val filtres = employes.filter {
+                        (departementSelectionne == null || it.departement.equals(departementSelectionne, true)) &&
+                        (filtreStatutEmploye == "Tous" ||
+                            (filtreStatutEmploye == "Actifs" && it.statut.equals("actif", true)) ||
+                            (filtreStatutEmploye == "Inactifs" && !it.statut.equals("actif", true))) &&
+                        (it.nom.contains(recherche, true) || it.matricule.contains(recherche, true) || it.poste.contains(recherche, true) || it.departement.contains(recherche, true))
+                    }
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                         Text(if (departementSelectionne == null) "Tous les employés" else departementSelectionne!!, fontWeight = FontWeight.SemiBold)
                         Text("${filtres.size} résultat(s)", color = Color.Gray, style = MaterialTheme.typography.bodySmall)
@@ -895,6 +1164,25 @@ fun EcranPersonnel(onRetour: () -> Unit) {
                                             Text("${e.matricule} • ${e.poste.ifBlank { "Poste non défini" }}", color = Color.Gray, style = MaterialTheme.typography.bodySmall)
                                             Text("${e.departement.ifBlank { "Département non défini" }} • ${e.statut}", color = violetRH, style = MaterialTheme.typography.labelMedium)
                                         }
+                                        TextButton(onClick = {
+                                            employeEnEdition = e
+                                            editNom = e.nomFamille
+                                            editPostnom = e.postnom
+                                            editPrenom = e.prenom
+                                            editPoste = e.poste
+                                            editDepartement = e.departement
+                                            editTelephone = e.telephone
+                                            editEmail = e.email
+                                            editTypeContrat = e.typeContrat.ifBlank { "CDI" }
+                                            editSexe = e.sexe
+                                            editDateNaissance = e.dateNaissance
+                                            editAdresse = e.adresse
+                                            editDateEmbauche = e.dateEmbauche
+                                            editSalaireBase = e.salaireBase
+                                            editNotes = e.notes
+                                            editStatut = e.statut.ifBlank { "actif" }
+                                            afficherModification = true
+                                        }) { Text("Modifier") }
                                         Icon(Icons.Filled.ArrowForward, contentDescription = "Ouvrir le dossier", tint = violetRH)
                                     }
                                 }
@@ -976,10 +1264,16 @@ fun EcranPersonnel(onRetour: () -> Unit) {
                         }
                     } else {
                         // Une seule zone défilante pour voir les informations ET les documents sans écran coupé.
-                        LazyColumn(
-                            Modifier.weight(1f),
-                            verticalArrangement = Arrangement.spacedBy(12.dp)
-                        ) {
+                        key(cible.id) {
+                            val etatListeDossier = rememberLazyListState()
+                            LaunchedEffect(onglet, cible.id) {
+                                if (onglet == "Dossiers") etatListeDossier.scrollToItem(0)
+                            }
+                            LazyColumn(
+                                state = etatListeDossier,
+                                modifier = Modifier.weight(1f),
+                                verticalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
                             item {
                                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                                     Column(Modifier.weight(1f)) {
@@ -995,15 +1289,21 @@ fun EcranPersonnel(onRetour: () -> Unit) {
                                     Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                                         Text("Informations personnelles", color = violetRH, fontWeight = FontWeight.Bold)
                                         LigneInfoRH("Nom complet", cible.nom)
+                                        LigneInfoRH("Sexe", cible.sexe.ifBlank { "Non renseigné" }.replaceFirstChar { it.uppercase() })
+                                        LigneInfoRH("Date de naissance", cible.dateNaissance.ifBlank { "Non renseignée" })
                                         LigneInfoRH("Téléphone", cible.telephone.ifBlank { "Non renseigné" })
                                         LigneInfoRH("E-mail", cible.email.ifBlank { "Non renseigné" })
+                                        LigneInfoRH("Adresse", cible.adresse.ifBlank { "Non renseignée" })
                                         Divider(color = fondRH)
                                         Text("Informations professionnelles", color = violetRH, fontWeight = FontWeight.Bold)
                                         LigneInfoRH("Matricule", cible.matricule)
                                         LigneInfoRH("Poste", cible.poste.ifBlank { "Non renseigné" })
                                         LigneInfoRH("Département", cible.departement.ifBlank { "Non affecté" })
                                         LigneInfoRH("Type de contrat", cible.typeContrat.ifBlank { "Non renseigné" })
+                                        LigneInfoRH("Date d'embauche", cible.dateEmbauche.ifBlank { "Non renseignée" })
+                                        LigneInfoRH("Salaire de base", cible.salaireBase.ifBlank { "Non renseigné" })
                                         LigneInfoRH("Statut", cible.statut.replaceFirstChar { it.uppercase() })
+                                        if (cible.notes.isNotBlank()) LigneInfoRH("Notes RH", cible.notes)
                                     }
                                 }
                             }
@@ -1098,15 +1398,19 @@ fun EcranPersonnel(onRetour: () -> Unit) {
                                                                 } }
                                                             })
                                                         }
-                                                    }, modifier = Modifier.weight(1f)) {
-                                                        Icon(Icons.Filled.Visibility, contentDescription = null)
-                                                        Spacer(Modifier.width(6.dp))
-                                                        Text("Visualiser")
+                                                    }, modifier = Modifier.weight(1f), contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp)) {
+                                                        Icon(Icons.Filled.Visibility, contentDescription = null, modifier = Modifier.size(18.dp))
+                                                        Spacer(Modifier.width(4.dp))
+                                                        Text("Visualiser", maxLines = 1, softWrap = false)
                                                     }
-                                                    Button(onClick = { telechargerDocumentRH(d) }, modifier = Modifier.weight(1f)) {
-                                                        Icon(Icons.Filled.Download, contentDescription = null)
-                                                        Spacer(Modifier.width(6.dp))
-                                                        Text("Télécharger")
+                                                    Button(
+                                                        onClick = { telechargerDocumentRH(d) },
+                                                        modifier = Modifier.weight(1f),
+                                                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp)
+                                                    ) {
+                                                        Icon(Icons.Filled.Download, contentDescription = null, modifier = Modifier.size(18.dp))
+                                                        Spacer(Modifier.width(4.dp))
+                                                        Text("Télécharger", maxLines = 1, softWrap = false)
                                                     }
                                                 }
                                                 if (estRH) {
@@ -1127,18 +1431,63 @@ fun EcranPersonnel(onRetour: () -> Unit) {
                             } else {
                                 item { Text("Les documents personnels sont confidentiels et réservés au responsable RH.", color = Color.Gray) }
                             }
+                            }
                         }
                     }
                 }
                 "Organisation" -> {
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                        Column { Text("Structure de l'entreprise", fontWeight = FontWeight.Bold); Text("${departements.size} département(s)", color = Color.Gray, style = MaterialTheme.typography.bodySmall) }
-                        Button(onClick = { afficherDepartement = true }) { Icon(Icons.Filled.AccountTree, null); Text(" Ajouter") }
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                            Text(
+                                "Structure de l'entreprise",
+                                fontWeight = FontWeight.Bold,
+                                style = MaterialTheme.typography.titleMedium
+                            )
+                            Text(
+                                "${departements.size} département(s) • ${postes.size} poste(s)",
+                                color = Color.Gray,
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                        }
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            OutlinedButton(
+                                onClick = { afficherPoste = true },
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Icon(Icons.Filled.Work, contentDescription = null)
+                                Spacer(Modifier.width(6.dp))
+                                Text("Nouveau poste", maxLines = 1)
+                            }
+                            Button(
+                                onClick = { afficherDepartement = true },
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Icon(Icons.Filled.AccountTree, contentDescription = null)
+                                Spacer(Modifier.width(6.dp))
+                                Text("Département", maxLines = 1)
+                            }
+                        }
                     }
-                    if (departements.isEmpty()) {
-                        Card(colors = CardDefaults.cardColors(containerColor = Color.White)) { Column(Modifier.fillMaxWidth().padding(18.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) { Icon(Icons.Filled.AccountTree, null, tint = violetRH, modifier = Modifier.size(30.dp)); Text("Aucun département", fontWeight = FontWeight.Bold); Text("Crée les départements pour structurer les équipes.", color = Color.Gray) } }
-                    } else LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        items(departements) { dep ->
+                    LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        item {
+                            Text("DÉPARTEMENTS", color = violetRH, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelLarge)
+                        }
+                        if (departements.isEmpty()) item {
+                            Card(colors = CardDefaults.cardColors(containerColor = Color.White)) {
+                                Column(Modifier.fillMaxWidth().padding(18.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                    Icon(Icons.Filled.AccountTree, null, tint = violetRH, modifier = Modifier.size(30.dp))
+                                    Text("Aucun département", fontWeight = FontWeight.Bold)
+                                    Text("Crée les départements pour structurer les équipes.", color = Color.Gray)
+                                }
+                            }
+                        }
+                        items(departements, key = { "dep_$it" }) { dep ->
                             val effectif = employes.count { it.departement.equals(dep, true) }
                             Card(modifier = Modifier.fillMaxWidth().clickable { departementSelectionne = dep; recherche = ""; naviguerVers("Employés") }, colors = CardDefaults.cardColors(containerColor = Color.White), shape = RoundedCornerShape(14.dp)) {
                                 Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -1151,6 +1500,31 @@ fun EcranPersonnel(onRetour: () -> Unit) {
                                 }
                             }
                         }
+                        item {
+                            Spacer(Modifier.height(8.dp))
+                            Text("POSTES", color = violetRH, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelLarge)
+                        }
+                        if (postes.isEmpty()) item {
+                            Card(colors = CardDefaults.cardColors(containerColor = Color.White)) {
+                                Column(Modifier.fillMaxWidth().padding(18.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                    Icon(Icons.Filled.Work, null, tint = violetRH, modifier = Modifier.size(28.dp))
+                                    Text("Aucun poste défini", fontWeight = FontWeight.Bold)
+                                    Text("Ajoute les fonctions de l'entreprise : comptable, vendeur, responsable RH, etc.", color = Color.Gray)
+                                }
+                            }
+                        }
+                        items(postes, key = { "poste_${it.id}" }) { posteRH ->
+                            Card(colors = CardDefaults.cardColors(containerColor = Color.White), shape = RoundedCornerShape(14.dp)) {
+                                Row(Modifier.fillMaxWidth().padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(Icons.Filled.Work, null, tint = violetRH, modifier = Modifier.size(26.dp))
+                                    Column(Modifier.weight(1f).padding(start = 12.dp)) {
+                                        Text(posteRH.nom, fontWeight = FontWeight.SemiBold)
+                                        if (posteRH.description.isNotBlank()) Text(posteRH.description, color = Color.Gray, style = MaterialTheme.typography.bodySmall)
+                                    }
+                                    Text("${employes.count { it.poste.equals(posteRH.nom, true) }} salarié(s)", color = Color.Gray, style = MaterialTheme.typography.labelSmall)
+                                }
+                            }
+                        }
                     }
                 }
                 "Présences" -> {
@@ -1159,19 +1533,91 @@ fun EcranPersonnel(onRetour: () -> Unit) {
                         TextButton(onClick = { chargerPresences() }) { Icon(Icons.Filled.Refresh, null); Text("Actualiser") }
                     }
                     if (chargementModule) LinearProgressIndicator(Modifier.fillMaxWidth())
-                    Text("Enregistrer une présence", fontWeight = FontWeight.SemiBold)
+                    val pointagesDuJour = presences.filter { it.date == java.time.LocalDate.now().toString() }
+                    Card(colors = CardDefaults.cardColors(containerColor = Color.White), shape = RoundedCornerShape(16.dp)) {
+                        Row(
+                            Modifier.fillMaxWidth().padding(vertical = 14.dp, horizontal = 8.dp),
+                            horizontalArrangement = Arrangement.SpaceEvenly
+                        ) {
+                            StatCompactRH("Présents", pointagesDuJour.count { it.statut == "present" }.toString())
+                            StatCompactRH("En retard", pointagesDuJour.count { it.statut == "retard" }.toString())
+                            StatCompactRH("Absents", pointagesDuJour.count { it.statut == "absent" }.toString())
+                        }
+                    }
+                    Text("Pointer le personnel", fontWeight = FontWeight.SemiBold)
                     LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         items(employes, key = { it.id }) { e ->
+                            val pointageExistant = pointagesDuJour.firstOrNull { it.employe == e.nom }
                             Card(colors = CardDefaults.cardColors(containerColor = Color.White), shape = RoundedCornerShape(14.dp)) {
-                                Row(Modifier.fillMaxWidth().padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                                    Icon(Icons.Filled.People, null, tint = violetRH, modifier = Modifier.size(24.dp))
-                                    Column(Modifier.weight(1f).padding(start = 10.dp)) { Text(e.nom, fontWeight = FontWeight.SemiBold); Text(e.poste, color = Color.Gray, style = MaterialTheme.typography.bodySmall) }
-                                    Button(onClick = { enregistrerPresence(e) }, contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)) { Text("Présent") }
+                                Column(
+                                    Modifier.fillMaxWidth().padding(12.dp),
+                                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Icon(Icons.Filled.People, null, tint = violetRH, modifier = Modifier.size(24.dp))
+                                        Column(Modifier.weight(1f).padding(start = 10.dp)) {
+                                            Text(e.nom, fontWeight = FontWeight.SemiBold)
+                                            Text(e.poste.ifBlank { "Poste non défini" }, color = Color.Gray, style = MaterialTheme.typography.bodySmall)
+                                        }
+                                        if (pointageExistant != null) {
+                                            Text(
+                                                pointageExistant.statut.replaceFirstChar { it.uppercase() },
+                                                color = when (pointageExistant.statut) {
+                                                    "present" -> Color(0xFF16834B)
+                                                    "retard" -> Color(0xFFB7791F)
+                                                    else -> Color(0xFFB42318)
+                                                },
+                                                style = MaterialTheme.typography.labelMedium,
+                                                fontWeight = FontWeight.SemiBold
+                                            )
+                                        } else {
+                                            Text("Non pointé", color = Color.Gray, style = MaterialTheme.typography.labelSmall)
+                                        }
+                                    }
+                                    Row(
+                                        Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                    ) {
+                                        Button(
+                                            onClick = { enregistrerPresence(e, "present") },
+                                            modifier = Modifier.weight(1f),
+                                            contentPadding = PaddingValues(horizontal = 4.dp, vertical = 6.dp)
+                                        ) { Text("Présent", maxLines = 1) }
+                                        OutlinedButton(
+                                            onClick = { enregistrerPresence(e, "retard") },
+                                            modifier = Modifier.weight(1f),
+                                            contentPadding = PaddingValues(horizontal = 4.dp, vertical = 6.dp)
+                                        ) { Text("Retard", maxLines = 1) }
+                                        OutlinedButton(
+                                            onClick = { enregistrerPresence(e, "absent") },
+                                            modifier = Modifier.weight(1f),
+                                            contentPadding = PaddingValues(horizontal = 4.dp, vertical = 6.dp)
+                                        ) { Text("Absent", maxLines = 1) }
+                                    }
                                 }
                             }
                         }
-                        item { Text("Historique des pointages", fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 8.dp)) }
-                        items(presences, key = { it.id }) { p ->
+                        item {
+                            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Text("Historique des pointages", fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 8.dp))
+                                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    FilterChip(
+                                        selected = filtreHistoriquePresence == "Aujourd'hui",
+                                        onClick = { filtreHistoriquePresence = "Aujourd'hui" },
+                                        label = { Text("Aujourd'hui") }
+                                    )
+                                    FilterChip(
+                                        selected = filtreHistoriquePresence == "Tous",
+                                        onClick = { filtreHistoriquePresence = "Tous" },
+                                        label = { Text("Tout l'historique") }
+                                    )
+                                }
+                            }
+                        }
+                        val historiqueFiltre = presences.filter {
+                            filtreHistoriquePresence == "Tous" || it.date == java.time.LocalDate.now().toString()
+                        }
+                        items(historiqueFiltre, key = { it.id }) { p ->
                             Card(colors = CardDefaults.cardColors(containerColor = Color.White)) {
                                 Row(Modifier.fillMaxWidth().padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
                                     Icon(Icons.Filled.EventAvailable, null, tint = violetRH)
@@ -1179,6 +1625,9 @@ fun EcranPersonnel(onRetour: () -> Unit) {
                                     Text(p.statut.replaceFirstChar { it.uppercase() }, color = if (p.statut == "present") Color(0xFF16834B) else Color(0xFFB45309), style = MaterialTheme.typography.labelMedium)
                                 }
                             }
+                        }
+                        if (historiqueFiltre.isEmpty()) item {
+                            Text("Aucun pointage pour cette période.", color = Color.Gray)
                         }
                     }
                 }
@@ -1192,9 +1641,36 @@ fun EcranPersonnel(onRetour: () -> Unit) {
                         StatCompactRH("Approuvés", conges.count { it.statut == "approuve" }.toString())
                         StatCompactRH("Refusés", conges.count { it.statut == "refuse" }.toString())
                     }
+                    Row(
+                        Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        listOf("Tous", "En attente", "Approuvés", "Refusés").forEach { filtre ->
+                            val statutFiltre = when (filtre) {
+                                "En attente" -> "en_attente"
+                                "Approuvés" -> "approuve"
+                                "Refusés" -> "refuse"
+                                else -> ""
+                            }
+                            val nombre = if (statutFiltre.isBlank()) conges.size else conges.count { it.statut == statutFiltre }
+                            FilterChip(
+                                selected = filtreConges == filtre,
+                                onClick = { filtreConges = filtre },
+                                label = { Text("$filtre ($nombre)") }
+                            )
+                        }
+                    }
                     if (chargementModule) LinearProgressIndicator(Modifier.fillMaxWidth())
+                    val congesFiltres = conges.filter { demande ->
+                        when (filtreConges) {
+                            "En attente" -> demande.statut == "en_attente"
+                            "Approuvés" -> demande.statut == "approuve"
+                            "Refusés" -> demande.statut == "refuse"
+                            else -> true
+                        }
+                    }
                     LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        items(conges, key = { it.id }) { x ->
+                        items(congesFiltres, key = { it.id }) { x ->
                             Card(colors = CardDefaults.cardColors(containerColor = Color.White), shape = RoundedCornerShape(14.dp)) {
                                 Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                                     Row(verticalAlignment = Alignment.CenterVertically) { Icon(Icons.Filled.BeachAccess, null, tint = violetRH); Text("  ${x.employe}", fontWeight = FontWeight.Bold); Spacer(Modifier.weight(1f)); Text(x.statut.replace("_", " "), color = if (x.statut == "approuve") Color(0xFF16834B) else Color(0xFF9A6700), style = MaterialTheme.typography.labelMedium) }
@@ -1207,7 +1683,13 @@ fun EcranPersonnel(onRetour: () -> Unit) {
                                 }
                             }
                         }
-                        if (conges.isEmpty() && !chargementModule) item { Text("Aucune demande de congé enregistrée.", color = Color.Gray) }
+                        if (congesFiltres.isEmpty() && !chargementModule) item {
+                            Text(
+                                if (conges.isEmpty()) "Aucune demande de congé enregistrée."
+                                else "Aucune demande dans ce filtre.",
+                                color = Color.Gray
+                            )
+                        }
                     }
                 }
                 "Paie" -> {
@@ -1222,19 +1704,58 @@ fun EcranPersonnel(onRetour: () -> Unit) {
                             StatCompactRH("Payés", bulletins.count { it.statut == "paye" }.toString())
                         }
                     }
+                    Row(
+                        Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        listOf("Tous", "Brouillons", "Payés").forEach { filtre ->
+                            val nombre = when (filtre) {
+                                "Brouillons" -> bulletins.count { it.statut == "brouillon" }
+                                "Payés" -> bulletins.count { it.statut == "paye" }
+                                else -> bulletins.size
+                            }
+                            FilterChip(
+                                selected = filtrePaie == filtre,
+                                onClick = { filtrePaie = filtre },
+                                label = { Text("$filtre ($nombre)") }
+                            )
+                        }
+                    }
                     if (chargementModule) LinearProgressIndicator(Modifier.fillMaxWidth())
+                    val bulletinsFiltres = bulletins.filter {
+                        when (filtrePaie) {
+                            "Brouillons" -> it.statut == "brouillon"
+                            "Payés" -> it.statut == "paye"
+                            else -> true
+                        }
+                    }
                     LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        items(bulletins, key = { it.id }) { b ->
+                        items(bulletinsFiltres, key = { it.id }) { b ->
                             Card(colors = CardDefaults.cardColors(containerColor = Color.White), shape = RoundedCornerShape(14.dp)) {
                                 Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
                                     Row(verticalAlignment = Alignment.CenterVertically) { Icon(Icons.Filled.Payments, null, tint = violetRH); Text("  ${b.employe}", fontWeight = FontWeight.Bold); Spacer(Modifier.weight(1f)); Text(b.statut, color = if (b.statut == "paye") Color(0xFF16834B) else Color(0xFF9A6700)) }
                                     Text("Période : ${b.debut} au ${b.fin}", color = Color.Gray, style = MaterialTheme.typography.bodySmall)
                                     Text("Base : ${"%.2f".format(b.base)}  •  Primes : ${"%.2f".format(b.primes)}  •  Retenues : ${"%.2f".format(b.retenues)}", style = MaterialTheme.typography.bodySmall)
                                     Text("Net à payer : ${"%.2f".format(b.net)}", color = violetRH, fontWeight = FontWeight.Bold)
+                                    if (b.statut == "brouillon" && estRH) {
+                                        Button(
+                                            onClick = { marquerBulletinPaye(b) },
+                                            modifier = Modifier.fillMaxWidth()
+                                        ) {
+                                            Icon(Icons.Filled.CheckCircle, contentDescription = null)
+                                            Spacer(Modifier.width(6.dp))
+                                            Text("Confirmer le paiement")
+                                        }
+                                    }
                                 }
                             }
                         }
-                        if (bulletins.isEmpty() && !chargementModule) item { Text("Aucun bulletin de paie enregistré.", color = Color.Gray) }
+                        if (bulletinsFiltres.isEmpty() && !chargementModule) item {
+                            Text(
+                                if (bulletins.isEmpty()) "Aucun bulletin de paie enregistré." else "Aucun bulletin dans ce filtre.",
+                                color = Color.Gray
+                            )
+                        }
                     }
                 }
                 "Rapports" -> {
@@ -1366,6 +1887,32 @@ fun EcranPersonnel(onRetour: () -> Unit) {
         )
     }
 
+    if (afficherPoste) {
+        AlertDialog(
+            onDismissRequest = { afficherPoste = false },
+            title = { Text("Ajouter un poste") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedTextField(
+                        value = nouveauPoste,
+                        onValueChange = { nouveauPoste = it },
+                        label = { Text("Intitulé du poste *") },
+                        singleLine = true
+                    )
+                    OutlinedTextField(
+                        value = descriptionPoste,
+                        onValueChange = { descriptionPoste = it },
+                        label = { Text("Description (facultative)") },
+                        minLines = 2
+                    )
+                    Text("Le poste sera enregistré pour cette entreprise uniquement.", color = Color.Gray, style = MaterialTheme.typography.bodySmall)
+                }
+            },
+            confirmButton = { Button(onClick = { ajouterPoste() }) { Text("Enregistrer") } },
+            dismissButton = { TextButton(onClick = { afficherPoste = false }) { Text("Annuler") } }
+        )
+    }
+
     if (afficherDemandeConge) {
         AlertDialog(
             onDismissRequest = { afficherDemandeConge = false },
@@ -1430,6 +1977,68 @@ fun EcranPersonnel(onRetour: () -> Unit) {
         )
     }
 
+    if (afficherModification && employeEnEdition != null) {
+        AlertDialog(
+            onDismissRequest = { if (!enregistrementModification) { afficherModification = false; employeEnEdition = null } },
+            title = { Text("Modifier la fiche employé") },
+            text = {
+                Column(
+                    Modifier.heightIn(max = 500.dp).verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    OutlinedTextField(editNom, { editNom = it }, label = { Text("Nom *") }, singleLine = true)
+                    OutlinedTextField(editPostnom, { editPostnom = it }, label = { Text("Postnom") }, singleLine = true)
+                    OutlinedTextField(editPrenom, { editPrenom = it }, label = { Text("Prénom") }, singleLine = true)
+                    OutlinedTextField(editPoste, { editPoste = it }, label = { Text("Poste *") }, singleLine = true)
+                    OutlinedTextField(editDepartement, { editDepartement = it }, label = { Text("Département") }, singleLine = true)
+                    OutlinedTextField(editTelephone, { editTelephone = it }, label = { Text("Téléphone") }, singleLine = true)
+                    OutlinedTextField(editEmail, { editEmail = it }, label = { Text("E-mail") }, singleLine = true)
+                    var menuSexeEdition by remember { mutableStateOf(false) }
+                    Box {
+                        OutlinedButton(onClick = { menuSexeEdition = true }) { Text("Sexe : " + (editSexe.ifBlank { "Non renseigné" })) }
+                        DropdownMenu(expanded = menuSexeEdition, onDismissRequest = { menuSexeEdition = false }) {
+                            listOf("homme", "femme", "autre", "").forEach { valeur ->
+                                DropdownMenuItem(text = { Text(valeur.ifBlank { "Non renseigné" }) }, onClick = { editSexe = valeur; menuSexeEdition = false })
+                            }
+                        }
+                    }
+                    OutlinedTextField(editDateNaissance, { editDateNaissance = it }, label = { Text("Date de naissance (AAAA-MM-JJ)") }, singleLine = true)
+                    OutlinedTextField(editAdresse, { editAdresse = it }, label = { Text("Adresse") })
+                    OutlinedTextField(editDateEmbauche, { editDateEmbauche = it }, label = { Text("Date d'embauche (AAAA-MM-JJ)") }, singleLine = true)
+                    OutlinedTextField(editSalaireBase, { editSalaireBase = it }, label = { Text("Salaire de base") }, singleLine = true)
+                    OutlinedTextField(editNotes, { editNotes = it }, label = { Text("Notes RH") }, minLines = 2)
+                    var menuStatutEdition by remember { mutableStateOf(false) }
+                    Box {
+                        OutlinedButton(onClick = { menuStatutEdition = true }) { Text("Statut : $editStatut") }
+                        DropdownMenu(expanded = menuStatutEdition, onDismissRequest = { menuStatutEdition = false }) {
+                            listOf("actif", "suspendu", "licencie").forEach { valeur ->
+                                DropdownMenuItem(text = { Text(valeur.replaceFirstChar { it.uppercase() }) }, onClick = { editStatut = valeur; menuStatutEdition = false })
+                            }
+                        }
+                    }
+                    var menuContratEdition by remember { mutableStateOf(false) }
+                    Box {
+                        OutlinedButton(onClick = { menuContratEdition = true }) { Text("Contrat : $editTypeContrat") }
+                        DropdownMenu(expanded = menuContratEdition, onDismissRequest = { menuContratEdition = false }) {
+                            listOf("CDI", "CDD", "Journalier", "Stage", "Consultant", "Autre").forEach { type ->
+                                DropdownMenuItem(text = { Text(type) }, onClick = { editTypeContrat = type; menuContratEdition = false })
+                            }
+                        }
+                    }
+                    Text("Le matricule et l'historique documentaire ne sont pas modifiés par ce formulaire.", color = Color.Gray, style = MaterialTheme.typography.bodySmall)
+                }
+            },
+            confirmButton = {
+                Button(onClick = { modifierEmploye() }, enabled = !enregistrementModification) {
+                    Text(if (enregistrementModification) "Enregistrement…" else "Enregistrer")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { afficherModification = false; employeEnEdition = null }, enabled = !enregistrementModification) { Text("Annuler") }
+            }
+        )
+    }
+
     if (afficherAjout) {
         AlertDialog(
             onDismissRequest = { if (!enregistrement) afficherAjout = false },
@@ -1444,6 +2053,20 @@ fun EcranPersonnel(onRetour: () -> Unit) {
                         OutlinedTextField(departement, { departement = it }, label = { Text("Département") }, singleLine = true)
                         OutlinedTextField(telephone, { telephone = it }, label = { Text("Téléphone") }, singleLine = true)
                         OutlinedTextField(email, { email = it }, label = { Text("E-mail") }, singleLine = true)
+                        var menuSexeCreation by remember { mutableStateOf(false) }
+                        Box {
+                            OutlinedButton(onClick = { menuSexeCreation = true }) { Text("Sexe : " + (sexe.ifBlank { "Non renseigné" })) }
+                            DropdownMenu(expanded = menuSexeCreation, onDismissRequest = { menuSexeCreation = false }) {
+                                listOf("homme", "femme", "autre", "").forEach { valeur ->
+                                    DropdownMenuItem(text = { Text(valeur.ifBlank { "Non renseigné" }) }, onClick = { sexe = valeur; menuSexeCreation = false })
+                                }
+                            }
+                        }
+                        OutlinedTextField(dateNaissance, { dateNaissance = it }, label = { Text("Date de naissance (AAAA-MM-JJ)") }, singleLine = true)
+                        OutlinedTextField(adresse, { adresse = it }, label = { Text("Adresse") })
+                        OutlinedTextField(dateEmbauche, { dateEmbauche = it }, label = { Text("Date d'embauche (AAAA-MM-JJ, facultatif)") }, singleLine = true)
+                        OutlinedTextField(salaireBase, { salaireBase = it }, label = { Text("Salaire de base") }, singleLine = true)
+                        OutlinedTextField(notesRH, { notesRH = it }, label = { Text("Notes RH") }, minLines = 2)
                         var menuContrat by remember { mutableStateOf(false) }
                         Box {
                             OutlinedButton(onClick = { menuContrat = true }) { Text("Contrat : $typeContrat") }
