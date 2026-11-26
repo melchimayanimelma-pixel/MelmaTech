@@ -1656,7 +1656,7 @@ fun EcranPersonnel(onRetour: () -> Unit) {
                                             onClick = { enregistrerDepart(pointageExistant) },
                                             modifier = Modifier.fillMaxWidth()
                                         ) {
-                                            Icon(Icons.Filled.Logout, null)
+                                            Icon(Icons.Filled.EventAvailable, null)
                                             Spacer(Modifier.width(6.dp))
                                             Text("Enregistrer l'heure de départ")
                                         }
