@@ -2069,9 +2069,35 @@ fun EcranPersonnel(onRetour: () -> Unit) {
                                         Text("Tous les champs suivis sont renseignés pour les employés chargés.", color = Color.Gray, style = MaterialTheme.typography.bodySmall)
                                     } else {
                                         dossiersIncomplets.take(8).forEach { (employe, manquants) ->
-                                            Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                                            Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
                                                 Text(employe.nom, fontWeight = FontWeight.SemiBold)
                                                 Text("À compléter : ${manquants.joinToString(" • ")}", color = Color.Gray, style = MaterialTheme.typography.bodySmall)
+                                                TextButton(
+                                                    onClick = {
+                                                        employeEnEdition = employe
+                                                        editNom = employe.nomFamille
+                                                        editPostnom = employe.postnom
+                                                        editPrenom = employe.prenom
+                                                        editPoste = employe.poste
+                                                        editDepartement = employe.departement
+                                                        editTelephone = employe.telephone
+                                                        editEmail = employe.email
+                                                        editTypeContrat = employe.typeContrat.ifBlank { "CDI" }
+                                                        editSexe = employe.sexe
+                                                        editDateNaissance = employe.dateNaissance
+                                                        editAdresse = employe.adresse
+                                                        editDateEmbauche = employe.dateEmbauche
+                                                        editSalaireBase = employe.salaireBase
+                                                        editNotes = employe.notes
+                                                        editStatut = employe.statut.ifBlank { "actif" }
+                                                        afficherModification = true
+                                                    },
+                                                    contentPadding = PaddingValues(horizontal = 0.dp, vertical = 2.dp)
+                                                ) {
+                                                    Text("Compléter la fiche", color = violetRH)
+                                                    Spacer(Modifier.width(4.dp))
+                                                    Icon(Icons.Filled.Edit, contentDescription = null, tint = violetRH, modifier = Modifier.size(16.dp))
+                                                }
                                             }
                                         }
                                         if (dossiersIncomplets.size > 8) {
