@@ -2,6 +2,8 @@ name: Construire MelmaTech
 
 on:
   push:
+    branches: [main, feature/rh-professionnel-complet, integration/rh-avance-main]
+  pull_request:
     branches: [main]
   workflow_dispatch:
 
