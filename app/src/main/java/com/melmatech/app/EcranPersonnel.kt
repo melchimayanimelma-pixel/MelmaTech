@@ -2048,6 +2048,41 @@ fun EcranPersonnel(onRetour: () -> Unit) {
                             }
                         }
                         item {
+                            val dossiersIncomplets = employes.mapNotNull { employe ->
+                                val manquants = buildList {
+                                    if (employe.telephone.isBlank()) add("Téléphone")
+                                    if (employe.email.isBlank()) add("E-mail")
+                                    if (employe.departement.isBlank()) add("Département")
+                                    if (employe.typeContrat.isBlank()) add("Type de contrat")
+                                    if (employe.dateNaissance.isBlank()) add("Date de naissance")
+                                }
+                                if (manquants.isEmpty()) null else employe to manquants
+                            }
+                            Card(colors = CardDefaults.cardColors(containerColor = Color.White)) {
+                                Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                                        Text("Qualité des dossiers", fontWeight = FontWeight.Bold)
+                                        Text("${employes.size - dossiersIncomplets.size}/${employes.size}", color = violetRH, fontWeight = FontWeight.Bold)
+                                    }
+                                    Text("${dossiersIncomplets.size} dossier(s) avec des informations à compléter", color = if (dossiersIncomplets.isEmpty()) Color(0xFF16834B) else Color(0xFFB7791F), style = MaterialTheme.typography.bodySmall)
+                                    if (dossiersIncomplets.isEmpty()) {
+                                        Text("Tous les champs suivis sont renseignés pour les employés chargés.", color = Color.Gray, style = MaterialTheme.typography.bodySmall)
+                                    } else {
+                                        dossiersIncomplets.take(8).forEach { (employe, manquants) ->
+                                            Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                                                Text(employe.nom, fontWeight = FontWeight.SemiBold)
+                                                Text("À compléter : ${manquants.joinToString(" • ")}", color = Color.Gray, style = MaterialTheme.typography.bodySmall)
+                                            }
+                                        }
+                                        if (dossiersIncomplets.size > 8) {
+                                            Text("Et ${dossiersIncomplets.size - 8} autre(s) dossier(s).", color = violetRH, style = MaterialTheme.typography.bodySmall)
+                                        }
+                                    }
+                                    Text("Contrôle indicatif basé sur les coordonnées et informations de base disponibles.", color = Color.Gray, style = MaterialTheme.typography.labelSmall)
+                                }
+                            }
+                        }
+                        item {
                             val aujourdHuiRapport = java.time.LocalDate.now()
                             val anciennete = employes.mapNotNull { employe ->
                                 val embauche = runCatching { java.time.LocalDate.parse(employe.dateEmbauche.take(10)) }.getOrNull()
