@@ -252,3 +252,12 @@ Tester le cycle de création d'employé (trigger matricule), les accès RH et no
 - Le tableau de bord présente une répartition des effectifs par `type_contrat`, uniquement pour les contrats renseignés.
 - Ces deux indicateurs sont calculés à partir des employés déjà chargés pour l'entreprise active; aucune nouvelle table ni migration n'est requise.
 - Correctif Compose : le champ de recherche de l'historique de pointage est encapsulé dans un `item { }` de LazyColumn. La compilation de la version précédente avait échoué sur un appel composable hors contexte; la validation du nouveau workflow reste en attente.
+
+
+## Améliorations interface et rapports — 26/11/2026
+- Tableau de bord : libellés des trois indicateurs secondaires sur deux lignes afin d'éviter leur chevauchement sur petits écrans.
+- Organisation : boutons d'ajout compacts, icônes réduites et libellé Départements adapté aux largeurs mobiles.
+- Présences : filtres de période horizontalement défilables et marge inférieure du contenu pour éviter que l'historique soit masqué par la barre de navigation.
+- Rapports : profil démographique à partir des champs sexe et date_naissance, avec tranches d'âge. Les dates invalides/futures sont ignorées et les valeurs de sexe inconnues sont classées « Non précisé / autre ».
+- Rapports : contrôle de complétude des dossiers à partir du téléphone, e-mail, département, type de contrat et date de naissance. Aucun champ n'est modifié automatiquement.
+- Ces ajouts sont calculés depuis les données déjà chargées; aucune migration Supabase n'est requise.
