@@ -1730,13 +1730,15 @@ fun EcranPersonnel(onRetour: () -> Unit) {
                                 }
                             }
                         }
-                        OutlinedTextField(
-                            value = recherchePresence,
-                            onValueChange = { recherchePresence = it },
-                            modifier = Modifier.fillMaxWidth(),
-                            singleLine = true,
-                            label = { Text("Rechercher un employé dans les pointages") }
-                        )
+                        item {
+                            OutlinedTextField(
+                                value = recherchePresence,
+                                onValueChange = { recherchePresence = it },
+                                modifier = Modifier.fillMaxWidth(),
+                                singleLine = true,
+                                label = { Text("Rechercher un employé dans les pointages") }
+                            )
+                        }
                         val aujourdHui = java.time.LocalDate.now()
                         val historiqueFiltre = presences.filter { presence ->
                             val date = runCatching { java.time.LocalDate.parse(presence.date) }.getOrNull()
