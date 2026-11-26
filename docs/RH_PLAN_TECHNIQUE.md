@@ -201,3 +201,24 @@ Tester le cycle de création d'employé (trigger matricule), les accès RH et no
 - Photo de profil privée, archivage avec journal d'audit, historique complet des changements et validation des dates calendaires restent à développer.
 - Les tests d'accès RLS et Storage par rôles et par entreprise n'ont pas encore été exécutés dans cette incrémentation.
 - Le build GitHub Actions doit être vérifié sur le dernier commit avant de déclarer cette livraison compilée.
+
+
+## Journal d'exécution — incrément RH avancé (26/11/2026)
+
+### Présences
+- Ajout de la recherche des pointages par nom d'employé.
+- Filtres d'historique par aujourd'hui, 7 jours, 30 jours et tout l'historique.
+- Ajout de l'enregistrement de l'heure de départ sur le pointage existant, limité à l'entreprise active et au responsable RH.
+- Les boutons de création du pointage du jour disparaissent après le premier pointage; l'écran propose alors l'enregistrement du départ lorsque l'arrivée existe et que le départ est vide. Cela réduit les doubles pointages via l'interface.
+
+### Congés
+- Chargement et affichage du commentaire de décision RH déjà prévu dans la table.
+- Toute décision passe désormais par une boîte de dialogue de confirmation.
+- Un motif est obligatoire pour refuser une demande; le commentaire d'approbation reste facultatif.
+- Les décisions affichent leur commentaire dans la fiche de demande.
+- Les boutons d'approbation/refus sont limités au responsable RH dans l'interface; les policies RLS existantes restent la protection serveur.
+
+### Limites et validation
+- Aucun schéma ni policy Supabase n'a été modifié pour cet incrément.
+- Les nouvelles opérations réutilisent les tables et colonnes déjà présentes : `presences_employes.heure_depart` et `demandes_conges.commentaire_decision`.
+- La compilation Android et les tests sur appareil doivent être confirmés avant fusion.
