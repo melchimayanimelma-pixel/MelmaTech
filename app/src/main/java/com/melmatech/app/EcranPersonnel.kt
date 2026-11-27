@@ -1140,17 +1140,17 @@ fun EcranPersonnel(onRetour: () -> Unit) {
                                 StatCompactRH("Absents", presences.count { it.date == java.time.LocalDate.now().toString() && it.statut == "absent" }.toString())
                             }
                             Divider(color = fondRH)
-                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                                    Text("Congés à traiter", color = Color.Gray, style = MaterialTheme.typography.labelSmall, minLines = 2)
+                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                                Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                                    Text("Congés à traiter", color = Color.Gray, style = MaterialTheme.typography.labelSmall, minLines = 2, maxLines = 2, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
                                     Text(conges.count { it.statut == "en_attente" }.toString(), color = violetRH, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
                                 }
-                                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                                    Text("Paies en brouillon", color = Color.Gray, style = MaterialTheme.typography.labelSmall, minLines = 2)
+                                Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                                    Text("Paies en brouillon", color = Color.Gray, style = MaterialTheme.typography.labelSmall, minLines = 2, maxLines = 2, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
                                     Text(bulletins.count { it.statut == "brouillon" }.toString(), color = violetRH, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
                                 }
-                                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                                    Text("Effectif actif", color = Color.Gray, style = MaterialTheme.typography.labelSmall, minLines = 2)
+                                Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                                    Text("Effectif actif", color = Color.Gray, style = MaterialTheme.typography.labelSmall, minLines = 2, maxLines = 2, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
                                     Text(employes.count { it.statut == "actif" }.toString(), color = violetRH, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
                                 }
                             }
@@ -1842,9 +1842,18 @@ fun EcranPersonnel(onRetour: () -> Unit) {
                     }
                 }
                 "Congés" -> {
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                        Text("Demandes et validations", fontWeight = FontWeight.Bold)
-                        Button(onClick = { afficherDemandeConge = true }) { Icon(Icons.Filled.BeachAccess, null); Spacer(Modifier.width(6.dp)); Text("Nouvelle demande") }
+                    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Text("Demandes et validations", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
+                        Button(
+                            onClick = { afficherDemandeConge = true },
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(14.dp),
+                            contentPadding = PaddingValues(horizontal = 14.dp, vertical = 12.dp)
+                        ) {
+                            Icon(Icons.Filled.BeachAccess, contentDescription = null)
+                            Spacer(Modifier.width(8.dp))
+                            Text("Nouvelle demande de congé", maxLines = 1)
+                        }
                     }
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         StatCompactRH("En attente", conges.count { it.statut == "en_attente" }.toString())
@@ -2337,7 +2346,12 @@ fun EcranPersonnel(onRetour: () -> Unit) {
             onDismissRequest = { afficherDemandeConge = false },
             title = { Text("Nouvelle demande de congé") },
             text = {
-                Column(Modifier.heightIn(max = 480.dp).verticalScroll(androidx.compose.foundation.rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Column(
+                    Modifier.fillMaxWidth().heightIn(max = 380.dp)
+                        .verticalScroll(androidx.compose.foundation.rememberScrollState())
+                        .padding(bottom = 8.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
                     var menuEmployeConge by remember { mutableStateOf(false) }
                     Box {
                         OutlinedButton(onClick = { menuEmployeConge = true }, modifier = Modifier.fillMaxWidth()) {
@@ -2402,8 +2416,10 @@ fun EcranPersonnel(onRetour: () -> Unit) {
             title = { Text("Modifier la fiche employé") },
             text = {
                 Column(
-                    Modifier.heightIn(max = 500.dp).verticalScroll(rememberScrollState()),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                    Modifier.fillMaxWidth().heightIn(max = 360.dp)
+                        .verticalScroll(rememberScrollState())
+                        .padding(bottom = 12.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     OutlinedTextField(editNom, { editNom = it }, label = { Text("Nom *") }, singleLine = true)
                     OutlinedTextField(editPostnom, { editPostnom = it }, label = { Text("Postnom") }, singleLine = true)
