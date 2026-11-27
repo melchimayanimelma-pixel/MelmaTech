@@ -2370,8 +2370,8 @@ fun EcranPersonnel(onRetour: () -> Unit) {
                             }
                         }
                     }
-                    OutlinedTextField(debutConge, { debutConge = it }, label = { Text("Date de début (AAAA-MM-JJ)") }, singleLine = true)
-                    OutlinedTextField(finConge, { finConge = it }, label = { Text("Date de fin (AAAA-MM-JJ)") }, singleLine = true)
+                    ChampDateRH("Date de début", debutConge) { debutConge = it }
+                    ChampDateRH("Date de fin", finConge) { finConge = it }
                     OutlinedTextField(motifConge, { motifConge = it }, label = { Text("Motif") }, minLines = 2)
                 }
             },
@@ -2395,8 +2395,8 @@ fun EcranPersonnel(onRetour: () -> Unit) {
                             employes.forEach { e -> DropdownMenuItem(text = { Text(e.nom) }, onClick = { employePaie = e.id; basePaie = ""; menuEmployePaie = false }) }
                         }
                     }
-                    OutlinedTextField(debutPaie, { debutPaie = it }, label = { Text("Début période (AAAA-MM-JJ)") }, singleLine = true)
-                    OutlinedTextField(finPaie, { finPaie = it }, label = { Text("Fin période (AAAA-MM-JJ)") }, singleLine = true)
+                    ChampDateRH("Début de période", debutPaie) { debutPaie = it }
+                    ChampDateRH("Fin de période", finPaie) { finPaie = it }
                     OutlinedTextField(basePaie, { basePaie = it }, label = { Text("Salaire de base") }, singleLine = true)
                     OutlinedTextField(primesPaie, { primesPaie = it }, label = { Text("Primes") }, singleLine = true)
                     OutlinedTextField(retenuesPaie, { retenuesPaie = it }, label = { Text("Retenues") }, singleLine = true)
@@ -2437,9 +2437,9 @@ fun EcranPersonnel(onRetour: () -> Unit) {
                             }
                         }
                     }
-                    OutlinedTextField(editDateNaissance, { editDateNaissance = it }, label = { Text("Date de naissance (AAAA-MM-JJ)") }, singleLine = true)
+                    ChampDateRH("Date de naissance", editDateNaissance) { editDateNaissance = it }
                     OutlinedTextField(editAdresse, { editAdresse = it }, label = { Text("Adresse") })
-                    OutlinedTextField(editDateEmbauche, { editDateEmbauche = it }, label = { Text("Date d'embauche (AAAA-MM-JJ)") }, singleLine = true)
+                    ChampDateRH("Date d'embauche", editDateEmbauche) { editDateEmbauche = it }
                     OutlinedTextField(editSalaireBase, { editSalaireBase = it }, label = { Text("Salaire de base") }, singleLine = true)
                     OutlinedTextField(editNotes, { editNotes = it }, label = { Text("Notes RH") }, minLines = 2)
                     var menuStatutEdition by remember { mutableStateOf(false) }
@@ -2497,9 +2497,9 @@ fun EcranPersonnel(onRetour: () -> Unit) {
                                 }
                             }
                         }
-                        OutlinedTextField(dateNaissance, { dateNaissance = it }, label = { Text("Date de naissance (AAAA-MM-JJ)") }, singleLine = true)
+                        ChampDateRH("Date de naissance", dateNaissance) { dateNaissance = it }
                         OutlinedTextField(adresse, { adresse = it }, label = { Text("Adresse") })
-                        OutlinedTextField(dateEmbauche, { dateEmbauche = it }, label = { Text("Date d'embauche (AAAA-MM-JJ, facultatif)") }, singleLine = true)
+                        ChampDateRH("Date d'embauche (facultatif)", dateEmbauche) { dateEmbauche = it }
                         OutlinedTextField(salaireBase, { salaireBase = it }, label = { Text("Salaire de base") }, singleLine = true)
                         OutlinedTextField(notesRH, { notesRH = it }, label = { Text("Notes RH") }, minLines = 2)
                         var menuContrat by remember { mutableStateOf(false) }
@@ -2589,3 +2589,61 @@ private fun CarteIndicateurRH(titre: String, valeur: String, icone: ImageVector,
         }
     }
 }
+
+/** Champ de date partagé par les formulaires RH. Conserve le format ISO AAAA-MM-JJ. */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ChampDateRH(
+    label: String,
+    value: String,
+    onValueChange: (String) -> Unit
+) {
+    var calendrierOuvert by remember { mutableStateOf(false) }
+    val dateInitiale = remember(value) {
+        runCatching { java.time.LocalDate.parse(value.take(10)) }
+            .getOrDefault(java.time.LocalDate.now())
+    }
+    val etatCalendrier = rememberDatePickerState(
+        initialSelectedDateMillis = dateInitiale.toEpochDay() * 86_400_000L
+    )
+
+    OutlinedTextField(
+        value = value,
+        onValueChange = {},
+        modifier = Modifier.fillMaxWidth().clickable { calendrierOuvert = true },
+        readOnly = true,
+        singleLine = true,
+        label = { Text(label) },
+        placeholder = { Text("AAAA-MM-JJ") },
+        trailingIcon = {
+            IconButton(onClick = { calendrierOuvert = true }) {
+                Icon(Icons.Filled.EventAvailable, contentDescription = "Ouvrir le calendrier", tint = violetRH)
+            }
+        }
+    )
+
+    if (calendrierOuvert) {
+        DatePickerDialog(
+            onDismissRequest = { calendrierOuvert = false },
+            confirmButton = {
+                TextButton(onClick = {
+                    etatCalendrier.selectedDateMillis?.let { millis ->
+                        onValueChange(java.time.LocalDate.ofEpochDay(millis / 86_400_000L).toString())
+                    }
+                    calendrierOuvert = false
+                }) { Text("Valider") }
+            },
+            dismissButton = {
+                TextButton(onClick = { calendrierOuvert = false }) { Text("Annuler") }
+            }
+        ) {
+            DatePicker(
+                state = etatCalendrier,
+                showModeToggle = false,
+                title = { Text("Sélectionner une date", modifier = Modifier.padding(start = 24.dp, top = 16.dp)) },
+                headline = { Text(label, modifier = Modifier.padding(start = 24.dp)) }
+            )
+        }
+    }
+}
+
