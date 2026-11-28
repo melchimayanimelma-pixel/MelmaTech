@@ -870,14 +870,7 @@ val enregistrerFactureLauncher =
     }
     }
 
-    MaterialTheme(
-        colorScheme = lightColorScheme(
-            primary = androidx.compose.ui.graphics.Color(0xFF1565C0),
-            secondary = androidx.compose.ui.graphics.Color(0xFF1976D2),
-            background = androidx.compose.ui.graphics.Color(0xFFF5F7FA),
-            surface = androidx.compose.ui.graphics.Color.White
-        )
-    ) {
+    MelmaTechTheme {
 
         if (!utilisateurConnecte) {
 
