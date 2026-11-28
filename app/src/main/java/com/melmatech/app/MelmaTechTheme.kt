@@ -8,6 +8,7 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 
 /**
  * Design system centralisé de MelmaTech.
@@ -49,7 +50,17 @@ private val MelmaTechShapes = Shapes(
 fun MelmaTechTheme(content: @Composable () -> Unit) {
     MaterialTheme(
         colorScheme = MelmaTechColors,
-        typography = Typography(),
+        typography = Typography().run {
+            copy(
+                displayLarge = displayLarge.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.Bold),
+                headlineLarge = headlineLarge.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.Bold),
+                headlineMedium = headlineMedium.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.Bold),
+                titleLarge = titleLarge.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold),
+                titleMedium = titleMedium.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold),
+                bodyLarge = bodyLarge.copy(lineHeight = 24.sp),
+                bodyMedium = bodyMedium.copy(lineHeight = 21.sp)
+            )
+        },
         shapes = MelmaTechShapes,
         content = content
     )
