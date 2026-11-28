@@ -133,7 +133,7 @@ private data class PaieRH(
 )
 
 private val violetRH = Color(0xFF6C3CE9)
-private val fondRH = Color(0xFFF5F3FA)
+private val fondRH = Color(0xFFF6F5FA)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
