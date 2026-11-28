@@ -14,7 +14,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Button
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -90,11 +89,7 @@ fun BarcodeScannerDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        shape = MaterialTheme.shapes.extraLarge,
-        containerColor = MaterialTheme.colorScheme.surface,
-        titleContentColor = MaterialTheme.colorScheme.onSurface,
-        textContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-        title = { Text("Scanner un code-barres", style = MaterialTheme.typography.titleLarge) },
+        title = { Text("Scanner un code-barres") },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 if (!permissionGranted) {
