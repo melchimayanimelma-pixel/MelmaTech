@@ -32,6 +32,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
@@ -58,7 +59,10 @@ import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Cancel
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.Cake
 import androidx.compose.material.icons.filled.Work
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -67,6 +71,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import okhttp3.*
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.RequestBody.Companion.toRequestBody
@@ -84,7 +89,16 @@ private data class EmployeListe(
     val statut: String,
     val telephone: String = "",
     val email: String = "",
-    val typeContrat: String = ""
+    val typeContrat: String = "",
+    val nomFamille: String = "",
+    val postnom: String = "",
+    val prenom: String = "",
+    val sexe: String = "",
+    val dateNaissance: String = "",
+    val adresse: String = "",
+    val dateEmbauche: String = "",
+    val salaireBase: String = "",
+    val notes: String = ""
 )
 
 private data class DocumentRH(
@@ -96,14 +110,21 @@ private data class DocumentRH(
     val typeMime: String
 )
 
+private data class PosteRH(
+    val id: String,
+    val nom: String,
+    val description: String,
+    val actif: Boolean
+)
+
 private data class PresenceRH(
-    val id: String, val employe: String, val date: String,
+    val id: String, val employeId: String, val employe: String, val date: String,
     val arrivee: String, val depart: String, val statut: String
 )
 private data class CongeRH(
     val id: String, val employeId: String, val employe: String,
     val type: String, val debut: String, val fin: String,
-    val motif: String, val statut: String
+    val motif: String, val statut: String, val commentaireDecision: String = ""
 )
 private data class PaieRH(
     val id: String, val employe: String, val debut: String,
@@ -124,12 +145,12 @@ fun EcranPersonnel(onRetour: () -> Unit) {
     var profil by remember { mutableStateOf<ProfilUtilisateur?>(null) }
     var employes by remember { mutableStateOf(emptyList<EmployeListe>()) }
     var departements by remember { mutableStateOf(emptyList<String>()) }
+    var postes by remember { mutableStateOf(emptyList<PosteRH>()) }
     var documents by remember { mutableStateOf(emptyList<DocumentRH>()) }
     var employeSelectionne by remember { mutableStateOf<EmployeListe?>(null) }
     // Sélection indépendante : l’onglet Dossiers commence toujours par l’annuaire.
     var dossierEmployeOuvert by remember { mutableStateOf<EmployeListe?>(null) }
     var departementSelectionne by remember { mutableStateOf<String?>(null) }
-    var filtreStatut by remember { mutableStateOf("Tous") }
     var onglet by remember { mutableStateOf("Accueil RH") }
     var message by remember { mutableStateOf("") }
     val historiqueOnglets = remember { mutableStateListOf("Accueil RH") }
@@ -154,6 +175,24 @@ fun EcranPersonnel(onRetour: () -> Unit) {
     var chargement by remember { mutableStateOf(true) }
     var recherche by remember { mutableStateOf("") }
     var afficherAjout by remember { mutableStateOf(false) }
+    var afficherModification by remember { mutableStateOf(false) }
+    var employeEnEdition by remember { mutableStateOf<EmployeListe?>(null) }
+    var editNom by remember { mutableStateOf("") }
+    var editPostnom by remember { mutableStateOf("") }
+    var editPrenom by remember { mutableStateOf("") }
+    var editPoste by remember { mutableStateOf("") }
+    var editDepartement by remember { mutableStateOf("") }
+    var editTelephone by remember { mutableStateOf("") }
+    var editEmail by remember { mutableStateOf("") }
+    var editTypeContrat by remember { mutableStateOf("CDI") }
+    var editSexe by remember { mutableStateOf("") }
+    var editDateNaissance by remember { mutableStateOf("") }
+    var editAdresse by remember { mutableStateOf("") }
+    var editDateEmbauche by remember { mutableStateOf("") }
+    var editSalaireBase by remember { mutableStateOf("") }
+    var editNotes by remember { mutableStateOf("") }
+    var editStatut by remember { mutableStateOf("actif") }
+    var enregistrementModification by remember { mutableStateOf(false) }
     var nom by remember { mutableStateOf("") }
     var postnom by remember { mutableStateOf("") }
     var prenom by remember { mutableStateOf("") }
@@ -162,6 +201,12 @@ fun EcranPersonnel(onRetour: () -> Unit) {
     var telephone by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
     var typeContrat by remember { mutableStateOf("CDI") }
+    var sexe by remember { mutableStateOf("") }
+    var dateNaissance by remember { mutableStateOf("") }
+    var adresse by remember { mutableStateOf("") }
+    var dateEmbauche by remember { mutableStateOf("") }
+    var salaireBase by remember { mutableStateOf("") }
+    var notesRH by remember { mutableStateOf("") }
     var enregistrement by remember { mutableStateOf(false) }
     var chargementDocuments by remember { mutableStateOf(false) }
     var documentASupprimer by remember { mutableStateOf<DocumentRH?>(null) }
@@ -174,9 +219,21 @@ fun EcranPersonnel(onRetour: () -> Unit) {
     var afficherDepartement by remember { mutableStateOf(false) }
     var nouveauDepartement by remember { mutableStateOf("") }
     var descriptionDepartement by remember { mutableStateOf("") }
+    var afficherPoste by remember { mutableStateOf(false) }
+    var nouveauPoste by remember { mutableStateOf("") }
+    var descriptionPoste by remember { mutableStateOf("") }
     var presences by remember { mutableStateOf(emptyList<PresenceRH>()) }
     var conges by remember { mutableStateOf(emptyList<CongeRH>()) }
+    var filtreConges by remember { mutableStateOf("Tous") }
     var bulletins by remember { mutableStateOf(emptyList<PaieRH>()) }
+    var filtrePaie by remember { mutableStateOf("Tous") }
+    var filtreStatutEmploye by remember { mutableStateOf("Tous") }
+    var filtreContratEmploye by remember { mutableStateOf("Tous") }
+    var filtreHistoriquePresence by remember { mutableStateOf("Aujourd'hui") }
+    var recherchePresence by remember { mutableStateOf("") }
+    var congeEnDecision by remember { mutableStateOf<CongeRH?>(null) }
+    var statutDecisionConge by remember { mutableStateOf("approuve") }
+    var commentaireDecisionConge by remember { mutableStateOf("") }
     var chargementModule by remember { mutableStateOf(false) }
     var afficherDemandeConge by remember { mutableStateOf(false) }
     var employeConge by remember { mutableStateOf("") }
@@ -192,9 +249,7 @@ fun EcranPersonnel(onRetour: () -> Unit) {
     var debutPaie by remember { mutableStateOf("") }
     var finPaie by remember { mutableStateOf("") }
     val scrollAjoutEmploye = rememberScrollState()
-    LaunchedEffect(afficherAjout) {
-        if (afficherAjout) scrollAjoutEmploye.scrollTo(0)
-    }
+    LaunchedEffect(afficherAjout) { if (afficherAjout) scrollAjoutEmploye.scrollTo(0) }
 
     val estRH = profil?.role?.trim()?.lowercase() == "responsable_rh"
 
@@ -241,7 +296,7 @@ fun EcranPersonnel(onRetour: () -> Unit) {
                         val a = JSONArray(body)
                         presences = (0 until a.length()).map { i ->
                             val x = a.getJSONObject(i); val e = x.optJSONObject("employes")
-                            PresenceRH(x.optString("id"), listOf(e?.optString("prenom"), e?.optString("nom"), e?.optString("postnom")).filterNotNull().filter { n -> n.isNotBlank() && n != "null" }.joinToString(" ").ifBlank { "Employé" }, x.optString("date_presence"), x.optString("heure_arrivee").take(5).let { v -> if (v == "null") "—" else v }, x.optString("heure_depart").take(5).let { v -> if (v == "null") "—" else v }, x.optString("statut"))
+                            PresenceRH(x.optString("id"), x.optString("employe_id"), listOf(e?.optString("prenom"), e?.optString("nom"), e?.optString("postnom")).filterNotNull().filter { n -> n.isNotBlank() && n != "null" }.joinToString(" ").ifBlank { "Employé" }, x.optString("date_presence"), x.optString("heure_arrivee").take(5).let { v -> if (v == "null") "—" else v }, x.optString("heure_depart").take(5).let { v -> if (v == "null") "—" else v }, x.optString("statut"))
                         }
                     } catch (_: Exception) { message = "Format des présences illisible." }
                 }
@@ -268,11 +323,38 @@ fun EcranPersonnel(onRetour: () -> Unit) {
         })
     }
 
+    fun enregistrerDepart(presence: PresenceRH) {
+        val p = profil ?: return
+        if (!estRH) { message = "Action réservée au responsable RH autorisé."; return }
+        if (presence.depart != "—") { message = "L'heure de départ est déjà enregistrée."; return }
+        val token = AuthService.obtenirAccessToken(context) ?: return
+        val now = java.text.SimpleDateFormat("HH:mm:ss", java.util.Locale.getDefault()).format(java.util.Date())
+        val payload = JSONObject().put("heure_depart", now)
+        val req = authHeaders(
+            Request.Builder().url("${SupabaseConfig.url}/rest/v1/presences_employes?id=eq.${presence.id}&entreprise_id=eq.${p.entrepriseId}"),
+            token
+        ).addHeader("Content-Type", "application/json")
+            .addHeader("Prefer", "return=minimal")
+            .patch(payload.toString().toRequestBody("application/json; charset=utf-8".toMediaType()))
+            .build()
+        client.newCall(req).enqueue(object : Callback {
+            override fun onFailure(call: Call, e: IOException) {
+                mainHandler.post { message = "Départ non enregistré : ${e.message}" }
+            }
+            override fun onResponse(call: Call, response: Response) { response.use {
+                mainHandler.post {
+                    if (it.isSuccessful) { message = "Heure de départ enregistrée."; chargerPresences() }
+                    else message = "Enregistrement du départ refusé (${it.code})."
+                }
+            } }
+        })
+    }
+
     fun chargerConges() {
         val p = profil ?: return
         val token = AuthService.obtenirAccessToken(context) ?: return
         chargementModule = true
-        val url = "${SupabaseConfig.url}/rest/v1/demandes_conges?entreprise_id=eq.${p.entrepriseId}&select=id,employe_id,type_conge,date_debut,date_fin,motif,statut,employes(nom,postnom,prenom)&order=cree_le.desc"
+        val url = "${SupabaseConfig.url}/rest/v1/demandes_conges?entreprise_id=eq.${p.entrepriseId}&select=id,employe_id,type_conge,date_debut,date_fin,motif,statut,commentaire_decision,employes(nom,postnom,prenom)&order=cree_le.desc"
         val req = authHeaders(Request.Builder().url(url), token).get().build()
         client.newCall(req).enqueue(object : Callback {
             override fun onFailure(call: Call, e: IOException) { mainHandler.post { chargementModule = false; message = "Erreur de chargement des congés : ${e.message}" } }
@@ -285,7 +367,7 @@ fun EcranPersonnel(onRetour: () -> Unit) {
                         val a = JSONArray(body)
                         conges = (0 until a.length()).map { i ->
                             val x = a.getJSONObject(i); val e = x.optJSONObject("employes")
-                            CongeRH(x.optString("id"), x.optString("employe_id"), listOf(e?.optString("prenom"), e?.optString("nom"), e?.optString("postnom")).filterNotNull().filter { n -> n.isNotBlank() && n != "null" }.joinToString(" ").ifBlank { "Employé" }, x.optString("type_conge"), x.optString("date_debut"), x.optString("date_fin"), x.optString("motif").takeUnless { v -> v == "null" }.orEmpty(), x.optString("statut"))
+                            CongeRH(x.optString("id"), x.optString("employe_id"), listOf(e?.optString("prenom"), e?.optString("nom"), e?.optString("postnom")).filterNotNull().filter { n -> n.isNotBlank() && n != "null" }.joinToString(" ").ifBlank { "Employé" }, x.optString("type_conge"), x.optString("date_debut"), x.optString("date_fin"), x.optString("motif").takeUnless { v -> v == "null" }.orEmpty(), x.optString("statut"), x.optString("commentaire_decision").takeUnless { v -> v == "null" }.orEmpty())
                         }
                     } catch (_: Exception) { message = "Format des congés illisible." }
                 }
@@ -312,18 +394,19 @@ fun EcranPersonnel(onRetour: () -> Unit) {
         })
     }
 
-    fun deciderConge(id: String, statut: String) {
+    fun deciderConge(id: String, statut: String, commentaire: String = "") {
         val p = profil ?: return
         val token = AuthService.obtenirAccessToken(context) ?: return
         val payload = JSONObject().put("statut", statut).put("decision_par", p.id)
             .put("decision_le", java.time.OffsetDateTime.now().toString())
+            .put("commentaire_decision", commentaire.trim().ifBlank { JSONObject.NULL })
         val req = authHeaders(Request.Builder().url("${SupabaseConfig.url}/rest/v1/demandes_conges?id=eq.$id&entreprise_id=eq.${p.entrepriseId}"), token)
             .addHeader("Content-Type", "application/json").addHeader("Prefer", "return=minimal")
             .patch(payload.toString().toRequestBody("application/json; charset=utf-8".toMediaType())).build()
         client.newCall(req).enqueue(object : Callback {
             override fun onFailure(call: Call, e: IOException) { mainHandler.post { message = "Décision non enregistrée : ${e.message}" } }
             override fun onResponse(call: Call, response: Response) { response.use { mainHandler.post {
-                if (it.isSuccessful) { message = if (statut == "approuve") "Congé approuvé." else "Congé refusé."; chargerConges() }
+                if (it.isSuccessful) { congeEnDecision = null; commentaireDecisionConge = ""; message = if (statut == "approuve") "Congé approuvé." else "Congé refusé."; chargerConges() }
                 else message = "Modification refusée (${it.code})."
             } } }
         })
@@ -351,6 +434,36 @@ fun EcranPersonnel(onRetour: () -> Unit) {
                     } catch (_: Exception) { message = "Format des bulletins illisible." }
                 }
             } }
+        })
+    }
+
+    fun marquerBulletinPaye(bulletin: PaieRH) {
+        val p = profil ?: return
+        if (!estRH) { message = "Action réservée au responsable RH autorisé."; return }
+        val token = AuthService.obtenirAccessToken(context) ?: return
+        val payload = JSONObject().put("statut", "paye")
+        val url = "${SupabaseConfig.url}/rest/v1/bulletins_paie?id=eq.${bulletin.id}&entreprise_id=eq.${p.entrepriseId}&statut=eq.brouillon"
+        val req = authHeaders(Request.Builder().url(url), token)
+            .addHeader("Content-Type", "application/json")
+            .addHeader("Prefer", "return=minimal")
+            .patch(payload.toString().toRequestBody("application/json; charset=utf-8".toMediaType()))
+            .build()
+        client.newCall(req).enqueue(object : Callback {
+            override fun onFailure(call: Call, e: IOException) {
+                mainHandler.post { message = "Mise à jour du paiement impossible : ${e.message}" }
+            }
+            override fun onResponse(call: Call, response: Response) {
+                response.use {
+                    mainHandler.post {
+                        if (it.isSuccessful) {
+                            message = "Bulletin marqué comme payé."
+                            chargerPaie()
+                        } else {
+                            message = "Modification du bulletin refusée (${it.code})."
+                        }
+                    }
+                }
+            }
         })
     }
 
@@ -514,6 +627,78 @@ fun EcranPersonnel(onRetour: () -> Unit) {
         }
     }
 
+    fun chargerPostes(entrepriseId: String, token: String) {
+        val url = "${SupabaseConfig.url}/rest/v1/postes?entreprise_id=eq.$entrepriseId&actif=eq.true&select=id,nom,description,actif&order=nom.asc"
+        val request = authHeaders(Request.Builder().url(url), token).get().build()
+        client.newCall(request).enqueue(object : Callback {
+            override fun onFailure(call: Call, e: IOException) {
+                mainHandler.post { message = "Impossible de charger les postes : ${e.message}" }
+            }
+            override fun onResponse(call: Call, response: Response) {
+                response.use {
+                    val body = it.body?.string().orEmpty()
+                    if (!it.isSuccessful) {
+                        mainHandler.post { message = "Chargement des postes refusé (${it.code})." }
+                        return
+                    }
+                    try {
+                        val array = JSONArray(body)
+                        val resultat = (0 until array.length()).map { index ->
+                            val item = array.getJSONObject(index)
+                            PosteRH(
+                                id = item.optString("id"),
+                                nom = item.optString("nom"),
+                                description = item.optString("description").takeUnless { value -> value == "null" }.orEmpty(),
+                                actif = item.optBoolean("actif", true)
+                            )
+                        }
+                        mainHandler.post { postes = resultat }
+                    } catch (_: Exception) {
+                        mainHandler.post { message = "La liste des postes reçue est illisible." }
+                    }
+                }
+            }
+        })
+    }
+
+    fun ajouterPoste() {
+        val p = profil ?: return
+        val token = AuthService.obtenirAccessToken(context)
+        if (token.isNullOrBlank()) { message = "Session expirée. Reconnecte-toi."; return }
+        if (nouveauPoste.isBlank()) { message = "Le nom du poste est obligatoire."; return }
+        val payload = JSONObject()
+            .put("entreprise_id", p.entrepriseId)
+            .put("nom", nouveauPoste.trim())
+            .put("description", descriptionPoste.trim().ifBlank { JSONObject.NULL })
+        val request = authHeaders(Request.Builder().url("${SupabaseConfig.url}/rest/v1/postes"), token)
+            .addHeader("Content-Type", "application/json")
+            .addHeader("Prefer", "return=minimal")
+            .post(payload.toString().toRequestBody("application/json; charset=utf-8".toMediaType()))
+            .build()
+        client.newCall(request).enqueue(object : Callback {
+            override fun onFailure(call: Call, e: IOException) {
+                mainHandler.post { message = "Création du poste impossible : ${e.message}" }
+            }
+            override fun onResponse(call: Call, response: Response) {
+                response.use {
+                    val code = it.code
+                    val detail = if (it.isSuccessful) "" else it.body?.string().orEmpty().take(140)
+                    mainHandler.post {
+                        if (code in 200..299) {
+                            afficherPoste = false
+                            nouveauPoste = ""
+                            descriptionPoste = ""
+                            message = "Poste ajouté avec succès."
+                            chargerPostes(p.entrepriseId, token)
+                        } else {
+                            message = "Création du poste refusée ($code) : $detail"
+                        }
+                    }
+                }
+            }
+        })
+    }
+
     fun chargerEmployes() {
         if (employes.isEmpty()) chargement = true
         message = ""
@@ -530,7 +715,7 @@ fun EcranPersonnel(onRetour: () -> Unit) {
                 message = "Session expirée. Reconnecte-toi."
                 return@obtenirProfil
             }
-            val url = "${SupabaseConfig.url}/rest/v1/employes?entreprise_id=eq.${p.entrepriseId}&select=id,matricule,nom,postnom,prenom,poste,departement,statut,telephone,email,type_contrat&order=nom.asc"
+            val url = "${SupabaseConfig.url}/rest/v1/employes?entreprise_id=eq.${p.entrepriseId}&select=id,matricule,nom,postnom,prenom,sexe,date_naissance,adresse,photo_url,poste,departement,date_embauche,type_contrat,salaire_base,statut,notes&order=nom.asc"
             val request = authHeaders(Request.Builder().url(url), token).get().build()
             client.newCall(request).enqueue(object : Callback {
                 override fun onFailure(call: Call, e: IOException) {
@@ -556,7 +741,16 @@ fun EcranPersonnel(onRetour: () -> Unit) {
                                         statut = item.optString("statut", "actif"),
                                         telephone = item.optString("telephone").takeUnless { v -> v == "null" }.orEmpty(),
                                         email = item.optString("email").takeUnless { v -> v == "null" }.orEmpty(),
-                                        typeContrat = item.optString("type_contrat").takeUnless { v -> v == "null" }.orEmpty()
+                                        typeContrat = item.optString("type_contrat").takeUnless { v -> v == "null" }.orEmpty(),
+                                        nomFamille = item.optString("nom").takeUnless { v -> v == "null" }.orEmpty(),
+                                        postnom = item.optString("postnom").takeUnless { v -> v == "null" }.orEmpty(),
+                                        prenom = item.optString("prenom").takeUnless { v -> v == "null" }.orEmpty(),
+                                        sexe = item.optString("sexe").takeUnless { v -> v == "null" }.orEmpty(),
+                                        dateNaissance = item.optString("date_naissance").takeUnless { v -> v == "null" }.orEmpty(),
+                                        adresse = item.optString("adresse").takeUnless { v -> v == "null" }.orEmpty(),
+                                        dateEmbauche = item.optString("date_embauche").takeUnless { v -> v == "null" }.orEmpty(),
+                                        salaireBase = if (item.isNull("salaire_base")) "" else item.optString("salaire_base"),
+                                        notes = item.optString("notes").takeUnless { v -> v == "null" }.orEmpty()
                                     )
                                 }
                                 if (onglet == "Employés" && message.isBlank()) message = ""
@@ -566,6 +760,7 @@ fun EcranPersonnel(onRetour: () -> Unit) {
                 }
             })
 
+            chargerPostes(p.entrepriseId, token)
             val urlDepartements = "${SupabaseConfig.url}/rest/v1/departements?entreprise_id=eq.${p.entrepriseId}&actif=eq.true&select=nom&order=nom.asc"
             val reqDep = authHeaders(Request.Builder().url(urlDepartements), token).get().build()
             client.newCall(reqDep).enqueue(object : Callback {
@@ -589,6 +784,9 @@ fun EcranPersonnel(onRetour: () -> Unit) {
         val token = AuthService.obtenirAccessToken(context)
         if (p == null || token.isNullOrBlank()) { message = "Session invalide. Reconnecte-toi."; return }
         if (nom.isBlank() || poste.isBlank()) { message = "Le nom et le poste sont obligatoires."; return }
+        if (dateNaissance.isNotBlank() && !dateNaissance.matches(Regex("\\d{4}-\\d{2}-\\d{2}"))) { message = "Date de naissance invalide (AAAA-MM-JJ)."; return }
+        if (dateEmbauche.isNotBlank() && !dateEmbauche.matches(Regex("\\d{4}-\\d{2}-\\d{2}"))) { message = "Date d'embauche invalide (AAAA-MM-JJ)."; return }
+        if (salaireBase.isNotBlank() && (salaireBase.toBigDecimalOrNull() == null || salaireBase.toBigDecimalOrNull()!! < java.math.BigDecimal.ZERO)) { message = "Le salaire doit être un montant positif ou nul."; return }
         enregistrement = true
         val matricule = "EMP-" + UUID.randomUUID().toString().take(8).uppercase()
         val data = JSONObject()
@@ -602,7 +800,13 @@ fun EcranPersonnel(onRetour: () -> Unit) {
             .put("telephone", telephone.trim().ifBlank { JSONObject.NULL })
             .put("email", email.trim().ifBlank { JSONObject.NULL })
             .put("type_contrat", typeContrat)
+            .put("sexe", sexe.ifBlank { JSONObject.NULL })
+            .put("date_naissance", dateNaissance.trim().ifBlank { JSONObject.NULL })
+            .put("adresse", adresse.trim().ifBlank { JSONObject.NULL })
+            .put("salaire_base", salaireBase.trim().toBigDecimalOrNull() ?: JSONObject.NULL)
+            .put("notes", notesRH.trim().ifBlank { JSONObject.NULL })
             .put("cree_par", p.id)
+        if (dateEmbauche.isNotBlank()) data.put("date_embauche", dateEmbauche.trim())
         val url = "${SupabaseConfig.url}/rest/v1/employes"
         val request = authHeaders(Request.Builder().url(url), token)
             .addHeader("Content-Type", "application/json")
@@ -620,10 +824,83 @@ fun EcranPersonnel(onRetour: () -> Unit) {
                         if (it.isSuccessful) {
                             afficherAjout = false
                             nom = ""; postnom = ""; prenom = ""; poste = ""; departement = ""; telephone = ""; email = ""
+                            sexe = ""; dateNaissance = ""; adresse = ""; dateEmbauche = ""; salaireBase = ""; notesRH = ""
                             message = "Employé ajouté avec succès."
                             chargerEmployes()
                         } else {
                             message = "Échec de l'ajout (${it.code}) : ${it.body?.string().orEmpty().take(180)}"
+                        }
+                    }
+                }
+            }
+        })
+    }
+
+    fun modifierEmploye() {
+        val p = profil
+        val cible = employeEnEdition
+        val token = AuthService.obtenirAccessToken(context)
+        if (p == null || cible == null || token.isNullOrBlank()) {
+            message = "Session invalide. Reconnecte-toi."
+            return
+        }
+        if (editNom.isBlank() || editPoste.isBlank()) {
+            message = "Le nom et le poste sont obligatoires."
+            return
+        }
+        if (editDateEmbauche.isBlank() || !editDateEmbauche.matches(Regex("\\d{4}-\\d{2}-\\d{2}"))) {
+            message = "La date d'embauche est obligatoire et doit respecter le format AAAA-MM-JJ."
+            return
+        }
+        if (editDateNaissance.isNotBlank() && !editDateNaissance.matches(Regex("\\d{4}-\\d{2}-\\d{2}"))) {
+            message = "La date de naissance doit respecter le format AAAA-MM-JJ."
+            return
+        }
+        if (editSalaireBase.isNotBlank() && (editSalaireBase.trim().toBigDecimalOrNull() == null || editSalaireBase.trim().toBigDecimalOrNull()!! < java.math.BigDecimal.ZERO)) {
+            message = "Le salaire doit être un montant positif ou nul."
+            return
+        }
+        enregistrementModification = true
+        val payload = JSONObject()
+            .put("nom", editNom.trim())
+            .put("postnom", editPostnom.trim().ifBlank { JSONObject.NULL })
+            .put("prenom", editPrenom.trim().ifBlank { JSONObject.NULL })
+            .put("poste", editPoste.trim())
+            .put("departement", editDepartement.trim().ifBlank { JSONObject.NULL })
+            .put("telephone", editTelephone.trim().ifBlank { JSONObject.NULL })
+            .put("email", editEmail.trim().ifBlank { JSONObject.NULL })
+            .put("type_contrat", editTypeContrat)
+            .put("sexe", editSexe.trim().ifBlank { JSONObject.NULL })
+            .put("date_naissance", editDateNaissance.trim().ifBlank { JSONObject.NULL })
+            .put("adresse", editAdresse.trim().ifBlank { JSONObject.NULL })
+            .put("date_embauche", editDateEmbauche.trim())
+            .put("salaire_base", editSalaireBase.trim().toBigDecimalOrNull() ?: JSONObject.NULL)
+            .put("notes", editNotes.trim().ifBlank { JSONObject.NULL })
+            .put("statut", editStatut)
+            .put("modifie_le", java.time.Instant.now().toString())
+        val url = "${SupabaseConfig.url}/rest/v1/employes?id=eq.${Uri.encode(cible.id)}&entreprise_id=eq.${Uri.encode(p.entrepriseId)}"
+        val request = authHeaders(Request.Builder().url(url), token)
+            .addHeader("Content-Type", "application/json")
+            .addHeader("Prefer", "return=minimal")
+            .patch(payload.toString().toRequestBody("application/json; charset=utf-8".toMediaType()))
+            .build()
+        client.newCall(request).enqueue(object : Callback {
+            override fun onFailure(call: Call, e: IOException) {
+                mainHandler.post { enregistrementModification = false; message = "Modification impossible : ${e.message}" }
+            }
+            override fun onResponse(call: Call, response: Response) {
+                response.use {
+                    val code = it.code
+                    val detail = if (it.isSuccessful) "" else it.body?.string().orEmpty().take(160)
+                    mainHandler.post {
+                        enregistrementModification = false
+                        if (code in 200..299) {
+                            afficherModification = false
+                            employeEnEdition = null
+                            message = "Fiche employé mise à jour."
+                            chargerEmployes()
+                        } else {
+                            message = "Modification refusée ($code) : $detail"
                         }
                     }
                 }
@@ -710,7 +987,7 @@ fun EcranPersonnel(onRetour: () -> Unit) {
     }
 
     BackHandler(
-        enabled = documentApercu != null || afficherAjout || onglet != "Accueil RH"
+        enabled = documentApercu != null || afficherAjout || afficherPoste || afficherDepartement || onglet != "Accueil RH"
     ) {
         when {
             documentApercu != null -> {
@@ -718,7 +995,10 @@ fun EcranPersonnel(onRetour: () -> Unit) {
                 pagesApercu = emptyList()
                 chargementApercu = false
             }
+            afficherModification -> { afficherModification = false; employeEnEdition = null }
             afficherAjout -> afficherAjout = false
+            afficherPoste -> afficherPoste = false
+            afficherDepartement -> afficherDepartement = false
             else -> revenirOngletPrecedent()
         }
     }
@@ -726,7 +1006,8 @@ fun EcranPersonnel(onRetour: () -> Unit) {
     fun actualiserOnglet() {
         message = ""
         when (onglet) {
-            "Accueil RH", "Employés", "Dossiers", "Organisation" -> chargerEmployes()
+            "Accueil RH" -> { chargerEmployes(); chargerPresences(); chargerConges(); chargerPaie() }
+            "Employés", "Dossiers", "Organisation" -> chargerEmployes()
             "Présences" -> chargerPresences()
             "Congés" -> chargerConges()
             "Paie" -> chargerPaie()
@@ -738,6 +1019,7 @@ fun EcranPersonnel(onRetour: () -> Unit) {
     LaunchedEffect(Unit) { chargerEmployes() }
     LaunchedEffect(onglet, profil) {
         if (profil != null) when (onglet) {
+            "Accueil RH" -> { chargerEmployes(); chargerPresences(); chargerConges(); chargerPaie() }
             "Employés", "Organisation" -> chargerEmployes()
             "Dossiers" -> dossierEmployeOuvert?.let { chargerDocuments(it) }
             "Présences" -> chargerPresences()
@@ -748,27 +1030,39 @@ fun EcranPersonnel(onRetour: () -> Unit) {
     }
 
     Column(
-        modifier = Modifier.fillMaxSize().background(fondRH).padding(horizontal = 16.dp, vertical = 12.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+        modifier = Modifier.fillMaxSize().background(fondRH).padding(horizontal = 18.dp, vertical = 14.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-            Column(Modifier.weight(1f)) {
-                Text("MELMATECH RH", color = violetRH, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
-                Text("Espace RH", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
-                Text(profil?.nomComplet.orEmpty(), color = Color.Gray, style = MaterialTheme.typography.bodySmall)
-            }
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                IconButton(onClick = { actualiserOnglet() }, enabled = !chargement && !chargementModule && !chargementDocuments) {
-                    Icon(Icons.Filled.Refresh, contentDescription = "Actualiser", tint = violetRH)
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(containerColor = violetRH),
+            shape = RoundedCornerShape(22.dp),
+            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        ) {
+            Row(
+                Modifier.fillMaxWidth().padding(start = 18.dp, end = 10.dp, top = 16.dp, bottom = 16.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                    Text("MELMATECH  /  RESSOURCES HUMAINES", color = Color.White.copy(alpha = 0.82f), style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
+                    Text("Espace RH", color = Color.White, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+                    Text(profil?.nomComplet.orEmpty(), color = Color.White.copy(alpha = 0.88f), style = MaterialTheme.typography.bodySmall, maxLines = 1)
                 }
-                TextButton(onClick = onRetour) { Text("Quitter") }
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    IconButton(onClick = { actualiserOnglet() }, enabled = !chargement && !chargementModule && !chargementDocuments) {
+                        Icon(Icons.Filled.Refresh, contentDescription = "Actualiser", tint = Color.White)
+                    }
+                    TextButton(onClick = onRetour) { Text("Quitter", color = Color.White, fontWeight = FontWeight.SemiBold) }
+                }
             }
         }
 
         Card(
             modifier = Modifier.fillMaxWidth(),
             colors = CardDefaults.cardColors(containerColor = Color.White),
-            shape = RoundedCornerShape(16.dp)
+            shape = RoundedCornerShape(20.dp),
+            elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 12.dp),
@@ -788,15 +1082,21 @@ fun EcranPersonnel(onRetour: () -> Unit) {
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Column(Modifier.weight(1f)) {
-                Text("ESPACE DE TRAVAIL", color = Color.Gray, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.SemiBold)
-                Text(onglet, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text("VOTRE ESPACE DE TRAVAIL", color = violetRH, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
+                Text(onglet, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
             }
             Box {
-                OutlinedButton(onClick = { menuNavigationOuvert = true }) {
-                    Text("Navigation RH")
+                OutlinedButton(
+                    onClick = { menuNavigationOuvert = true },
+                    shape = RoundedCornerShape(14.dp),
+                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 9.dp)
+                ) {
+                    Icon(Icons.Filled.Menu, contentDescription = null, modifier = Modifier.size(18.dp))
                     Spacer(Modifier.width(6.dp))
-                    Icon(Icons.Filled.ArrowForward, contentDescription = null)
+                    Text("Modules", fontWeight = FontWeight.SemiBold)
+                    Spacer(Modifier.width(4.dp))
+                    Icon(Icons.Filled.ArrowForward, contentDescription = null, modifier = Modifier.size(16.dp))
                 }
                 DropdownMenu(expanded = menuNavigationOuvert, onDismissRequest = { menuNavigationOuvert = false }) {
                     sectionsRH.forEach { destination ->
@@ -830,7 +1130,88 @@ fun EcranPersonnel(onRetour: () -> Unit) {
             }
             when (onglet) {
                 "Accueil RH" -> {
-                    Text("Que souhaitez-vous gérer ?", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                    Text("Centre de pilotage RH", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                    Card(colors = CardDefaults.cardColors(containerColor = Color.White), shape = RoundedCornerShape(18.dp)) {
+                        Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                            Text("Activité du jour", fontWeight = FontWeight.Bold)
+                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                StatCompactRH("Présents", presences.count { it.date == java.time.LocalDate.now().toString() && it.statut == "present" }.toString())
+                                StatCompactRH("Retards", presences.count { it.date == java.time.LocalDate.now().toString() && it.statut == "retard" }.toString())
+                                StatCompactRH("Absents", presences.count { it.date == java.time.LocalDate.now().toString() && it.statut == "absent" }.toString())
+                            }
+                            Divider(color = fondRH)
+                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                                Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                                    Text("Congés à traiter", color = Color.Gray, style = MaterialTheme.typography.labelSmall, minLines = 2, maxLines = 2, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+                                    Text(conges.count { it.statut == "en_attente" }.toString(), color = violetRH, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+                                }
+                                Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                                    Text("Paies en brouillon", color = Color.Gray, style = MaterialTheme.typography.labelSmall, minLines = 2, maxLines = 2, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+                                    Text(bulletins.count { it.statut == "brouillon" }.toString(), color = violetRH, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+                                }
+                                Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                                    Text("Effectif actif", color = Color.Gray, style = MaterialTheme.typography.labelSmall, minLines = 2, maxLines = 2, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+                                    Text(employes.count { it.statut == "actif" }.toString(), color = violetRH, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+                                }
+                            }
+                            if (conges.any { it.statut == "en_attente" } || bulletins.any { it.statut == "brouillon" }) {
+                                Text("Des validations RH nécessitent votre attention.", color = Color(0xFF9A6700), style = MaterialTheme.typography.bodySmall)
+                            } else {
+                                Text("Aucune validation en attente parmi les données chargées.", color = Color(0xFF16834B), style = MaterialTheme.typography.bodySmall)
+                            }
+                        }
+                    }
+                    val aujourdhuiRH = java.time.LocalDate.now()
+                    val anniversairesProches = employes.mapNotNull { employe ->
+                        val naissance = runCatching { java.time.LocalDate.parse(employe.dateNaissance.take(10)) }.getOrNull()
+                            ?: return@mapNotNull null
+                        val anniversaireCetteAnnee = naissance.withYear(aujourdhuiRH.year)
+                        val prochain = if (anniversaireCetteAnnee.isBefore(aujourdhuiRH)) anniversaireCetteAnnee.plusYears(1) else anniversaireCetteAnnee
+                        val jours = java.time.temporal.ChronoUnit.DAYS.between(aujourdhuiRH, prochain)
+                        if (jours in 0..30) employe to jours else null
+                    }.sortedBy { it.second }
+                    Card(colors = CardDefaults.cardColors(containerColor = Color.White), shape = RoundedCornerShape(16.dp)) {
+                        Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Filled.Cake, contentDescription = null, tint = violetRH)
+                                Spacer(Modifier.width(8.dp))
+                                Text("Anniversaires à venir", fontWeight = FontWeight.Bold)
+                                Spacer(Modifier.weight(1f))
+                                Text("${anniversairesProches.size}", color = violetRH, fontWeight = FontWeight.Bold)
+                            }
+                            if (anniversairesProches.isEmpty()) {
+                                Text("Aucun anniversaire renseigné dans les 30 prochains jours.", color = Color.Gray, style = MaterialTheme.typography.bodySmall)
+                            } else {
+                                anniversairesProches.take(5).forEach { (employe, jours) ->
+                                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                                        Column(Modifier.weight(1f)) {
+                                            Text(employe.nom, fontWeight = FontWeight.Medium)
+                                            Text(employe.departement.ifBlank { employe.poste }, color = Color.Gray, style = MaterialTheme.typography.bodySmall)
+                                        }
+                                        Text(if (jours == 0L) "Aujourd'hui" else "Dans ${jours} j", color = violetRH, style = MaterialTheme.typography.labelMedium)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    val repartitionContrats = employes.filter { it.typeContrat.isNotBlank() && it.typeContrat != "null" }
+                        .groupingBy { it.typeContrat }.eachCount().toList().sortedByDescending { it.second }
+                    Card(colors = CardDefaults.cardColors(containerColor = Color.White), shape = RoundedCornerShape(16.dp)) {
+                        Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Text("Répartition des contrats", fontWeight = FontWeight.Bold)
+                            if (repartitionContrats.isEmpty()) {
+                                Text("Aucun type de contrat renseigné.", color = Color.Gray, style = MaterialTheme.typography.bodySmall)
+                            } else {
+                                repartitionContrats.take(4).forEach { (type, nombre) ->
+                                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                        Text(type)
+                                        Text(nombre.toString(), color = violetRH, fontWeight = FontWeight.SemiBold)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    Text("Modules de gestion", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                     LazyColumn(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                         item {
                             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -874,27 +1255,48 @@ fun EcranPersonnel(onRetour: () -> Unit) {
                             FilterChip(selected = departementSelectionne.equals(dep, true), onClick = { departementSelectionne = if (departementSelectionne.equals(dep, true)) null else dep }, label = { Text("$dep ($nombre)") })
                         }
                     }
-                    // Filtre complémentaire par statut : il s'ajoute au filtre département et à la recherche.
-                    Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        val statuts = listOf("Tous", "Actifs", "Inactifs")
-                        statuts.forEach { statut ->
-                            val nombre = when (statut) {
+                    Row(
+                        Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        listOf("Tous", "Actifs", "Inactifs").forEach { filtre ->
+                            val nombre = when (filtre) {
                                 "Actifs" -> employes.count { it.statut.equals("actif", true) }
                                 "Inactifs" -> employes.count { !it.statut.equals("actif", true) }
                                 else -> employes.size
                             }
                             FilterChip(
-                                selected = filtreStatut == statut,
-                                onClick = { filtreStatut = statut },
-                                label = { Text("$statut ($nombre)") }
+                                selected = filtreStatutEmploye == filtre,
+                                onClick = { filtreStatutEmploye = filtre },
+                                label = { Text("$filtre ($nombre)") }
+                            )
+                        }
+                    }
+                    val contratsDisponibles = employes.map { it.typeContrat }.filter { it.isNotBlank() && it != "null" }.distinct().sorted()
+                    Row(
+                        Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        FilterChip(
+                            selected = filtreContratEmploye == "Tous",
+                            onClick = { filtreContratEmploye = "Tous" },
+                            label = { Text("Tous contrats") }
+                        )
+                        contratsDisponibles.forEach { contrat ->
+                            val nombre = employes.count { it.typeContrat.equals(contrat, true) }
+                            FilterChip(
+                                selected = filtreContratEmploye.equals(contrat, true),
+                                onClick = { filtreContratEmploye = if (filtreContratEmploye.equals(contrat, true)) "Tous" else contrat },
+                                label = { Text("$contrat ($nombre)") }
                             )
                         }
                     }
                     val filtres = employes.filter {
                         (departementSelectionne == null || it.departement.equals(departementSelectionne, true)) &&
-                        (filtreStatut == "Tous" ||
-                            (filtreStatut == "Actifs" && it.statut.equals("actif", true)) ||
-                            (filtreStatut == "Inactifs" && !it.statut.equals("actif", true))) &&
+                        (filtreStatutEmploye == "Tous" ||
+                            (filtreStatutEmploye == "Actifs" && it.statut.equals("actif", true)) ||
+                            (filtreStatutEmploye == "Inactifs" && !it.statut.equals("actif", true))) &&
+                        (filtreContratEmploye == "Tous" || it.typeContrat.equals(filtreContratEmploye, true)) &&
                         (it.nom.contains(recherche, true) || it.matricule.contains(recherche, true) || it.poste.contains(recherche, true) || it.departement.contains(recherche, true) || it.telephone.contains(recherche, true) || it.email.contains(recherche, true))
                     }
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
@@ -922,6 +1324,25 @@ fun EcranPersonnel(onRetour: () -> Unit) {
                                             Text("${e.matricule} • ${e.poste.ifBlank { "Poste non défini" }}", color = Color.Gray, style = MaterialTheme.typography.bodySmall)
                                             Text("${e.departement.ifBlank { "Département non défini" }} • ${e.statut}", color = violetRH, style = MaterialTheme.typography.labelMedium)
                                         }
+                                        TextButton(onClick = {
+                                            employeEnEdition = e
+                                            editNom = e.nomFamille
+                                            editPostnom = e.postnom
+                                            editPrenom = e.prenom
+                                            editPoste = e.poste
+                                            editDepartement = e.departement
+                                            editTelephone = e.telephone
+                                            editEmail = e.email
+                                            editTypeContrat = e.typeContrat.ifBlank { "CDI" }
+                                            editSexe = e.sexe
+                                            editDateNaissance = e.dateNaissance
+                                            editAdresse = e.adresse
+                                            editDateEmbauche = e.dateEmbauche
+                                            editSalaireBase = e.salaireBase
+                                            editNotes = e.notes
+                                            editStatut = e.statut.ifBlank { "actif" }
+                                            afficherModification = true
+                                        }) { Text("Modifier") }
                                         Icon(Icons.Filled.ArrowForward, contentDescription = "Ouvrir le dossier", tint = violetRH)
                                     }
                                 }
@@ -1003,10 +1424,16 @@ fun EcranPersonnel(onRetour: () -> Unit) {
                         }
                     } else {
                         // Une seule zone défilante pour voir les informations ET les documents sans écran coupé.
-                        LazyColumn(
-                            Modifier.weight(1f),
-                            verticalArrangement = Arrangement.spacedBy(12.dp)
-                        ) {
+                        key(cible.id) {
+                            val etatListeDossier = rememberLazyListState()
+                            LaunchedEffect(onglet, cible.id) {
+                                if (onglet == "Dossiers") etatListeDossier.scrollToItem(0)
+                            }
+                            LazyColumn(
+                                state = etatListeDossier,
+                                modifier = Modifier.weight(1f),
+                                verticalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
                             item {
                                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                                     Column(Modifier.weight(1f)) {
@@ -1022,15 +1449,21 @@ fun EcranPersonnel(onRetour: () -> Unit) {
                                     Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                                         Text("Informations personnelles", color = violetRH, fontWeight = FontWeight.Bold)
                                         LigneInfoRH("Nom complet", cible.nom)
+                                        LigneInfoRH("Sexe", cible.sexe.ifBlank { "Non renseigné" }.replaceFirstChar { it.uppercase() })
+                                        LigneInfoRH("Date de naissance", cible.dateNaissance.ifBlank { "Non renseignée" })
                                         LigneInfoRH("Téléphone", cible.telephone.ifBlank { "Non renseigné" })
                                         LigneInfoRH("E-mail", cible.email.ifBlank { "Non renseigné" })
+                                        LigneInfoRH("Adresse", cible.adresse.ifBlank { "Non renseignée" })
                                         Divider(color = fondRH)
                                         Text("Informations professionnelles", color = violetRH, fontWeight = FontWeight.Bold)
                                         LigneInfoRH("Matricule", cible.matricule)
                                         LigneInfoRH("Poste", cible.poste.ifBlank { "Non renseigné" })
                                         LigneInfoRH("Département", cible.departement.ifBlank { "Non affecté" })
                                         LigneInfoRH("Type de contrat", cible.typeContrat.ifBlank { "Non renseigné" })
+                                        LigneInfoRH("Date d'embauche", cible.dateEmbauche.ifBlank { "Non renseignée" })
+                                        LigneInfoRH("Salaire de base", cible.salaireBase.ifBlank { "Non renseigné" })
                                         LigneInfoRH("Statut", cible.statut.replaceFirstChar { it.uppercase() })
+                                        if (cible.notes.isNotBlank()) LigneInfoRH("Notes RH", cible.notes)
                                     }
                                 }
                             }
@@ -1125,15 +1558,19 @@ fun EcranPersonnel(onRetour: () -> Unit) {
                                                                 } }
                                                             })
                                                         }
-                                                    }, modifier = Modifier.weight(1f)) {
-                                                        Icon(Icons.Filled.Visibility, contentDescription = null)
-                                                        Spacer(Modifier.width(6.dp))
-                                                        Text("Visualiser")
+                                                    }, modifier = Modifier.weight(1f).heightIn(min = 48.dp), contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp)) {
+                                                        Icon(Icons.Filled.Visibility, contentDescription = null, modifier = Modifier.size(18.dp))
+                                                        Spacer(Modifier.width(4.dp))
+                                                        Text("Visualiser", fontSize = 13.sp, maxLines = 1, softWrap = false)
                                                     }
-                                                    Button(onClick = { telechargerDocumentRH(d) }, modifier = Modifier.weight(1f)) {
-                                                        Icon(Icons.Filled.Download, contentDescription = null)
-                                                        Spacer(Modifier.width(6.dp))
-                                                        Text("Télécharger")
+                                                    Button(
+                                                        onClick = { telechargerDocumentRH(d) },
+                                                        modifier = Modifier.weight(1f).heightIn(min = 48.dp),
+                                                        contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp)
+                                                    ) {
+                                                        Icon(Icons.Filled.Download, contentDescription = null, modifier = Modifier.size(18.dp))
+                                                        Spacer(Modifier.width(4.dp))
+                                                        Text("Télécharger", fontSize = 13.sp, maxLines = 1, softWrap = false)
                                                     }
                                                 }
                                                 if (estRH) {
@@ -1154,18 +1591,65 @@ fun EcranPersonnel(onRetour: () -> Unit) {
                             } else {
                                 item { Text("Les documents personnels sont confidentiels et réservés au responsable RH.", color = Color.Gray) }
                             }
+                            }
                         }
                     }
                 }
                 "Organisation" -> {
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                        Column { Text("Structure de l'entreprise", fontWeight = FontWeight.Bold); Text("${departements.size} département(s)", color = Color.Gray, style = MaterialTheme.typography.bodySmall) }
-                        Button(onClick = { afficherDepartement = true }) { Icon(Icons.Filled.AccountTree, null); Text(" Ajouter") }
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                            Text(
+                                "Structure de l'entreprise",
+                                fontWeight = FontWeight.Bold,
+                                style = MaterialTheme.typography.titleMedium
+                            )
+                            Text(
+                                "${departements.size} département(s) • ${postes.size} poste(s)",
+                                color = Color.Gray,
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                        }
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            OutlinedButton(
+                                onClick = { afficherPoste = true },
+                                modifier = Modifier.weight(1f),
+                                contentPadding = PaddingValues(horizontal = 6.dp, vertical = 10.dp)
+                            ) {
+                                Icon(Icons.Filled.Work, contentDescription = null, modifier = Modifier.size(18.dp))
+                                Spacer(Modifier.width(4.dp))
+                                Text("Nouveau poste", maxLines = 1, fontSize = 12.sp)
+                            }
+                            Button(
+                                onClick = { afficherDepartement = true },
+                                modifier = Modifier.weight(1f),
+                                contentPadding = PaddingValues(horizontal = 6.dp, vertical = 10.dp)
+                            ) {
+                                Icon(Icons.Filled.AccountTree, contentDescription = null, modifier = Modifier.size(18.dp))
+                                Spacer(Modifier.width(4.dp))
+                                Text("Départements", maxLines = 1, fontSize = 12.sp)
+                            }
+                        }
                     }
-                    if (departements.isEmpty()) {
-                        Card(colors = CardDefaults.cardColors(containerColor = Color.White)) { Column(Modifier.fillMaxWidth().padding(18.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) { Icon(Icons.Filled.AccountTree, null, tint = violetRH, modifier = Modifier.size(30.dp)); Text("Aucun département", fontWeight = FontWeight.Bold); Text("Crée les départements pour structurer les équipes.", color = Color.Gray) } }
-                    } else LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        items(departements) { dep ->
+                    LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        item {
+                            Text("DÉPARTEMENTS", color = violetRH, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelLarge)
+                        }
+                        if (departements.isEmpty()) item {
+                            Card(colors = CardDefaults.cardColors(containerColor = Color.White)) {
+                                Column(Modifier.fillMaxWidth().padding(18.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                    Icon(Icons.Filled.AccountTree, null, tint = violetRH, modifier = Modifier.size(30.dp))
+                                    Text("Aucun département", fontWeight = FontWeight.Bold)
+                                    Text("Crée les départements pour structurer les équipes.", color = Color.Gray)
+                                }
+                            }
+                        }
+                        items(departements, key = { "dep_$it" }) { dep ->
                             val effectif = employes.count { it.departement.equals(dep, true) }
                             Card(modifier = Modifier.fillMaxWidth().clickable { departementSelectionne = dep; recherche = ""; naviguerVers("Employés") }, colors = CardDefaults.cardColors(containerColor = Color.White), shape = RoundedCornerShape(14.dp)) {
                                 Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -1178,6 +1662,31 @@ fun EcranPersonnel(onRetour: () -> Unit) {
                                 }
                             }
                         }
+                        item {
+                            Spacer(Modifier.height(8.dp))
+                            Text("POSTES", color = violetRH, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelLarge)
+                        }
+                        if (postes.isEmpty()) item {
+                            Card(colors = CardDefaults.cardColors(containerColor = Color.White)) {
+                                Column(Modifier.fillMaxWidth().padding(18.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                    Icon(Icons.Filled.Work, null, tint = violetRH, modifier = Modifier.size(28.dp))
+                                    Text("Aucun poste défini", fontWeight = FontWeight.Bold)
+                                    Text("Ajoute les fonctions de l'entreprise : comptable, vendeur, responsable RH, etc.", color = Color.Gray)
+                                }
+                            }
+                        }
+                        items(postes, key = { "poste_${it.id}" }) { posteRH ->
+                            Card(colors = CardDefaults.cardColors(containerColor = Color.White), shape = RoundedCornerShape(14.dp)) {
+                                Row(Modifier.fillMaxWidth().padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(Icons.Filled.Work, null, tint = violetRH, modifier = Modifier.size(26.dp))
+                                    Column(Modifier.weight(1f).padding(start = 12.dp)) {
+                                        Text(posteRH.nom, fontWeight = FontWeight.SemiBold)
+                                        if (posteRH.description.isNotBlank()) Text(posteRH.description, color = Color.Gray, style = MaterialTheme.typography.bodySmall)
+                                    }
+                                    Text("${employes.count { it.poste.equals(posteRH.nom, true) }} salarié(s)", color = Color.Gray, style = MaterialTheme.typography.labelSmall)
+                                }
+                            }
+                        }
                     }
                 }
                 "Présences" -> {
@@ -1186,19 +1695,139 @@ fun EcranPersonnel(onRetour: () -> Unit) {
                         TextButton(onClick = { chargerPresences() }) { Icon(Icons.Filled.Refresh, null); Text("Actualiser") }
                     }
                     if (chargementModule) LinearProgressIndicator(Modifier.fillMaxWidth())
-                    Text("Enregistrer une présence", fontWeight = FontWeight.SemiBold)
-                    LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    val pointagesDuJour = presences.filter { it.date == java.time.LocalDate.now().toString() }
+                    Card(colors = CardDefaults.cardColors(containerColor = Color.White), shape = RoundedCornerShape(16.dp)) {
+                        Row(
+                            Modifier.fillMaxWidth().padding(vertical = 14.dp, horizontal = 8.dp),
+                            horizontalArrangement = Arrangement.SpaceEvenly
+                        ) {
+                            StatCompactRH("Présents", pointagesDuJour.count { it.statut == "present" }.toString())
+                            StatCompactRH("En retard", pointagesDuJour.count { it.statut == "retard" }.toString())
+                            StatCompactRH("Absents", pointagesDuJour.count { it.statut == "absent" }.toString())
+                        }
+                    }
+                    Text("Pointer le personnel", fontWeight = FontWeight.SemiBold)
+                    LazyColumn(
+                        modifier = Modifier.weight(1f),
+                        contentPadding = PaddingValues(bottom = 32.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
                         items(employes, key = { it.id }) { e ->
+                            val pointageExistant = pointagesDuJour.firstOrNull { it.employeId == e.id }
                             Card(colors = CardDefaults.cardColors(containerColor = Color.White), shape = RoundedCornerShape(14.dp)) {
-                                Row(Modifier.fillMaxWidth().padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                                    Icon(Icons.Filled.People, null, tint = violetRH, modifier = Modifier.size(24.dp))
-                                    Column(Modifier.weight(1f).padding(start = 10.dp)) { Text(e.nom, fontWeight = FontWeight.SemiBold); Text(e.poste, color = Color.Gray, style = MaterialTheme.typography.bodySmall) }
-                                    Button(onClick = { enregistrerPresence(e) }, contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)) { Text("Présent") }
+                                Column(
+                                    Modifier.fillMaxWidth().padding(12.dp),
+                                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Icon(Icons.Filled.People, null, tint = violetRH, modifier = Modifier.size(24.dp))
+                                        Column(Modifier.weight(1f).padding(start = 10.dp)) {
+                                            Text(e.nom, fontWeight = FontWeight.SemiBold)
+                                            Text(e.poste.ifBlank { "Poste non défini" }, color = Color.Gray, style = MaterialTheme.typography.bodySmall)
+                                        }
+                                        if (pointageExistant != null) {
+                                            Text(
+                                                pointageExistant.statut.replaceFirstChar { it.uppercase() },
+                                                color = when (pointageExistant.statut) {
+                                                    "present" -> Color(0xFF16834B)
+                                                    "retard" -> Color(0xFFB7791F)
+                                                    else -> Color(0xFFB42318)
+                                                },
+                                                style = MaterialTheme.typography.labelMedium,
+                                                fontWeight = FontWeight.SemiBold
+                                            )
+                                        } else {
+                                            Text("Non pointé", color = Color.Gray, style = MaterialTheme.typography.labelSmall)
+                                        }
+                                    }
+                                    if (pointageExistant == null) {
+                                        Row(
+                                            Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                        ) {
+                                            Button(
+                                                onClick = { enregistrerPresence(e, "present") },
+                                                modifier = Modifier.weight(1f),
+                                                contentPadding = PaddingValues(horizontal = 4.dp, vertical = 6.dp)
+                                            ) { Text("Présent", maxLines = 1) }
+                                            OutlinedButton(
+                                                onClick = { enregistrerPresence(e, "retard") },
+                                                modifier = Modifier.weight(1f),
+                                                contentPadding = PaddingValues(horizontal = 4.dp, vertical = 6.dp)
+                                            ) { Text("Retard", maxLines = 1) }
+                                            OutlinedButton(
+                                                onClick = { enregistrerPresence(e, "absent") },
+                                                modifier = Modifier.weight(1f),
+                                                contentPadding = PaddingValues(horizontal = 4.dp, vertical = 6.dp)
+                                            ) { Text("Absent", maxLines = 1) }
+                                        }
+                                    } else if (pointageExistant.arrivee != "—" && pointageExistant.depart == "—") {
+                                        OutlinedButton(
+                                            onClick = { enregistrerDepart(pointageExistant) },
+                                            modifier = Modifier.fillMaxWidth()
+                                        ) {
+                                            Icon(Icons.Filled.EventAvailable, null)
+                                            Spacer(Modifier.width(6.dp))
+                                            Text("Enregistrer l'heure de départ")
+                                        }
+                                    } else {
+                                        Text(
+                                            if (pointageExistant.statut == "absent") "Absence déjà enregistrée" else "Journée pointée et clôturée",
+                                            color = Color.Gray,
+                                            style = MaterialTheme.typography.bodySmall
+                                        )
+                                    }
                                 }
                             }
                         }
-                        item { Text("Historique des pointages", fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 8.dp)) }
-                        items(presences, key = { it.id }) { p ->
+                        item {
+                            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Text("Historique des pointages", fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 8.dp))
+                                Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    FilterChip(
+                                        selected = filtreHistoriquePresence == "Aujourd'hui",
+                                        onClick = { filtreHistoriquePresence = "Aujourd'hui" },
+                                        label = { Text("Aujourd'hui") }
+                                    )
+                                    FilterChip(
+                                        selected = filtreHistoriquePresence == "7 jours",
+                                        onClick = { filtreHistoriquePresence = "7 jours" },
+                                        label = { Text("7 jours") }
+                                    )
+                                    FilterChip(
+                                        selected = filtreHistoriquePresence == "30 jours",
+                                        onClick = { filtreHistoriquePresence = "30 jours" },
+                                        label = { Text("30 jours") }
+                                    )
+                                    FilterChip(
+                                        selected = filtreHistoriquePresence == "Tous",
+                                        onClick = { filtreHistoriquePresence = "Tous" },
+                                        label = { Text("Tout") }
+                                    )
+                                }
+                            }
+                        }
+                        item {
+                            OutlinedTextField(
+                                value = recherchePresence,
+                                onValueChange = { recherchePresence = it },
+                                modifier = Modifier.fillMaxWidth(),
+                                singleLine = true,
+                                label = { Text("Rechercher un employé dans les pointages") }
+                            )
+                        }
+                        val aujourdHui = java.time.LocalDate.now()
+                        val historiqueFiltre = presences.filter { presence ->
+                            val date = runCatching { java.time.LocalDate.parse(presence.date) }.getOrNull()
+                            val dansPeriode = when (filtreHistoriquePresence) {
+                                "Aujourd'hui" -> date == aujourdHui
+                                "7 jours" -> date != null && !date.isBefore(aujourdHui.minusDays(6)) && !date.isAfter(aujourdHui)
+                                "30 jours" -> date != null && !date.isBefore(aujourdHui.minusDays(29)) && !date.isAfter(aujourdHui)
+                                else -> true
+                            }
+                            dansPeriode && (recherchePresence.isBlank() || presence.employe.contains(recherchePresence, true))
+                        }
+                        items(historiqueFiltre, key = { it.id }) { p ->
                             Card(colors = CardDefaults.cardColors(containerColor = Color.White)) {
                                 Row(Modifier.fillMaxWidth().padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
                                     Icon(Icons.Filled.EventAvailable, null, tint = violetRH)
@@ -1207,34 +1836,80 @@ fun EcranPersonnel(onRetour: () -> Unit) {
                                 }
                             }
                         }
+                        if (historiqueFiltre.isEmpty()) item {
+                            Text("Aucun pointage pour cette période.", color = Color.Gray)
+                        }
                     }
                 }
                 "Congés" -> {
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                        Text("Demandes et validations", fontWeight = FontWeight.Bold)
-                        Button(onClick = { afficherDemandeConge = true }) { Icon(Icons.Filled.BeachAccess, null); Spacer(Modifier.width(6.dp)); Text("Nouvelle demande") }
+                    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Text("Demandes et validations", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
+                        Button(
+                            onClick = { afficherDemandeConge = true },
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(14.dp),
+                            contentPadding = PaddingValues(horizontal = 14.dp, vertical = 12.dp)
+                        ) {
+                            Icon(Icons.Filled.BeachAccess, contentDescription = null)
+                            Spacer(Modifier.width(8.dp))
+                            Text("Nouvelle demande de congé", maxLines = 1)
+                        }
                     }
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         StatCompactRH("En attente", conges.count { it.statut == "en_attente" }.toString())
                         StatCompactRH("Approuvés", conges.count { it.statut == "approuve" }.toString())
                         StatCompactRH("Refusés", conges.count { it.statut == "refuse" }.toString())
                     }
+                    Row(
+                        Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        listOf("Tous", "En attente", "Approuvés", "Refusés").forEach { filtre ->
+                            val statutFiltre = when (filtre) {
+                                "En attente" -> "en_attente"
+                                "Approuvés" -> "approuve"
+                                "Refusés" -> "refuse"
+                                else -> ""
+                            }
+                            val nombre = if (statutFiltre.isBlank()) conges.size else conges.count { it.statut == statutFiltre }
+                            FilterChip(
+                                selected = filtreConges == filtre,
+                                onClick = { filtreConges = filtre },
+                                label = { Text("$filtre ($nombre)") }
+                            )
+                        }
+                    }
                     if (chargementModule) LinearProgressIndicator(Modifier.fillMaxWidth())
+                    val congesFiltres = conges.filter { demande ->
+                        when (filtreConges) {
+                            "En attente" -> demande.statut == "en_attente"
+                            "Approuvés" -> demande.statut == "approuve"
+                            "Refusés" -> demande.statut == "refuse"
+                            else -> true
+                        }
+                    }
                     LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        items(conges, key = { it.id }) { x ->
+                        items(congesFiltres, key = { it.id }) { x ->
                             Card(colors = CardDefaults.cardColors(containerColor = Color.White), shape = RoundedCornerShape(14.dp)) {
                                 Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                                     Row(verticalAlignment = Alignment.CenterVertically) { Icon(Icons.Filled.BeachAccess, null, tint = violetRH); Text("  ${x.employe}", fontWeight = FontWeight.Bold); Spacer(Modifier.weight(1f)); Text(x.statut.replace("_", " "), color = if (x.statut == "approuve") Color(0xFF16834B) else Color(0xFF9A6700), style = MaterialTheme.typography.labelMedium) }
                                     Text("${x.type} • ${x.debut} au ${x.fin}", color = Color.Gray)
-                                    if (x.motif.isNotBlank()) Text(x.motif, style = MaterialTheme.typography.bodySmall)
-                                    if (x.statut == "en_attente") Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                        OutlinedButton(onClick = { deciderConge(x.id, "refuse") }, modifier = Modifier.weight(1f)) { Icon(Icons.Filled.Cancel, null); Text(" Refuser") }
-                                        Button(onClick = { deciderConge(x.id, "approuve") }, modifier = Modifier.weight(1f)) { Icon(Icons.Filled.CheckCircle, null); Text(" Approuver") }
+                                    if (x.motif.isNotBlank()) Text("Motif : ${x.motif}", style = MaterialTheme.typography.bodySmall)
+                                    if (x.commentaireDecision.isNotBlank()) Text("Décision RH : ${x.commentaireDecision}", color = Color.Gray, style = MaterialTheme.typography.bodySmall)
+                                    if (x.statut == "en_attente" && estRH) Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                        OutlinedButton(onClick = { congeEnDecision = x; statutDecisionConge = "refuse"; commentaireDecisionConge = "" }, modifier = Modifier.weight(1f)) { Icon(Icons.Filled.Cancel, null); Text(" Refuser") }
+                                        Button(onClick = { congeEnDecision = x; statutDecisionConge = "approuve"; commentaireDecisionConge = "" }, modifier = Modifier.weight(1f)) { Icon(Icons.Filled.CheckCircle, null); Text(" Approuver") }
                                     }
                                 }
                             }
                         }
-                        if (conges.isEmpty() && !chargementModule) item { Text("Aucune demande de congé enregistrée.", color = Color.Gray) }
+                        if (congesFiltres.isEmpty() && !chargementModule) item {
+                            Text(
+                                if (conges.isEmpty()) "Aucune demande de congé enregistrée."
+                                else "Aucune demande dans ce filtre.",
+                                color = Color.Gray
+                            )
+                        }
                     }
                 }
                 "Paie" -> {
@@ -1249,19 +1924,58 @@ fun EcranPersonnel(onRetour: () -> Unit) {
                             StatCompactRH("Payés", bulletins.count { it.statut == "paye" }.toString())
                         }
                     }
+                    Row(
+                        Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        listOf("Tous", "Brouillons", "Payés").forEach { filtre ->
+                            val nombre = when (filtre) {
+                                "Brouillons" -> bulletins.count { it.statut == "brouillon" }
+                                "Payés" -> bulletins.count { it.statut == "paye" }
+                                else -> bulletins.size
+                            }
+                            FilterChip(
+                                selected = filtrePaie == filtre,
+                                onClick = { filtrePaie = filtre },
+                                label = { Text("$filtre ($nombre)") }
+                            )
+                        }
+                    }
                     if (chargementModule) LinearProgressIndicator(Modifier.fillMaxWidth())
+                    val bulletinsFiltres = bulletins.filter {
+                        when (filtrePaie) {
+                            "Brouillons" -> it.statut == "brouillon"
+                            "Payés" -> it.statut == "paye"
+                            else -> true
+                        }
+                    }
                     LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        items(bulletins, key = { it.id }) { b ->
+                        items(bulletinsFiltres, key = { it.id }) { b ->
                             Card(colors = CardDefaults.cardColors(containerColor = Color.White), shape = RoundedCornerShape(14.dp)) {
                                 Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
                                     Row(verticalAlignment = Alignment.CenterVertically) { Icon(Icons.Filled.Payments, null, tint = violetRH); Text("  ${b.employe}", fontWeight = FontWeight.Bold); Spacer(Modifier.weight(1f)); Text(b.statut, color = if (b.statut == "paye") Color(0xFF16834B) else Color(0xFF9A6700)) }
                                     Text("Période : ${b.debut} au ${b.fin}", color = Color.Gray, style = MaterialTheme.typography.bodySmall)
                                     Text("Base : ${"%.2f".format(b.base)}  •  Primes : ${"%.2f".format(b.primes)}  •  Retenues : ${"%.2f".format(b.retenues)}", style = MaterialTheme.typography.bodySmall)
                                     Text("Net à payer : ${"%.2f".format(b.net)}", color = violetRH, fontWeight = FontWeight.Bold)
+                                    if (b.statut == "brouillon" && estRH) {
+                                        Button(
+                                            onClick = { marquerBulletinPaye(b) },
+                                            modifier = Modifier.fillMaxWidth()
+                                        ) {
+                                            Icon(Icons.Filled.CheckCircle, contentDescription = null)
+                                            Spacer(Modifier.width(6.dp))
+                                            Text("Confirmer le paiement")
+                                        }
+                                    }
                                 }
                             }
                         }
-                        if (bulletins.isEmpty() && !chargementModule) item { Text("Aucun bulletin de paie enregistré.", color = Color.Gray) }
+                        if (bulletinsFiltres.isEmpty() && !chargementModule) item {
+                            Text(
+                                if (bulletins.isEmpty()) "Aucun bulletin de paie enregistré." else "Aucun bulletin dans ce filtre.",
+                                color = Color.Gray
+                            )
+                        }
                     }
                 }
                 "Rapports" -> {
@@ -1279,15 +1993,223 @@ fun EcranPersonnel(onRetour: () -> Unit) {
                             Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                                 Text("Masse salariale enregistrée", fontWeight = FontWeight.Bold)
                                 Text("${"%.2f".format(bulletins.sumOf { it.net })}", color = violetRH, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
-                                Text("Total des bulletins actuellement chargés, sans extrapolation.", color = Color.Gray, style = MaterialTheme.typography.bodySmall)
+                                Text(
+                                    if (bulletins.isEmpty()) "Aucun bulletin de paie n'est actuellement chargé. Le montant affiché est nul faute de données."
+                                    else "Total des ${bulletins.size} bulletin(s) actuellement chargés, sans extrapolation.",
+                                    color = Color.Gray,
+                                    style = MaterialTheme.typography.bodySmall
+                                )
                             }
                         } }
+                        item {
+                            val repartitionDepartements = employes
+                                .filter { it.departement.isNotBlank() && it.departement != "null" }
+                                .groupingBy { it.departement.trim() }.eachCount()
+                                .toList().sortedByDescending { it.second }
+                            Card(colors = CardDefaults.cardColors(containerColor = Color.White)) {
+                                Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                                    Text("Effectifs par département", fontWeight = FontWeight.Bold)
+                                    if (repartitionDepartements.isEmpty()) {
+                                        Text("Aucun département renseigné pour les employés chargés.", color = Color.Gray, style = MaterialTheme.typography.bodySmall)
+                                    } else {
+                                        repartitionDepartements.forEach { (nomDepartement, total) ->
+                                            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                                    Text(nomDepartement, style = MaterialTheme.typography.bodyMedium)
+                                                    Text("$total / ${employes.size}", color = violetRH, fontWeight = FontWeight.SemiBold)
+                                                }
+                                                LinearProgressIndicator(
+                                                    progress = { if (employes.isEmpty()) 0f else total.toFloat() / employes.size.toFloat() },
+                                                    modifier = Modifier.fillMaxWidth().height(6.dp),
+                                                    color = violetRH,
+                                                    trackColor = fondRH
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        item {
+                            val aujourdHuiAnalyse = java.time.LocalDate.now()
+                            val repartitionSexe = employes
+                                .map { it.sexe.trim().lowercase() }
+                                .filter { it.isNotBlank() && it != "null" }
+                                .groupingBy { sexe ->
+                                    when (sexe) {
+                                        "m", "masculin", "homme" -> "Hommes"
+                                        "f", "feminin", "féminin", "femme" -> "Femmes"
+                                        else -> "Non précisé / autre"
+                                    }
+                                }.eachCount()
+                            val repartitionAge = employes.mapNotNull { employe ->
+                                val naissance = runCatching { java.time.LocalDate.parse(employe.dateNaissance.take(10)) }.getOrNull()
+                                    ?: return@mapNotNull null
+                                if (naissance.isAfter(aujourdHuiAnalyse)) return@mapNotNull null
+                                val age = java.time.Period.between(naissance, aujourdHuiAnalyse).years
+                                when {
+                                    age < 25 -> "Moins de 25 ans"
+                                    age < 35 -> "25 à 34 ans"
+                                    age < 45 -> "35 à 44 ans"
+                                    age < 55 -> "45 à 54 ans"
+                                    else -> "55 ans et plus"
+                                }
+                            }.groupingBy { it }.eachCount()
+                            Card(colors = CardDefaults.cardColors(containerColor = Color.White)) {
+                                Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                                    Text("Profil démographique du personnel", fontWeight = FontWeight.Bold)
+                                    Text("Répartition par sexe", color = violetRH, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold)
+                                    if (repartitionSexe.isEmpty()) {
+                                        Text("Données de sexe non renseignées.", color = Color.Gray, style = MaterialTheme.typography.bodySmall)
+                                    } else {
+                                        repartitionSexe.forEach { (categorie, total) ->
+                                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                                Text(categorie)
+                                                Text(total.toString(), color = violetRH, fontWeight = FontWeight.SemiBold)
+                                            }
+                                        }
+                                    }
+                                    Divider(color = fondRH)
+                                    Text("Tranches d'âge", color = violetRH, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold)
+                                    if (repartitionAge.isEmpty()) {
+                                        Text("Aucune date de naissance exploitable : renseigne les dates dans les fiches employés pour obtenir cette analyse.", color = Color.Gray, style = MaterialTheme.typography.bodySmall)
+                                    } else {
+                                        listOf("Moins de 25 ans", "25 à 34 ans", "35 à 44 ans", "45 à 54 ans", "55 ans et plus").forEach { tranche ->
+                                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                                Text(tranche)
+                                                Text((repartitionAge[tranche] ?: 0).toString(), color = violetRH, fontWeight = FontWeight.SemiBold)
+                                            }
+                                        }
+                                    }
+                                    Text("Analyse calculée uniquement à partir des dates de naissance et informations renseignées.", color = Color.Gray, style = MaterialTheme.typography.bodySmall)
+                                }
+                            }
+                        }
+                        item {
+                            val dossiersIncomplets = employes.mapNotNull { employe ->
+                                val manquants = buildList {
+                                    if (employe.telephone.isBlank()) add("Téléphone")
+                                    if (employe.email.isBlank()) add("E-mail")
+                                    if (employe.departement.isBlank()) add("Département")
+                                    if (employe.typeContrat.isBlank()) add("Type de contrat")
+                                    if (employe.dateNaissance.isBlank()) add("Date de naissance")
+                                }
+                                if (manquants.isEmpty()) null else employe to manquants
+                            }
+                            Card(colors = CardDefaults.cardColors(containerColor = Color.White)) {
+                                Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                                        Text("Qualité des dossiers", fontWeight = FontWeight.Bold)
+                                        Text("${employes.size - dossiersIncomplets.size}/${employes.size}", color = violetRH, fontWeight = FontWeight.Bold)
+                                    }
+                                    Text("${dossiersIncomplets.size} dossier(s) avec des informations à compléter", color = if (dossiersIncomplets.isEmpty()) Color(0xFF16834B) else Color(0xFFB7791F), style = MaterialTheme.typography.bodySmall)
+                                    if (dossiersIncomplets.isEmpty()) {
+                                        Text("Tous les champs suivis sont renseignés pour les employés chargés.", color = Color.Gray, style = MaterialTheme.typography.bodySmall)
+                                    } else {
+                                        dossiersIncomplets.take(8).forEach { (employe, manquants) ->
+                                            Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                                                Text(employe.nom, fontWeight = FontWeight.SemiBold)
+                                                Text("À compléter : ${manquants.joinToString(" • ")}", color = Color.Gray, style = MaterialTheme.typography.bodySmall)
+                                                TextButton(
+                                                    onClick = {
+                                                        employeEnEdition = employe
+                                                        editNom = employe.nomFamille
+                                                        editPostnom = employe.postnom
+                                                        editPrenom = employe.prenom
+                                                        editPoste = employe.poste
+                                                        editDepartement = employe.departement
+                                                        editTelephone = employe.telephone
+                                                        editEmail = employe.email
+                                                        editTypeContrat = employe.typeContrat.ifBlank { "CDI" }
+                                                        editSexe = employe.sexe
+                                                        editDateNaissance = employe.dateNaissance
+                                                        editAdresse = employe.adresse
+                                                        editDateEmbauche = employe.dateEmbauche
+                                                        editSalaireBase = employe.salaireBase
+                                                        editNotes = employe.notes
+                                                        editStatut = employe.statut.ifBlank { "actif" }
+                                                        afficherModification = true
+                                                    },
+                                                    contentPadding = PaddingValues(horizontal = 0.dp, vertical = 2.dp)
+                                                ) {
+                                                    Text("Compléter la fiche", color = violetRH)
+                                                    Spacer(Modifier.width(4.dp))
+                                                    Icon(Icons.Filled.Edit, contentDescription = null, tint = violetRH, modifier = Modifier.size(16.dp))
+                                                }
+                                            }
+                                        }
+                                        if (dossiersIncomplets.size > 8) {
+                                            Text("Et ${dossiersIncomplets.size - 8} autre(s) dossier(s).", color = violetRH, style = MaterialTheme.typography.bodySmall)
+                                        }
+                                    }
+                                    Text("Contrôle indicatif basé sur les coordonnées et informations de base disponibles.", color = Color.Gray, style = MaterialTheme.typography.labelSmall)
+                                }
+                            }
+                        }
+                        item {
+                            val aujourdHuiRapport = java.time.LocalDate.now()
+                            val anciennete = employes.mapNotNull { employe ->
+                                val embauche = runCatching { java.time.LocalDate.parse(employe.dateEmbauche.take(10)) }.getOrNull()
+                                    ?: return@mapNotNull null
+                                if (embauche.isAfter(aujourdHuiRapport)) return@mapNotNull null
+                                val annees = java.time.Period.between(embauche, aujourdHuiRapport).years
+                                when {
+                                    annees < 1 -> "Moins d'un an"
+                                    annees < 3 -> "1 à 2 ans"
+                                    annees < 5 -> "3 à 4 ans"
+                                    else -> "5 ans et plus"
+                                }
+                            }.groupingBy { it }.eachCount()
+                            val ordreAnciennete = listOf("Moins d'un an", "1 à 2 ans", "3 à 4 ans", "5 ans et plus")
+                            Card(colors = CardDefaults.cardColors(containerColor = Color.White)) {
+                                Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    Text("Ancienneté du personnel", fontWeight = FontWeight.Bold)
+                                    ordreAnciennete.forEach { tranche ->
+                                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                            Text(tranche, style = MaterialTheme.typography.bodyMedium)
+                                            Text((anciennete[tranche] ?: 0).toString(), color = violetRH, fontWeight = FontWeight.SemiBold)
+                                        }
+                                    }
+                                    Text("Calcul basé sur les dates d'embauche renseignées et les employés chargés.", color = Color.Gray, style = MaterialTheme.typography.bodySmall)
+                                }
+                            }
+                        }
+
                     }
                 }
             }
         }
 
         if (message.isNotBlank()) Text(message, color = if (message.contains("succès") || message.contains("ajouté")) Color(0xFF16834B) else Color(0xFFB45309), style = MaterialTheme.typography.bodySmall)
+    }
+
+    if (congeEnDecision != null) {
+        val demande = congeEnDecision!!
+        AlertDialog(
+            onDismissRequest = { congeEnDecision = null; commentaireDecisionConge = "" },
+            title = { Text(if (statutDecisionConge == "approuve") "Approuver le congé" else "Refuser le congé") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("${demande.employe} • ${demande.type}\n${demande.debut} au ${demande.fin}")
+                    OutlinedTextField(
+                        value = commentaireDecisionConge,
+                        onValueChange = { commentaireDecisionConge = it },
+                        modifier = Modifier.fillMaxWidth(),
+                        minLines = 2,
+                        label = { Text(if (statutDecisionConge == "refuse") "Motif du refus *" else "Commentaire RH (facultatif)") }
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = { deciderConge(demande.id, statutDecisionConge, commentaireDecisionConge) },
+                    enabled = statutDecisionConge != "refuse" || commentaireDecisionConge.isNotBlank()
+                ) { Text(if (statutDecisionConge == "approuve") "Confirmer" else "Confirmer le refus") }
+            },
+            dismissButton = {
+                TextButton(onClick = { congeEnDecision = null; commentaireDecisionConge = "" }) { Text("Annuler") }
+            }
+        )
     }
 
     if (documentASupprimer != null) {
@@ -1393,12 +2315,43 @@ fun EcranPersonnel(onRetour: () -> Unit) {
         )
     }
 
+    if (afficherPoste) {
+        AlertDialog(
+            onDismissRequest = { afficherPoste = false },
+            title = { Text("Ajouter un poste") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedTextField(
+                        value = nouveauPoste,
+                        onValueChange = { nouveauPoste = it },
+                        label = { Text("Intitulé du poste *") },
+                        singleLine = true
+                    )
+                    OutlinedTextField(
+                        value = descriptionPoste,
+                        onValueChange = { descriptionPoste = it },
+                        label = { Text("Description (facultative)") },
+                        minLines = 2
+                    )
+                    Text("Le poste sera enregistré pour cette entreprise uniquement.", color = Color.Gray, style = MaterialTheme.typography.bodySmall)
+                }
+            },
+            confirmButton = { Button(onClick = { ajouterPoste() }) { Text("Enregistrer") } },
+            dismissButton = { TextButton(onClick = { afficherPoste = false }) { Text("Annuler") } }
+        )
+    }
+
     if (afficherDemandeConge) {
         AlertDialog(
             onDismissRequest = { afficherDemandeConge = false },
             title = { Text("Nouvelle demande de congé") },
             text = {
-                Column(Modifier.heightIn(max = 480.dp).verticalScroll(scrollAjoutEmploye), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Column(
+                    Modifier.fillMaxWidth().heightIn(max = 380.dp)
+                        .verticalScroll(androidx.compose.foundation.rememberScrollState())
+                        .padding(bottom = 8.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
                     var menuEmployeConge by remember { mutableStateOf(false) }
                     Box {
                         OutlinedButton(onClick = { menuEmployeConge = true }, modifier = Modifier.fillMaxWidth()) {
@@ -1417,8 +2370,8 @@ fun EcranPersonnel(onRetour: () -> Unit) {
                             }
                         }
                     }
-                    OutlinedTextField(debutConge, { debutConge = it }, label = { Text("Date de début (AAAA-MM-JJ)") }, singleLine = true)
-                    OutlinedTextField(finConge, { finConge = it }, label = { Text("Date de fin (AAAA-MM-JJ)") }, singleLine = true)
+                    ChampDateRH("Date de début", debutConge) { debutConge = it }
+                    ChampDateRH("Date de fin", finConge) { finConge = it }
                     OutlinedTextField(motifConge, { motifConge = it }, label = { Text("Motif") }, minLines = 2)
                 }
             },
@@ -1442,8 +2395,8 @@ fun EcranPersonnel(onRetour: () -> Unit) {
                             employes.forEach { e -> DropdownMenuItem(text = { Text(e.nom) }, onClick = { employePaie = e.id; basePaie = ""; menuEmployePaie = false }) }
                         }
                     }
-                    OutlinedTextField(debutPaie, { debutPaie = it }, label = { Text("Début période (AAAA-MM-JJ)") }, singleLine = true)
-                    OutlinedTextField(finPaie, { finPaie = it }, label = { Text("Fin période (AAAA-MM-JJ)") }, singleLine = true)
+                    ChampDateRH("Début de période", debutPaie) { debutPaie = it }
+                    ChampDateRH("Fin de période", finPaie) { finPaie = it }
                     OutlinedTextField(basePaie, { basePaie = it }, label = { Text("Salaire de base") }, singleLine = true)
                     OutlinedTextField(primesPaie, { primesPaie = it }, label = { Text("Primes") }, singleLine = true)
                     OutlinedTextField(retenuesPaie, { retenuesPaie = it }, label = { Text("Retenues") }, singleLine = true)
@@ -1457,13 +2410,77 @@ fun EcranPersonnel(onRetour: () -> Unit) {
         )
     }
 
+    if (afficherModification && employeEnEdition != null) {
+        AlertDialog(
+            onDismissRequest = { if (!enregistrementModification) { afficherModification = false; employeEnEdition = null } },
+            title = { Text("Modifier la fiche employé") },
+            text = {
+                Column(
+                    Modifier.fillMaxWidth().heightIn(max = 360.dp)
+                        .verticalScroll(rememberScrollState())
+                        .padding(bottom = 12.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    OutlinedTextField(editNom, { editNom = it }, label = { Text("Nom *") }, singleLine = true)
+                    OutlinedTextField(editPostnom, { editPostnom = it }, label = { Text("Postnom") }, singleLine = true)
+                    OutlinedTextField(editPrenom, { editPrenom = it }, label = { Text("Prénom") }, singleLine = true)
+                    OutlinedTextField(editPoste, { editPoste = it }, label = { Text("Poste *") }, singleLine = true)
+                    OutlinedTextField(editDepartement, { editDepartement = it }, label = { Text("Département") }, singleLine = true)
+                    OutlinedTextField(editTelephone, { editTelephone = it }, label = { Text("Téléphone") }, singleLine = true)
+                    OutlinedTextField(editEmail, { editEmail = it }, label = { Text("E-mail") }, singleLine = true)
+                    var menuSexeEdition by remember { mutableStateOf(false) }
+                    Box {
+                        OutlinedButton(onClick = { menuSexeEdition = true }) { Text("Sexe : " + (editSexe.ifBlank { "Non renseigné" })) }
+                        DropdownMenu(expanded = menuSexeEdition, onDismissRequest = { menuSexeEdition = false }) {
+                            listOf("homme", "femme", "autre", "").forEach { valeur ->
+                                DropdownMenuItem(text = { Text(valeur.ifBlank { "Non renseigné" }) }, onClick = { editSexe = valeur; menuSexeEdition = false })
+                            }
+                        }
+                    }
+                    ChampDateRH("Date de naissance", editDateNaissance) { editDateNaissance = it }
+                    OutlinedTextField(editAdresse, { editAdresse = it }, label = { Text("Adresse") })
+                    ChampDateRH("Date d'embauche", editDateEmbauche) { editDateEmbauche = it }
+                    OutlinedTextField(editSalaireBase, { editSalaireBase = it }, label = { Text("Salaire de base") }, singleLine = true)
+                    OutlinedTextField(editNotes, { editNotes = it }, label = { Text("Notes RH") }, minLines = 2)
+                    var menuStatutEdition by remember { mutableStateOf(false) }
+                    Box {
+                        OutlinedButton(onClick = { menuStatutEdition = true }) { Text("Statut : $editStatut") }
+                        DropdownMenu(expanded = menuStatutEdition, onDismissRequest = { menuStatutEdition = false }) {
+                            listOf("actif", "suspendu", "licencie").forEach { valeur ->
+                                DropdownMenuItem(text = { Text(valeur.replaceFirstChar { it.uppercase() }) }, onClick = { editStatut = valeur; menuStatutEdition = false })
+                            }
+                        }
+                    }
+                    var menuContratEdition by remember { mutableStateOf(false) }
+                    Box {
+                        OutlinedButton(onClick = { menuContratEdition = true }) { Text("Contrat : $editTypeContrat") }
+                        DropdownMenu(expanded = menuContratEdition, onDismissRequest = { menuContratEdition = false }) {
+                            listOf("CDI", "CDD", "Journalier", "Stage", "Consultant", "Autre").forEach { type ->
+                                DropdownMenuItem(text = { Text(type) }, onClick = { editTypeContrat = type; menuContratEdition = false })
+                            }
+                        }
+                    }
+                    Text("Le matricule et l'historique documentaire ne sont pas modifiés par ce formulaire.", color = Color.Gray, style = MaterialTheme.typography.bodySmall)
+                }
+            },
+            confirmButton = {
+                Button(onClick = { modifierEmploye() }, enabled = !enregistrementModification) {
+                    Text(if (enregistrementModification) "Enregistrement…" else "Enregistrer")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { afficherModification = false; employeEnEdition = null }, enabled = !enregistrementModification) { Text("Annuler") }
+            }
+        )
+    }
+
     if (afficherAjout) {
         AlertDialog(
             onDismissRequest = { if (!enregistrement) afficherAjout = false },
             title = { Text("Ajouter un employé") },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(7.dp), modifier = Modifier.heightIn(max = 440.dp)) {
-                    androidx.compose.foundation.layout.Column(Modifier.verticalScroll(androidx.compose.foundation.rememberScrollState()), verticalArrangement = Arrangement.spacedBy(7.dp)) {
+                    androidx.compose.foundation.layout.Column(Modifier.verticalScroll(scrollAjoutEmploye), verticalArrangement = Arrangement.spacedBy(7.dp)) {
                         OutlinedTextField(nom, { nom = it }, label = { Text("Nom *") }, singleLine = true)
                         OutlinedTextField(postnom, { postnom = it }, label = { Text("Postnom") }, singleLine = true)
                         OutlinedTextField(prenom, { prenom = it }, label = { Text("Prénom") }, singleLine = true)
@@ -1471,6 +2488,20 @@ fun EcranPersonnel(onRetour: () -> Unit) {
                         OutlinedTextField(departement, { departement = it }, label = { Text("Département") }, singleLine = true)
                         OutlinedTextField(telephone, { telephone = it }, label = { Text("Téléphone") }, singleLine = true)
                         OutlinedTextField(email, { email = it }, label = { Text("E-mail") }, singleLine = true)
+                        var menuSexeCreation by remember { mutableStateOf(false) }
+                        Box {
+                            OutlinedButton(onClick = { menuSexeCreation = true }) { Text("Sexe : " + (sexe.ifBlank { "Non renseigné" })) }
+                            DropdownMenu(expanded = menuSexeCreation, onDismissRequest = { menuSexeCreation = false }) {
+                                listOf("homme", "femme", "autre", "").forEach { valeur ->
+                                    DropdownMenuItem(text = { Text(valeur.ifBlank { "Non renseigné" }) }, onClick = { sexe = valeur; menuSexeCreation = false })
+                                }
+                            }
+                        }
+                        ChampDateRH("Date de naissance", dateNaissance) { dateNaissance = it }
+                        OutlinedTextField(adresse, { adresse = it }, label = { Text("Adresse") })
+                        ChampDateRH("Date d'embauche (facultatif)", dateEmbauche) { dateEmbauche = it }
+                        OutlinedTextField(salaireBase, { salaireBase = it }, label = { Text("Salaire de base") }, singleLine = true)
+                        OutlinedTextField(notesRH, { notesRH = it }, label = { Text("Notes RH") }, minLines = 2)
                         var menuContrat by remember { mutableStateOf(false) }
                         Box {
                             OutlinedButton(onClick = { menuContrat = true }) { Text("Contrat : $typeContrat") }
@@ -1558,3 +2589,64 @@ private fun CarteIndicateurRH(titre: String, valeur: String, icone: ImageVector,
         }
     }
 }
+
+/** Champ de date partagé par les formulaires RH. Conserve le format ISO AAAA-MM-JJ. */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ChampDateRH(
+    label: String,
+    value: String,
+    onValueChange: (String) -> Unit
+) {
+    var calendrierOuvert by remember { mutableStateOf(false) }
+    // Un champ vide reste vide : le calendrier s'ouvre sur le mois courant,
+    // sans enregistrer automatiquement une date par défaut.
+    val dateInitiale = remember(value) {
+        runCatching { java.time.LocalDate.parse(value.take(10)) }.getOrNull()
+    }
+    val aujourdHui = remember { java.time.LocalDate.now() }
+    val etatCalendrier = rememberDatePickerState(
+        initialSelectedDateMillis = dateInitiale?.toEpochDay()?.times(86_400_000L),
+        initialDisplayedMonthMillis = (dateInitiale ?: aujourdHui).toEpochDay() * 86_400_000L
+    )
+
+    OutlinedTextField(
+        value = value,
+        onValueChange = {},
+        modifier = Modifier.fillMaxWidth().clickable { calendrierOuvert = true },
+        readOnly = true,
+        singleLine = true,
+        label = { Text(label) },
+        placeholder = { Text("AAAA-MM-JJ") },
+        trailingIcon = {
+            IconButton(onClick = { calendrierOuvert = true }) {
+                Icon(Icons.Filled.EventAvailable, contentDescription = "Ouvrir le calendrier", tint = violetRH)
+            }
+        }
+    )
+
+    if (calendrierOuvert) {
+        DatePickerDialog(
+            onDismissRequest = { calendrierOuvert = false },
+            confirmButton = {
+                TextButton(onClick = {
+                    etatCalendrier.selectedDateMillis?.let { millis ->
+                        onValueChange(java.time.LocalDate.ofEpochDay(millis / 86_400_000L).toString())
+                    }
+                    calendrierOuvert = false
+                }) { Text("Valider") }
+            },
+            dismissButton = {
+                TextButton(onClick = { calendrierOuvert = false }) { Text("Annuler") }
+            }
+        ) {
+            DatePicker(
+                state = etatCalendrier,
+                showModeToggle = false,
+                title = { Text("Sélectionner une date", modifier = Modifier.padding(start = 24.dp, top = 16.dp)) },
+                headline = { Text(label, modifier = Modifier.padding(start = 24.dp)) }
+            )
+        }
+    }
+}
+
