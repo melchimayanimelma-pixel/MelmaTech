@@ -870,14 +870,7 @@ val enregistrerFactureLauncher =
     }
     }
 
-    MaterialTheme(
-        colorScheme = lightColorScheme(
-            primary = androidx.compose.ui.graphics.Color(0xFF1565C0),
-            secondary = androidx.compose.ui.graphics.Color(0xFF1976D2),
-            background = androidx.compose.ui.graphics.Color(0xFFF5F7FA),
-            surface = androidx.compose.ui.graphics.Color.White
-        )
-    ) {
+    MelmaTechTheme {
 
         if (!utilisateurConnecte) {
 
@@ -931,24 +924,24 @@ val enregistrerFactureLauncher =
         } else {
 
             Scaffold(
+    containerColor = MaterialTheme.colorScheme.background,
     topBar = {
         TopAppBar(
-    title = {
-    Text(
-        text = "MelmaTech",
-        color = Color(0xFF6C3CE9),
-        fontWeight = FontWeight.Bold
-    )
-},
-    colors = TopAppBarDefaults.topAppBarColors(
-        containerColor = Color.White
-    )
-)
+            title = {
+                Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
+                    Text("MelmaTech", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.ExtraBold, style = MaterialTheme.typography.titleLarge)
+                    Text("GESTION D’ENTREPRISE", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.SemiBold)
+                }
+            },
+            colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.surface),
+            windowInsets = TopAppBarDefaults.windowInsets
+        )
     },
                 bottomBar = {
                     NavigationBar(
-    containerColor = Color.White,
-    contentColor = Color(0xFF6C3CE9)
+    containerColor = MaterialTheme.colorScheme.surface,
+    contentColor = MaterialTheme.colorScheme.primary,
+    tonalElevation = 8.dp
 ) {
                         val onglets = if (estAdministrateur) {
                             listOf(
@@ -1008,7 +1001,8 @@ val enregistrerFactureLauncher =
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(padding)
-                        .padding(12.dp)
+                        .background(MaterialTheme.colorScheme.background)
+                        .padding(horizontal = 16.dp, vertical = 14.dp)
                 ) {
 
                     // Empêche l'accès aux pages réservées.
@@ -6206,39 +6200,36 @@ fun DashboardCard(titre: String, montant: String) {
 
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(20.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = couleur
-        ),
-        elevation = CardDefaults.cardElevation(
-            defaultElevation = 4.dp
-        )
+        shape = RoundedCornerShape(22.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        border = BorderStroke(1.dp, Color(0xFFEAE6F0)),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp, pressedElevation = 5.dp)
     ) {
         Column(
-            modifier = Modifier.padding(18.dp)
+            modifier = Modifier.padding(18.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            Icon(
-                imageVector = icone,
-                contentDescription = titre,
-                tint = Color.White,
-                modifier = Modifier.size(30.dp)
-            )
-
-            Spacer(Modifier.height(12.dp))
+            Box(
+                modifier = Modifier.size(42.dp).clip(RoundedCornerShape(14.dp)).background(couleur.copy(alpha = 0.12f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(imageVector = icone, contentDescription = titre, tint = couleur, modifier = Modifier.size(23.dp))
+            }
 
             Text(
                 text = titre,
-                style = MaterialTheme.typography.titleMedium,
-                color = Color.White
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                fontWeight = FontWeight.Medium
             )
 
             Spacer(Modifier.height(6.dp))
 
             Text(
                 text = montant,
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Bold,
-                color = Color.White
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.ExtraBold,
+                color = MaterialTheme.colorScheme.onSurface
             )
         }
     }
