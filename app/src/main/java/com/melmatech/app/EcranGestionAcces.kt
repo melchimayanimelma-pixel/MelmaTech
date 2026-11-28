@@ -66,10 +66,10 @@ fun EcranGestionAcces(
     var descriptionRoleEdition by remember { mutableStateOf("") }
     var rolePourPermissions by remember { mutableStateOf<RolePersonnalise?>(null) }
 
-    val violet = Color(0xFF6C3CE9)
-    val fond = Color(0xFFF4F2FA)
-    val textePrincipal = Color(0xFF242033)
-    val texteSecondaire = Color(0xFF777386)
+    val violet = MaterialTheme.colorScheme.primary
+    val fond = MaterialTheme.colorScheme.background
+    val textePrincipal = MaterialTheme.colorScheme.onSurface
+    val texteSecondaire = MaterialTheme.colorScheme.onSurfaceVariant
 
     fun charger() {
         chargement = true
