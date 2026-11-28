@@ -2599,12 +2599,15 @@ private fun ChampDateRH(
     onValueChange: (String) -> Unit
 ) {
     var calendrierOuvert by remember { mutableStateOf(false) }
+    // Un champ vide reste vide : le calendrier s'ouvre sur le mois courant,
+    // sans enregistrer automatiquement une date par défaut.
     val dateInitiale = remember(value) {
-        runCatching { java.time.LocalDate.parse(value.take(10)) }
-            .getOrDefault(java.time.LocalDate.now())
+        runCatching { java.time.LocalDate.parse(value.take(10)) }.getOrNull()
     }
+    val aujourdHui = remember { java.time.LocalDate.now() }
     val etatCalendrier = rememberDatePickerState(
-        initialSelectedDateMillis = dateInitiale.toEpochDay() * 86_400_000L
+        initialSelectedDateMillis = dateInitiale?.toEpochDay()?.times(86_400_000L),
+        initialDisplayedMonthMillis = (dateInitiale ?: aujourdHui).toEpochDay() * 86_400_000L
     )
 
     OutlinedTextField(
